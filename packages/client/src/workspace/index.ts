@@ -1,14 +1,11 @@
-import { WorkspaceConnection } from "./connection/types";
-import { WorkspaceDatabase } from "./database/types";
-import { WorkspaceType } from "./types";
+import { WorkspaceConnection, WorkspaceConnectionConfig } from "./connection";
 
-export class Workspace<T extends WorkspaceType = any> {
-  constructor(
-    private connection: WorkspaceConnection<T>,
-    public database: WorkspaceDatabase<T>,
-  ) {}
+export class Workspace<T extends WorkspaceConnection> {
+  constructor(public connection: T) {}
 
-  get client(): WorkspaceConnection<T>["client"] {
-    return this.connection.client;
+  static async connect(config: WorkspaceConnectionConfig) {
+    const connection = new WorkspaceConnection(config);
+    await connection.connect();
+    return new Workspace(connection);
   }
 }

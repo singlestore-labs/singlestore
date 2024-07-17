@@ -1,5 +1,7 @@
-import { WorkspaceManager } from "./workspace/manager";
+import { Workspace } from "./workspace";
 
 export class SingleStoreClient {
-  workspace = new WorkspaceManager();
+  workspace = {
+    connect: Workspace.connect,
+  };
 }
