@@ -4,7 +4,7 @@ import { WorkspaceTable, WorkspaceTableSchema } from "./table";
 export interface WorkspaceDatabaseSchema {
   name: string;
   tables: WorkspaceTableSchema[];
-  workspace?: string;
+  workspaceName?: string;
 }
 
 export class WorkspaceDatabase<T extends WorkspaceConnection, U extends WorkspaceDatabaseSchema["name"]> {
@@ -17,19 +17,20 @@ export class WorkspaceDatabase<T extends WorkspaceConnection, U extends Workspac
     return new WorkspaceTable(this._connection, this.name, name);
   }
 
-  async createTable<T extends WorkspaceTableSchema>(schema: T) {
-    await WorkspaceTable.create(this._connection, this.name, schema);
+  createTable<T extends WorkspaceTableSchema>(schema: T) {
+    return WorkspaceTable.create(this._connection, this.name, schema);
   }
 
-  async dropTable(name: WorkspaceTableSchema["name"]) {
-    await WorkspaceTable.drop(this._connection, this.name, name);
+  dropTable(name: WorkspaceTableSchema["name"]) {
+    return WorkspaceTable.drop(this._connection, this.name, name);
   }
 
   static async create<T extends WorkspaceConnection, U extends WorkspaceDatabaseSchema>(connection: T, schema: U) {
     const definitions: string[] = [`CREATE TABLE IF NOT EXISTS ${schema.name}`];
-    if (schema.workspace) definitions.push(`ON WORKSPACE '${schema.workspace}'`);
+    if (schema.workspaceName) definitions.push(`ON WORKSPACE '${schema.workspaceName}'`);
     await connection.client.execute(definitions.join(" "));
     await Promise.all(schema.tables.map((table) => WorkspaceTable.create(connection, schema.name, table)));
+    return new WorkspaceDatabase(connection, schema.name);
   }
 
   static async drop(connection: WorkspaceConnection, name: WorkspaceDatabaseSchema["name"]) {

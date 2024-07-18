@@ -24,7 +24,6 @@ export class WorkspaceColumn<T extends WorkspaceConnection, U extends string, N 
     if (schema.primaryKey) definitions.push("PRIMARY KEY");
     if (schema.autoIncrement) definitions.push("AUTO_INCREMENT");
     if (schema.default !== undefined) definitions.push(`DEFAULT ${schema.default}`);
-
     return [...definitions, ...(schema.definitions || [])].filter(Boolean).join(" ");
   }
 
@@ -37,6 +36,7 @@ export class WorkspaceColumn<T extends WorkspaceConnection, U extends string, N 
     await connection.client.execute(`\
       ALTER TABLE ${tablePath} ADD COLUMN ${definition}
     `);
+    return new WorkspaceColumn(connection, tablePath, schema.name);
   }
 
   static async drop(connection: WorkspaceConnection, tablePath: string, name: WorkspaceColumnSchema["name"]) {

@@ -24,19 +24,18 @@ export class WorkspaceTable<T extends WorkspaceConnection, U extends string, N e
     return new WorkspaceColumn(this._connection, this._path, name);
   }
 
-  async addColumn<T extends WorkspaceColumnSchema>(schema: T) {
-    await WorkspaceColumn.add(this._connection, this._path, schema);
+  addColumn<T extends WorkspaceColumnSchema>(schema: T) {
+    return WorkspaceColumn.add(this._connection, this._path, schema);
   }
 
-  async dropColumn(name: WorkspaceColumnSchema["name"]) {
-    await WorkspaceColumn.drop(this._connection, this._path, name);
+  dropColumn(name: WorkspaceColumnSchema["name"]) {
+    return WorkspaceColumn.drop(this._connection, this._path, name);
   }
 
   static schemaToQueryDefinition(schema: WorkspaceTableSchema) {
     const definitions: string[] = [...schema.columns.map(WorkspaceColumn.schemaToQueryDefinition)];
     if (schema.primaryKeys?.length) definitions.push(`PRIMARY KEY (${schema.primaryKeys.join(", ")})`);
     if (schema.fulltextKeys?.length) definitions.push(`FULLTEXT KEY (${schema.fulltextKeys.join(", ")})`);
-
     return [...definitions, ...(schema.definitions || [])].filter(Boolean).join(", ");
   }
 
@@ -49,6 +48,7 @@ export class WorkspaceTable<T extends WorkspaceConnection, U extends string, N e
     await connection.client.execute(`\
       CREATE TABLE IF NOT EXISTS ${dbName}.${schema.name} (${definition})
     `);
+    return new WorkspaceTable(connection, dbName, schema.name);
   }
 
   static async drop(connection: WorkspaceConnection, dbName: string, name: WorkspaceTableSchema["name"]) {
