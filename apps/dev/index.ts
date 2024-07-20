@@ -3,22 +3,33 @@ import { SingleStoreClient } from "@singlestore/client";
 async function main() {
   const client = new SingleStoreClient();
 
-  const myWorkspace = await client.workspace.connect({ host: "test", user: "test", password: "test" });
-
-  const myDatabase = await myWorkspace.createDatabase({
-    name: "myDatabase",
-    tables: [
-      {
-        name: "users",
-        columns: [
-          { name: "id", type: "bigint", primaryKey: true, autoIncrement: true },
-          { name: "name", type: "varchar(32)", nullable: false },
-        ],
-      },
-    ],
+  const workspace = await client.workspace({
+    name: "workspace-1",
+    host: process.env.DB_HOST ?? "",
+    user: process.env.DB_USER ?? "",
+    password: process.env.DB_PASSWORD ?? "",
   });
 
-  const usersTable = myDatabase.table("users");
+  const db = await workspace.createDatabase<{
+    tables: {
+      users: {
+        columns: {
+          id: number;
+          name: string;
+        };
+      };
+    };
+  }>({
+    name: "singlestore_client",
+    tables: {
+      users: {
+        columns: {
+          id: { type: "bigint", autoIncrement: true, primaryKey: true },
+          name: { type: "varchar(32)" },
+        },
+      },
+    },
+  });
 }
 
-// main();
+main();

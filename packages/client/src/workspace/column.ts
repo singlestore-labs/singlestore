@@ -2,7 +2,7 @@ import { WorkspaceConnection } from "./connection";
 
 export interface WorkspaceColumnSchema {
   name: string;
-  type?: string;
+  type: string;
   nullable?: boolean;
   primaryKey?: boolean;
   autoIncrement?: boolean;
@@ -10,11 +10,11 @@ export interface WorkspaceColumnSchema {
   definitions?: string[];
 }
 
-export class WorkspaceColumn<T extends WorkspaceConnection, U extends string, N extends WorkspaceColumnSchema["name"]> {
+export class WorkspaceColumn<T extends WorkspaceColumnSchema> {
   constructor(
-    private _connection: T,
-    private _tablePath: U,
-    public name: N,
+    private _connection: WorkspaceConnection,
+    private _tablePath: string,
+    public name: T["name"],
   ) {}
 
   static schemaToQueryDefinition(schema: WorkspaceColumnSchema) {
@@ -27,16 +27,12 @@ export class WorkspaceColumn<T extends WorkspaceConnection, U extends string, N 
     return [...definitions, ...(schema.definitions || [])].filter(Boolean).join(" ");
   }
 
-  static async add<T extends WorkspaceConnection, U extends string, S extends WorkspaceColumnSchema>(
-    connection: T,
-    tablePath: U,
-    schema: S,
-  ) {
+  static async add<T extends WorkspaceColumnSchema>(connection: WorkspaceConnection, tablePath: string, schema: T) {
     const definition = WorkspaceColumn.schemaToQueryDefinition(schema);
     await connection.client.execute(`\
       ALTER TABLE ${tablePath} ADD COLUMN ${definition}
     `);
-    return new WorkspaceColumn(connection, tablePath, schema.name);
+    return new WorkspaceColumn<T>(connection, tablePath, schema.name);
   }
 
   static async drop(connection: WorkspaceConnection, tablePath: string, name: WorkspaceColumnSchema["name"]) {
@@ -45,8 +41,12 @@ export class WorkspaceColumn<T extends WorkspaceConnection, U extends string, N 
     `);
   }
 
+  async drop() {
+    await WorkspaceColumn.drop(this._connection, this._tablePath, this.name);
+  }
+
   async modify(schema: Partial<Omit<WorkspaceColumnSchema, "name">>) {
-    const definition = WorkspaceColumn.schemaToQueryDefinition({ ...schema, name: this.name });
+    const definition = WorkspaceColumn.schemaToQueryDefinition({ type: "", ...schema, name: this.name });
     await this._connection.client.execute(`\
       ALTER TABLE ${this._tablePath} MODIFY COLUMN ${definition}
     `);
@@ -56,9 +56,5 @@ export class WorkspaceColumn<T extends WorkspaceConnection, U extends string, N 
     await this._connection.client.execute(`\
       ALTER TABLE ${this._tablePath} CHANGE ${this.name} ${newName}
     `);
-  }
-
-  async drop() {
-    await WorkspaceColumn.drop(this._connection, this._tablePath, this.name);
   }
 }
