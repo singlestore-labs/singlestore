@@ -1,22 +1,25 @@
 import { FlexKeyOf } from "../types/helpers";
 import { WorkspaceConnection } from "./connection";
-import { WorkspaceTable, WorkspaceTableSchema } from "./table";
+import { WorkspaceTable, WorkspaceTableSchema, WorkspaceTableType } from "./table";
 
-export interface WorkspaceDatabaseSchema<
-  T extends Record<string, WorkspaceTableSchema> = Record<string, WorkspaceTableSchema>,
-> {
-  name: string;
-  tables: T;
+export interface WorkspaceDatabaseType {
+  name?: string;
+  tables: Record<string, WorkspaceTableType>;
+}
+
+export interface WorkspaceDatabaseSchema<T extends WorkspaceDatabaseType = WorkspaceDatabaseType> {
+  name: Exclude<T["name"], undefined>;
+  tables: { [K in keyof T["tables"]]: Omit<WorkspaceTableSchema<T["tables"][K]>, "name"> };
   workspace?: string;
 }
 
-export class WorkspaceDatabase<T extends WorkspaceDatabaseSchema> {
+export class WorkspaceDatabase<T extends WorkspaceDatabaseType = WorkspaceDatabaseType> {
   constructor(
     private _connection: WorkspaceConnection,
-    public name: T["name"],
+    public name: WorkspaceDatabaseSchema["name"],
   ) {}
 
-  static async create<T extends WorkspaceDatabaseSchema>(connection: WorkspaceConnection, schema: T) {
+  static async create<T extends WorkspaceDatabaseType>(connection: WorkspaceConnection, schema: WorkspaceDatabaseSchema<T>) {
     const definitions: string[] = [`CREATE DATABASE IF NOT EXISTS ${schema.name}`];
     if (schema.workspace) definitions.push(`ON WORKSPACE '${schema.workspace}'`);
     await connection.client.execute(definitions.join(" "));
@@ -42,7 +45,7 @@ export class WorkspaceDatabase<T extends WorkspaceDatabaseSchema> {
     return new WorkspaceTable<T["tables"][U]>(this._connection, this.name, name);
   }
 
-  createTable<T extends WorkspaceTableSchema = WorkspaceTableSchema>(schema: T) {
+  createTable<T extends WorkspaceTableType>(schema: WorkspaceTableSchema<T>) {
     return WorkspaceTable.create<T>(this._connection, this.name, schema);
   }
 

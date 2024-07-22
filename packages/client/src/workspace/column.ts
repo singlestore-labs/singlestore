@@ -1,6 +1,8 @@
 import { WorkspaceConnection } from "./connection";
 
-export interface WorkspaceColumnSchema {
+export interface WorkspaceColumnType {}
+
+export interface WorkspaceColumnSchema<T extends WorkspaceColumnType = WorkspaceColumnType> {
   name: string;
   type: string;
   nullable?: boolean;
@@ -10,11 +12,11 @@ export interface WorkspaceColumnSchema {
   definitions?: string[];
 }
 
-export class WorkspaceColumn<T extends WorkspaceColumnSchema> {
+export class WorkspaceColumn<T extends WorkspaceColumnType = WorkspaceColumnType> {
   constructor(
     private _connection: WorkspaceConnection,
     private _tablePath: string,
-    public name: T["name"],
+    public name: string,
   ) {}
 
   static schemaToQueryDefinition(schema: WorkspaceColumnSchema) {
@@ -27,7 +29,11 @@ export class WorkspaceColumn<T extends WorkspaceColumnSchema> {
     return [...definitions, ...(schema.definitions || [])].filter(Boolean).join(" ");
   }
 
-  static async add<T extends WorkspaceColumnSchema>(connection: WorkspaceConnection, tablePath: string, schema: T) {
+  static async add<T extends WorkspaceColumnType = WorkspaceColumnType>(
+    connection: WorkspaceConnection,
+    tablePath: string,
+    schema: WorkspaceColumnSchema<T>,
+  ) {
     const definition = WorkspaceColumn.schemaToQueryDefinition(schema);
     await connection.client.execute(`\
       ALTER TABLE ${tablePath} ADD COLUMN ${definition}

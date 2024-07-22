@@ -1,22 +1,27 @@
 import { FlexKeyOf } from "../types/helpers";
-import { WorkspaceColumn, WorkspaceColumnSchema } from "./column";
+import { WorkspaceColumn, WorkspaceColumnSchema, WorkspaceColumnType } from "./column";
 import { WorkspaceConnection } from "./connection";
 
-export interface WorkspaceTableSchema<T extends Record<string, WorkspaceColumnSchema> = Record<string, WorkspaceColumnSchema>> {
-  name: string;
-  columns: T;
+export interface WorkspaceTableType {
+  name?: string;
+  columns: Record<string, WorkspaceColumnType>;
+}
+
+export interface WorkspaceTableSchema<T extends WorkspaceTableType = WorkspaceTableType> {
+  name: Exclude<T["name"], undefined>;
+  columns: { [K in keyof T["columns"]]: Omit<WorkspaceColumnSchema<T["columns"][K]>, "name"> };
   primaryKeys?: string[];
   fulltextKeys?: string[];
   definitions?: string[];
 }
 
-export class WorkspaceTable<T extends WorkspaceTableSchema> {
+export class WorkspaceTable<T extends WorkspaceTableType = WorkspaceTableType> {
   private _path: string;
 
   constructor(
     private _connection: WorkspaceConnection,
     private _dbName: string,
-    public name: T["name"],
+    public name: WorkspaceTableSchema["name"],
   ) {
     this._path = `${this._dbName}.${this.name}`;
   }
@@ -32,7 +37,11 @@ export class WorkspaceTable<T extends WorkspaceTableSchema> {
     return [...definitions, ...(schema.definitions || [])].filter(Boolean).join(", ");
   }
 
-  static async create<T extends WorkspaceTableSchema>(connection: WorkspaceConnection, dbName: string, schema: T) {
+  static async create<T extends WorkspaceTableType>(
+    connection: WorkspaceConnection,
+    dbName: string,
+    schema: WorkspaceTableSchema<T>,
+  ) {
     const definition = WorkspaceTable.schemaToQueryDefinition(schema);
     await connection.client.execute(`\
       CREATE TABLE IF NOT EXISTS ${dbName}.${schema.name} (${definition})
@@ -50,11 +59,11 @@ export class WorkspaceTable<T extends WorkspaceTableSchema> {
     await WorkspaceTable.drop(this._connection, this._dbName, this.name);
   }
 
-  column<U extends FlexKeyOf<T["columns"]>>(name: U) {
-    return new WorkspaceColumn<T["columns"][U]>(this._connection, this._path, name);
+  column(name: FlexKeyOf<T["columns"]>) {
+    return new WorkspaceColumn(this._connection, this._path, name);
   }
 
-  addColumn<T extends WorkspaceColumnSchema>(schema: T) {
+  addColumn<T extends WorkspaceColumnType>(schema: WorkspaceColumnSchema<T>) {
     return WorkspaceColumn.add<T>(this._connection, this._path, schema);
   }
 
