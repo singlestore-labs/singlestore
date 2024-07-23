@@ -20,7 +20,7 @@ export class WorkspaceColumn<T extends WorkspaceColumnType = WorkspaceColumnType
   ) {}
 
   static schemaToQueryDefinition(schema: WorkspaceColumnSchema) {
-    const definitions: string[] = [schema.name];
+    const definitions: string[] = [`\`${schema.name}\``];
     if (schema.type) definitions.push(schema.type);
     if (schema.nullable !== undefined && !schema.nullable) definitions.push("NOT NULL");
     if (schema.primaryKey) definitions.push("PRIMARY KEY");

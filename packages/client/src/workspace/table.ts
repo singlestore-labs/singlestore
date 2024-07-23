@@ -1,6 +1,8 @@
+import { ResultSetHeader, RowDataPacket } from "mysql2";
 import { FlexKeyOf } from "../types/helpers";
 import { WorkspaceColumn, WorkspaceColumnSchema, WorkspaceColumnType } from "./column";
 import { WorkspaceConnection } from "./connection";
+import { QueryBuilder, QueryFilters, QueryOptions } from "../query/builder";
 
 export interface WorkspaceTableType {
   name?: string;
@@ -81,5 +83,19 @@ export class WorkspaceTable<T extends WorkspaceTableType = WorkspaceTableType> {
     await this._connection.client.execute(`\
       ALTER TABLE ${this._path} RENAME TO ${newName}
     `);
+  }
+
+  async find(...args: ConstructorParameters<typeof QueryBuilder<T["columns"]>>) {
+    const { definition, values } = new QueryBuilder(...args);
+    const query = `SELECT * FROM ${this._path} ${definition}`;
+    const [rows] = await this._connection.client.execute<(T["columns"] & RowDataPacket)[]>(query, values);
+    return rows;
+  }
+
+  async delete(filters: QueryFilters<T["columns"]>) {
+    const { definition, values } = new QueryBuilder(filters);
+    const query = `DELETE FROM ${this._path} ${definition}`;
+    const [rows] = await this._connection.client.execute<ResultSetHeader>(query, values);
+    return rows;
   }
 }

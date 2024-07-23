@@ -21,7 +21,7 @@ export class WorkspaceDatabase<T extends WorkspaceDatabaseType = WorkspaceDataba
 
   static async create<T extends WorkspaceDatabaseType>(connection: WorkspaceConnection, schema: WorkspaceDatabaseSchema<T>) {
     const definitions: string[] = [`CREATE DATABASE IF NOT EXISTS ${schema.name}`];
-    if (schema.workspace) definitions.push(`ON WORKSPACE '${schema.workspace}'`);
+    if (schema.workspace) definitions.push(`ON WORKSPACE \`${schema.workspace}\``);
     await connection.client.execute(definitions.join(" "));
 
     await Promise.all(
