@@ -43,7 +43,7 @@ async function main() {
 
   const users = await usersTable.find(
     { and: [{ id: { gte: 5 } }, { name: { in: ["James", "John"] } }] },
-    { limit: 5, orderBy: { name: "asc" } },
+    { limit: 5, orderBy: { name: "asc" }, groupBy: ["name"] },
   );
 
   console.dir({ users });

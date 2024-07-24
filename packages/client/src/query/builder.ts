@@ -24,7 +24,7 @@ export class QueryBuilder<T extends QuerySchema> {
       optionsBuilder = new QueryOptionsBuilder(args[1] as QueryOptions<T>);
     }
 
-    this.statement = [filtersBuilder.clause, optionsBuilder.clauses.orderBy, optionsBuilder.clauses.limit].join(" ");
+    this.statement = [filtersBuilder.clause, ...Object.values(optionsBuilder.clauses)].join(" ");
     this.values = filtersBuilder.values;
   }
 }
