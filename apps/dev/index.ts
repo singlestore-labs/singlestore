@@ -12,12 +12,12 @@ interface SingleStoreClientDatabase {
 }
 
 async function main() {
+  const dbName = "singlestore_client";
+
   const client = new SingleStoreClient();
 
   const workspace = await client.workspace<{
-    databases: {
-      singlestore_client: SingleStoreClientDatabase;
-    };
+    databases: { singlestore_client: SingleStoreClientDatabase };
   }>({
     name: "workspace-1",
     host: process.env.DB_HOST ?? "",
@@ -25,10 +25,10 @@ async function main() {
     password: process.env.DB_PASSWORD ?? "",
   });
 
-  // await workspace.dropDatabase("singlestore_client");
+  await workspace.dropDatabase(dbName);
 
   const db = await workspace.createDatabase<SingleStoreClientDatabase>({
-    name: "singlestore_client",
+    name: dbName,
     tables: {
       users: {
         columns: {
@@ -42,13 +42,13 @@ async function main() {
   const usersTable = db.table("users");
 
   const users = await usersTable.find(
-    { and: [{ id: { gte: 100 } }, { name: { in: ["James", "John"] } }] },
+    { and: [{ id: { gte: 5 } }, { name: { in: ["James", "John"] } }] },
     { limit: 5, orderBy: { name: "asc" } },
   );
 
   console.dir({ users });
 
-  console.dir(await usersTable.delete({ id: users[0]?.id || 1 }));
+  // console.dir(await usersTable.delete({ id: users[0]?.id || 1 }));
 }
 
 main();

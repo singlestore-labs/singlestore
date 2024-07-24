@@ -2,7 +2,8 @@ import { ResultSetHeader, RowDataPacket } from "mysql2";
 import { FlexKeyOf } from "../types/helpers";
 import { WorkspaceColumn, WorkspaceColumnSchema, WorkspaceColumnType } from "./column";
 import { WorkspaceConnection } from "./connection";
-import { QueryBuilder, QueryFilters, QueryOptions } from "../query/builder";
+import { QueryBuilder } from "../query/builder";
+import { QueryFilters } from "../query/filters/builder";
 
 export interface WorkspaceTableType {
   name?: string;
@@ -14,7 +15,7 @@ export interface WorkspaceTableSchema<T extends WorkspaceTableType = WorkspaceTa
   columns: { [K in keyof T["columns"]]: Omit<WorkspaceColumnSchema<T["columns"][K]>, "name"> };
   primaryKeys?: string[];
   fulltextKeys?: string[];
-  definitions?: string[];
+  clauses?: string[];
 }
 
 export class WorkspaceTable<T extends WorkspaceTableType = WorkspaceTableType> {
@@ -28,15 +29,15 @@ export class WorkspaceTable<T extends WorkspaceTableType = WorkspaceTableType> {
     this._path = `${this._dbName}.${this.name}`;
   }
 
-  static schemaToQueryDefinition(schema: WorkspaceTableSchema) {
-    const definitions: string[] = [
+  static schemaToClauses(schema: WorkspaceTableSchema) {
+    const clauses: string[] = [
       ...Object.entries(schema.columns).map(([name, schema]) => {
-        return WorkspaceColumn.schemaToQueryDefinition({ ...schema, name });
+        return WorkspaceColumn.schemaToClauses({ ...schema, name });
       }),
     ];
-    if (schema.primaryKeys?.length) definitions.push(`PRIMARY KEY (${schema.primaryKeys.join(", ")})`);
-    if (schema.fulltextKeys?.length) definitions.push(`FULLTEXT KEY (${schema.fulltextKeys.join(", ")})`);
-    return [...definitions, ...(schema.definitions || [])].filter(Boolean).join(", ");
+    if (schema.primaryKeys?.length) clauses.push(`PRIMARY KEY (${schema.primaryKeys.join(", ")})`);
+    if (schema.fulltextKeys?.length) clauses.push(`FULLTEXT KEY (${schema.fulltextKeys.join(", ")})`);
+    return [...clauses, ...(schema.clauses || [])].filter(Boolean).join(", ");
   }
 
   static async create<T extends WorkspaceTableType>(
@@ -44,9 +45,9 @@ export class WorkspaceTable<T extends WorkspaceTableType = WorkspaceTableType> {
     dbName: string,
     schema: WorkspaceTableSchema<T>,
   ) {
-    const definition = WorkspaceTable.schemaToQueryDefinition(schema);
+    const clauses = WorkspaceTable.schemaToClauses(schema);
     await connection.client.execute(`\
-      CREATE TABLE IF NOT EXISTS ${dbName}.${schema.name} (${definition})
+      CREATE TABLE IF NOT EXISTS ${dbName}.${schema.name} (${clauses})
     `);
     return new WorkspaceTable<T>(connection, dbName, schema.name);
   }
@@ -86,15 +87,20 @@ export class WorkspaceTable<T extends WorkspaceTableType = WorkspaceTableType> {
   }
 
   async find(...args: ConstructorParameters<typeof QueryBuilder<T["columns"]>>) {
-    const { definition, values } = new QueryBuilder(...args);
-    const query = `SELECT * FROM ${this._path} ${definition}`;
+    const { statement, values } = new QueryBuilder(...args);
+    const query = `SELECT * FROM ${this._path} ${statement}`;
     const [rows] = await this._connection.client.execute<(T["columns"] & RowDataPacket)[]>(query, values);
     return rows;
   }
 
+  async update(filters: QueryFilters<T["columns"]>) {
+    const { statement, values } = new QueryBuilder(filters);
+    const query = `SELECT * FROM ${this._path} ${statement}`;
+  }
+
   async delete(filters: QueryFilters<T["columns"]>) {
-    const { definition, values } = new QueryBuilder(filters);
-    const query = `DELETE FROM ${this._path} ${definition}`;
+    const { statement, values } = new QueryBuilder(filters);
+    const query = `DELETE FROM ${this._path} ${statement}`;
     const [rows] = await this._connection.client.execute<ResultSetHeader>(query, values);
     return rows;
   }
