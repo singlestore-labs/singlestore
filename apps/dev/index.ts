@@ -25,7 +25,7 @@ async function main() {
     password: process.env.DB_PASSWORD ?? "",
   });
 
-  // await workspace.dropDatabase(dbName);
+  await workspace.dropDatabase(dbName);
 
   const db = await workspace.createDatabase<SingleStoreClientDatabase>({
     name: dbName,
@@ -39,18 +39,30 @@ async function main() {
     },
   });
 
-  const usersTable = db.table("users");
+  console.log("Insert one user");
+  const insertedUser = await db.table("users").insert({ name: "Kate" });
+  console.dir(insertedUser);
 
-  const [users] = await usersTable.select(
-    { and: [{ id: { gte: 5 } }, { name: { in: ["James", "John"] } }] },
-    { columns: ["id", "name"], limit: 5, orderBy: { name: "asc" }, groupBy: ["name"] },
-  );
+  console.log("Insert many users");
+  const insertedUsers = await db.table("users").insert([{ name: "James" }, { name: "John" }, { name: "Alex" }]);
+  console.dir(insertedUsers);
 
-  console.dir({ users }, { depth: 10 });
+  console.log("Select users");
+  const [users] = await db
+    .table("users")
+    .select(
+      { name: { in: ["Kate", "James"] } },
+      { columns: ["id", "name"], limit: 5, orderBy: { name: "asc" }, groupBy: ["name"] },
+    );
+  console.dir({ users });
 
-  console.dir(await usersTable.update({ name: "Test" }, { id: users[0]?.id || 1 }));
+  console.log("Update user");
+  const updatedUser = await db.table("users").update({ name: "Test" }, { id: users[1]?.id || 1 });
+  console.dir(updatedUser);
 
-  // console.dir(await usersTable.delete({ id: users[0]?.id || 1 }));
+  console.log("Delete user");
+  const deletedUser = await db.table("users").delete({ id: users[0]?.id || 1 });
+  console.dir(deletedUser);
 }
 
 main();

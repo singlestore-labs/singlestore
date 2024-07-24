@@ -86,22 +86,33 @@ export class WorkspaceTable<T extends WorkspaceTableType = WorkspaceTableType> {
     `);
   }
 
+  insert(data: Partial<T["columns"]> | Partial<T["columns"]>[]) {
+    const _data = Array.isArray(data) ? data : [data];
+    const keys = Object.keys(_data[0]!);
+    const placeholders = _data.map(() => `(${keys.map(() => "?").join(", ")})`).join(", ");
+    const values = _data.flatMap((value) => Object.values(value));
+    const query = `INSERT INTO ${this._path} (${keys}) VALUES ${placeholders}`;
+    return this._connection.client.execute<ResultSetHeader>(query, values);
+  }
+
   select(...args: ConstructorParameters<typeof QueryBuilder<T["columns"]>>) {
-    const { columns, clauses, values } = new QueryBuilder(...args);
-    const query = `SELECT ${columns} FROM ${this._path} ${Object.values(clauses).join(" ")}`;
+    const { columns, clause, values } = new QueryBuilder(...args);
+    const query = `SELECT ${columns} FROM ${this._path} ${clause}`;
     return this._connection.client.execute<(T["columns"] & RowDataPacket)[]>(query, values);
   }
 
-  update(set: Partial<T["columns"]>, filters: QueryFilters<T["columns"]>) {
-    const { clauses, values } = new QueryBuilder(filters);
-    const setAssignment = QueryBuilder.toColumnValueAssignment(set);
-    const query = `UPDATE ${this._path} SET ${setAssignment.columns} ${Object.values(clauses).join(" ")}`;
-    return this._connection.client.execute<ResultSetHeader>(query, [...setAssignment.values, ...values]);
+  update(data: Partial<T["columns"]>, filters: QueryFilters<T["columns"]>) {
+    const { clause, values } = new QueryBuilder(filters);
+    const columnAssignments = Object.keys(data)
+      .map((key) => `${key} = ?`)
+      .join(", ");
+    const query = `UPDATE ${this._path} SET ${columnAssignments} ${clause}`;
+    return this._connection.client.execute<ResultSetHeader>(query, [...Object.values(data), ...values]);
   }
 
   delete(filters: QueryFilters<T["columns"]>) {
-    const { clauses, values } = new QueryBuilder(filters);
-    const query = `DELETE FROM ${this._path} ${Object.values(clauses).join(" ")}`;
+    const { clause, values } = new QueryBuilder(filters);
+    const query = `DELETE FROM ${this._path} ${clause}`;
     return this._connection.client.execute<ResultSetHeader>(query, values);
   }
 }

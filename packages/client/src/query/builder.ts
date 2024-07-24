@@ -10,6 +10,7 @@ export class QueryBuilder<T extends QuerySchema> {
     orderBy: "",
     limit: "",
   };
+  clause: string;
   values: T[keyof T][] = [];
 
   constructor(
@@ -31,15 +32,7 @@ export class QueryBuilder<T extends QuerySchema> {
 
     this.columns = optionsBuilder.columns;
     this.clauses = { where: filtersBuilder.clause, ...optionsBuilder.clauses };
+    this.clause = Object.values(this.clauses).join(" ");
     this.values = filtersBuilder.values;
-  }
-
-  static toColumnValueAssignment<T extends object>(object: T): { columns: string; values: T[keyof T][] } {
-    return {
-      columns: Object.keys(object)
-        .map((key) => `${key} = ?`)
-        .join(", "),
-      values: Object.values(object),
-    };
   }
 }
