@@ -1,3 +1,4 @@
+import { ResultSetHeader } from "mysql2";
 import { WorkspaceConnection } from "./connection";
 
 export interface WorkspaceColumnType {}
@@ -35,31 +36,31 @@ export class WorkspaceColumn<T extends WorkspaceColumnType = WorkspaceColumnType
     schema: WorkspaceColumnSchema<T>,
   ) {
     const clauses = WorkspaceColumn.schemaToClauses(schema);
-    await connection.client.execute(`\
+    await connection.client.execute<ResultSetHeader>(`\
       ALTER TABLE ${tablePath} ADD COLUMN ${clauses}
     `);
     return new WorkspaceColumn<T>(connection, tablePath, schema.name);
   }
 
-  static async drop(connection: WorkspaceConnection, tablePath: string, name: WorkspaceColumnSchema["name"]) {
-    await connection.client.execute(`\
+  static drop(connection: WorkspaceConnection, tablePath: string, name: WorkspaceColumnSchema["name"]) {
+    return connection.client.execute<ResultSetHeader>(`\
       ALTER TABLE ${tablePath} DROP COLUMN ${name}
     `);
   }
 
-  async drop() {
-    await WorkspaceColumn.drop(this._connection, this._tablePath, this.name);
+  drop() {
+    return WorkspaceColumn.drop(this._connection, this._tablePath, this.name);
   }
 
-  async modify(schema: Partial<Omit<WorkspaceColumnSchema, "name">>) {
+  modify(schema: Partial<Omit<WorkspaceColumnSchema, "name">>) {
     const clauses = WorkspaceColumn.schemaToClauses({ type: "", ...schema, name: this.name });
-    await this._connection.client.execute(`\
+    return this._connection.client.execute<ResultSetHeader>(`\
       ALTER TABLE ${this._tablePath} MODIFY COLUMN ${clauses}
     `);
   }
 
-  async rename(newName: WorkspaceColumnSchema["name"]) {
-    await this._connection.client.execute(`\
+  rename(newName: WorkspaceColumnSchema["name"]) {
+    return this._connection.client.execute<ResultSetHeader>(`\
       ALTER TABLE ${this._tablePath} CHANGE ${this.name} ${newName}
     `);
   }

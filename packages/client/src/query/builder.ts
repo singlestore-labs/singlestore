@@ -4,8 +4,12 @@ import { QuerySchema } from "./types";
 
 export class QueryBuilder<T extends QuerySchema> {
   columns: string = "*";
-  clauses: Record<"where" | "orderBy" | "limit", string> = { where: "", orderBy: "", limit: "" };
-  clause: string = "";
+  clauses: Record<"where" | Exclude<keyof QueryOptions, "columns">, string> = {
+    where: "",
+    groupBy: "",
+    orderBy: "",
+    limit: "",
+  };
   values: T[keyof T][] = [];
 
   constructor(
@@ -26,7 +30,16 @@ export class QueryBuilder<T extends QuerySchema> {
     }
 
     this.columns = optionsBuilder.columns;
-    this.clause = [filtersBuilder.clause, ...Object.values(optionsBuilder.clauses)].join(" ");
+    this.clauses = { where: filtersBuilder.clause, ...optionsBuilder.clauses };
     this.values = filtersBuilder.values;
+  }
+
+  static toColumnValueAssignment<T extends object>(object: T): { columns: string; values: T[keyof T][] } {
+    return {
+      columns: Object.keys(object)
+        .map((key) => `${key} = ?`)
+        .join(", "),
+      values: Object.values(object),
+    };
   }
 }

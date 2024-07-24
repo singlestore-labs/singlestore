@@ -46,20 +46,20 @@ export class WorkspaceTable<T extends WorkspaceTableType = WorkspaceTableType> {
     schema: WorkspaceTableSchema<T>,
   ) {
     const clauses = WorkspaceTable.schemaToClauses(schema);
-    await connection.client.execute(`\
+    await connection.client.execute<ResultSetHeader>(`\
       CREATE TABLE IF NOT EXISTS ${dbName}.${schema.name} (${clauses})
     `);
     return new WorkspaceTable<T>(connection, dbName, schema.name);
   }
 
-  static async drop(connection: WorkspaceConnection, dbName: string, name: WorkspaceTableSchema["name"]) {
-    await connection.client.execute(`\
+  static drop(connection: WorkspaceConnection, dbName: string, name: WorkspaceTableSchema["name"]) {
+    return connection.client.execute<ResultSetHeader>(`\
       DROP TABLE IF EXISTS ${dbName}.${name}
     `);
   }
 
-  async drop() {
-    await WorkspaceTable.drop(this._connection, this._dbName, this.name);
+  drop() {
+    return WorkspaceTable.drop(this._connection, this._dbName, this.name);
   }
 
   column(name: FlexKeyOf<T["columns"]>) {
@@ -74,34 +74,34 @@ export class WorkspaceTable<T extends WorkspaceTableType = WorkspaceTableType> {
     return WorkspaceColumn.drop(this._connection, this._path, name);
   }
 
-  async truncate() {
-    await this._connection.client.execute(`\
+  truncate() {
+    return this._connection.client.execute<ResultSetHeader>(`\
       TRUNCATE TABLE ${this._path}
     `);
   }
 
-  async rename(newName: WorkspaceTableSchema["name"]) {
-    await this._connection.client.execute(`\
+  rename(newName: WorkspaceTableSchema["name"]) {
+    return this._connection.client.execute<ResultSetHeader>(`\
       ALTER TABLE ${this._path} RENAME TO ${newName}
     `);
   }
 
-  async select(...args: ConstructorParameters<typeof QueryBuilder<T["columns"]>>) {
-    const { columns, clause, values } = new QueryBuilder(...args);
-    const query = `SELECT ${columns} FROM ${this._path} ${clause}`;
-    const [rows] = await this._connection.client.execute<(T["columns"] & RowDataPacket)[]>(query, values);
-    return rows;
+  select(...args: ConstructorParameters<typeof QueryBuilder<T["columns"]>>) {
+    const { columns, clauses, values } = new QueryBuilder(...args);
+    const query = `SELECT ${columns} FROM ${this._path} ${Object.values(clauses).join(" ")}`;
+    return this._connection.client.execute<(T["columns"] & RowDataPacket)[]>(query, values);
   }
 
-  async update(filters: QueryFilters<T["columns"]>) {
-    const { clause, values } = new QueryBuilder(filters);
-    const query = `SELECT * FROM ${this._path} ${clause}`;
+  update(set: Partial<T["columns"]>, filters: QueryFilters<T["columns"]>) {
+    const { clauses, values } = new QueryBuilder(filters);
+    const setAssignment = QueryBuilder.toColumnValueAssignment(set);
+    const query = `UPDATE ${this._path} SET ${setAssignment.columns} ${Object.values(clauses).join(" ")}`;
+    return this._connection.client.execute<ResultSetHeader>(query, [...setAssignment.values, ...values]);
   }
 
-  async delete(filters: QueryFilters<T["columns"]>) {
-    const { clause, values } = new QueryBuilder(filters);
-    const query = `DELETE FROM ${this._path} ${clause}`;
-    const [rows] = await this._connection.client.execute<ResultSetHeader>(query, values);
-    return rows;
+  delete(filters: QueryFilters<T["columns"]>) {
+    const { clauses, values } = new QueryBuilder(filters);
+    const query = `DELETE FROM ${this._path} ${Object.values(clauses).join(" ")}`;
+    return this._connection.client.execute<ResultSetHeader>(query, values);
   }
 }

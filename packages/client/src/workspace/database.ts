@@ -1,3 +1,4 @@
+import { ResultSetHeader } from "mysql2";
 import { FlexKeyOf } from "../types/helpers";
 import { WorkspaceConnection } from "./connection";
 import { WorkspaceTable, WorkspaceTableSchema, WorkspaceTableType } from "./table";
@@ -22,7 +23,7 @@ export class WorkspaceDatabase<T extends WorkspaceDatabaseType = WorkspaceDataba
   static async create<T extends WorkspaceDatabaseType>(connection: WorkspaceConnection, schema: WorkspaceDatabaseSchema<T>) {
     const clauses: string[] = [`CREATE DATABASE IF NOT EXISTS ${schema.name}`];
     if (schema.workspace) clauses.push(`ON WORKSPACE \`${schema.workspace}\``);
-    await connection.client.execute(clauses.join(" "));
+    await connection.client.execute<ResultSetHeader>(clauses.join(" "));
 
     await Promise.all(
       Object.entries(schema.tables).map(([name, tableSchema]) => {
@@ -33,12 +34,12 @@ export class WorkspaceDatabase<T extends WorkspaceDatabaseType = WorkspaceDataba
     return new WorkspaceDatabase<T>(connection, schema.name);
   }
 
-  static async drop(connection: WorkspaceConnection, name: WorkspaceDatabaseSchema["name"]) {
-    await connection.client.execute(`DROP DATABASE IF EXISTS ${name}`);
+  static drop(connection: WorkspaceConnection, name: WorkspaceDatabaseSchema["name"]) {
+    return connection.client.execute<ResultSetHeader>(`DROP DATABASE IF EXISTS ${name}`);
   }
 
-  async drop() {
-    await WorkspaceDatabase.drop(this._connection, this.name);
+  drop() {
+    return WorkspaceDatabase.drop(this._connection, this.name);
   }
 
   table<U extends FlexKeyOf<T["tables"]>>(name: U) {

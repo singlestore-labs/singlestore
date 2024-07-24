@@ -41,12 +41,14 @@ async function main() {
 
   const usersTable = db.table("users");
 
-  const users = await usersTable.select(
+  const [users] = await usersTable.select(
     { and: [{ id: { gte: 5 } }, { name: { in: ["James", "John"] } }] },
     { columns: ["id", "name"], limit: 5, orderBy: { name: "asc" }, groupBy: ["name"] },
   );
 
-  console.dir({ users });
+  console.dir({ users }, { depth: 10 });
+
+  console.dir(await usersTable.update({ name: "Test" }, { id: users[0]?.id || 1 }));
 
   // console.dir(await usersTable.delete({ id: users[0]?.id || 1 }));
 }
