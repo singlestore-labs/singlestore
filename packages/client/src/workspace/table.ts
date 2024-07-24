@@ -87,20 +87,20 @@ export class WorkspaceTable<T extends WorkspaceTableType = WorkspaceTableType> {
   }
 
   async find(...args: ConstructorParameters<typeof QueryBuilder<T["columns"]>>) {
-    const { statement, values } = new QueryBuilder(...args);
-    const query = `SELECT * FROM ${this._path} ${statement}`;
+    const { clause, values } = new QueryBuilder(...args);
+    const query = `SELECT * FROM ${this._path} ${clause}`;
     const [rows] = await this._connection.client.execute<(T["columns"] & RowDataPacket)[]>(query, values);
     return rows;
   }
 
   async update(filters: QueryFilters<T["columns"]>) {
-    const { statement, values } = new QueryBuilder(filters);
-    const query = `SELECT * FROM ${this._path} ${statement}`;
+    const { clause, values } = new QueryBuilder(filters);
+    const query = `SELECT * FROM ${this._path} ${clause}`;
   }
 
   async delete(filters: QueryFilters<T["columns"]>) {
-    const { statement, values } = new QueryBuilder(filters);
-    const query = `DELETE FROM ${this._path} ${statement}`;
+    const { clause, values } = new QueryBuilder(filters);
+    const query = `DELETE FROM ${this._path} ${clause}`;
     const [rows] = await this._connection.client.execute<ResultSetHeader>(query, values);
     return rows;
   }

@@ -4,7 +4,7 @@ import { QuerySchema } from "./types";
 
 export class QueryBuilder<T extends QuerySchema> {
   clauses: Record<"where" | "orderBy" | "limit", string> = { where: "", orderBy: "", limit: "" };
-  statement: string = "";
+  clause: string = "";
   values: T[keyof T][] = [];
 
   constructor(
@@ -24,7 +24,7 @@ export class QueryBuilder<T extends QuerySchema> {
       optionsBuilder = new QueryOptionsBuilder(args[1] as QueryOptions<T>);
     }
 
-    this.statement = [filtersBuilder.clause, ...Object.values(optionsBuilder.clauses)].join(" ");
+    this.clause = [filtersBuilder.clause, ...Object.values(optionsBuilder.clauses)].join(" ");
     this.values = filtersBuilder.values;
   }
 }
