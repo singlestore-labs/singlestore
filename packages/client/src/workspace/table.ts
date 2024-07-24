@@ -86,9 +86,9 @@ export class WorkspaceTable<T extends WorkspaceTableType = WorkspaceTableType> {
     `);
   }
 
-  async find(...args: ConstructorParameters<typeof QueryBuilder<T["columns"]>>) {
-    const { clause, values } = new QueryBuilder(...args);
-    const query = `SELECT * FROM ${this._path} ${clause}`;
+  async select(...args: ConstructorParameters<typeof QueryBuilder<T["columns"]>>) {
+    const { columns, clause, values } = new QueryBuilder(...args);
+    const query = `SELECT ${columns} FROM ${this._path} ${clause}`;
     const [rows] = await this._connection.client.execute<(T["columns"] & RowDataPacket)[]>(query, values);
     return rows;
   }

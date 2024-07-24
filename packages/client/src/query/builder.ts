@@ -3,6 +3,7 @@ import { QueryOptions, QueryOptionsBuilder } from "./options/builder";
 import { QuerySchema } from "./types";
 
 export class QueryBuilder<T extends QuerySchema> {
+  columns: string = "*";
   clauses: Record<"where" | "orderBy" | "limit", string> = { where: "", orderBy: "", limit: "" };
   clause: string = "";
   values: T[keyof T][] = [];
@@ -24,6 +25,7 @@ export class QueryBuilder<T extends QuerySchema> {
       optionsBuilder = new QueryOptionsBuilder(args[1] as QueryOptions<T>);
     }
 
+    this.columns = optionsBuilder.columns;
     this.clause = [filtersBuilder.clause, ...Object.values(optionsBuilder.clauses)].join(" ");
     this.values = filtersBuilder.values;
   }

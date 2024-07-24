@@ -1,13 +1,14 @@
-import { FlexKeyOf } from "../../types/helpers";
 import { QuerySchema } from "../types";
 
 export type QueryOptions<T extends QuerySchema = QuerySchema> = {
-  groupBy?: FlexKeyOf<T>[];
+  columns?: (keyof T)[];
+  groupBy?: (keyof T)[];
   orderBy?: { [K in keyof T]?: "asc" | "desc" };
   limit?: number;
 };
 
 export class QueryOptionsBuilder<T extends QuerySchema> {
+  columns: string = "*";
   clauses: { groupBy: string; orderBy: string; limit: string } = {
     groupBy: "",
     orderBy: "",
@@ -15,6 +16,7 @@ export class QueryOptionsBuilder<T extends QuerySchema> {
   };
 
   constructor(public options?: QueryOptions<T>) {
+    this.columns = this._buildColumnsClause(options?.columns);
     this.clauses = {
       groupBy: this._buildGroupByClause(options?.groupBy),
       orderBy: this._buildOrderByClause(options?.orderBy),
@@ -22,11 +24,15 @@ export class QueryOptionsBuilder<T extends QuerySchema> {
     };
   }
 
-  private _buildGroupByClause(groupBy?: QueryOptions["groupBy"]): string {
+  private _buildColumnsClause(columns?: QueryOptions<T>["columns"]): string {
+    return columns?.length ? columns.join(", ") : "*";
+  }
+
+  private _buildGroupByClause(groupBy?: QueryOptions<T>["groupBy"]): string {
     return groupBy?.length ? `GROUP BY ${groupBy.join(", ")}` : "";
   }
 
-  private _buildOrderByClause(orderBy: QueryOptions["orderBy"]): string {
+  private _buildOrderByClause(orderBy: QueryOptions<T>["orderBy"]): string {
     if (!orderBy) return "";
 
     const condition = Object.entries(orderBy)
@@ -36,7 +42,7 @@ export class QueryOptionsBuilder<T extends QuerySchema> {
     return `ORDER BY ${condition}`;
   }
 
-  private _buildLimitClause(limit?: QueryOptions["limit"]): string {
+  private _buildLimitClause(limit?: QueryOptions<T>["limit"]): string {
     return limit ? `LIMIT ${limit}` : "";
   }
 }

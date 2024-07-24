@@ -25,7 +25,7 @@ async function main() {
     password: process.env.DB_PASSWORD ?? "",
   });
 
-  await workspace.dropDatabase(dbName);
+  // await workspace.dropDatabase(dbName);
 
   const db = await workspace.createDatabase<SingleStoreClientDatabase>({
     name: dbName,
@@ -41,9 +41,9 @@ async function main() {
 
   const usersTable = db.table("users");
 
-  const users = await usersTable.find(
+  const users = await usersTable.select(
     { and: [{ id: { gte: 5 } }, { name: { in: ["James", "John"] } }] },
-    { limit: 5, orderBy: { name: "asc" }, groupBy: ["name"] },
+    { columns: ["id", "name"], limit: 5, orderBy: { name: "asc" }, groupBy: ["name"] },
   );
 
   console.dir({ users });
