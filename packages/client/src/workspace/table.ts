@@ -1,8 +1,9 @@
 import { ResultSetHeader, RowDataPacket } from "mysql2";
 import { WorkspaceColumn, WorkspaceColumnSchema, WorkspaceColumnType } from "./column";
 import { WorkspaceConnection } from "./connection";
-import { QueryBuilder } from "../query/builder";
+import { QueryBuilder, QueryBuilderArgs } from "../query/builder";
 import { QueryFilters } from "../query/filters/builder";
+import { ExtractQueryBuilderOptionsArg } from "../query/types";
 
 export interface WorkspaceTableType {
   columns: Record<string, WorkspaceColumnType>;
@@ -68,7 +69,7 @@ export class WorkspaceTable<T extends WorkspaceTableType> {
     return WorkspaceColumn.add(this._connection, this.databaseName, this.name, schema);
   }
 
-  dropColumn(name: Extract<keyof T["columns"], string>) {
+  dropColumn(name: ({} & string) | Extract<keyof T["columns"], string>) {
     return WorkspaceColumn.drop(this._connection, this.databaseName, this.name, name);
   }
 
@@ -94,11 +95,18 @@ export class WorkspaceTable<T extends WorkspaceTableType> {
     return this._connection.client.execute<ResultSetHeader>(query, values);
   }
 
-  // TODO: Add returned columns typing
-  select<U extends T["columns"]>(...args: ConstructorParameters<typeof QueryBuilder<U>>) {
+  select<U extends QueryBuilderArgs<T["columns"]>>(...args: U) {
+    type Options = ExtractQueryBuilderOptionsArg<U>;
+
+    type ResultColumns = Options["columns"] extends never
+      ? T["columns"]
+      : Options["columns"] extends string[]
+        ? Pick<T["columns"], Options["columns"][number]>
+        : T["columns"];
+
     const { columns, clause, values } = new QueryBuilder(...args);
     const query = `SELECT ${columns} FROM ${this._path} ${clause}`;
-    return this._connection.client.execute<(T["columns"] & RowDataPacket)[]>(query, values);
+    return this._connection.client.execute<(ResultColumns & RowDataPacket)[]>(query, values);
   }
 
   update(data: Partial<T["columns"]>, filters: QueryFilters<T["columns"]>) {

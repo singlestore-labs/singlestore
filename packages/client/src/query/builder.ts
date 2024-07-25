@@ -1,6 +1,11 @@
 import { QueryFilters, QueryFiltersBuilder } from "./filters/builder";
 import { QueryOptions, QueryOptionsBuilder } from "./options/builder";
-import { QuerySchema } from "./types";
+import { QuerySchema } from "./schema";
+
+export type QueryBuilderArgs<T extends QuerySchema> =
+  | [filters: QueryFilters<T>]
+  | [options: QueryOptions<T>]
+  | [filters: QueryFilters<T>, options: QueryOptions<T>];
 
 export class QueryBuilder<T extends QuerySchema> {
   columns: string = "*";
@@ -13,9 +18,7 @@ export class QueryBuilder<T extends QuerySchema> {
   clause: string;
   values: T[keyof T][] = [];
 
-  constructor(
-    ...args: [filters: QueryFilters<T>] | [options: QueryOptions<T>] | [filters: QueryFilters<T>, options: QueryOptions<T>]
-  ) {
+  constructor(...args: QueryBuilderArgs<T>) {
     let filtersBuilder: QueryFiltersBuilder<T> = new QueryFiltersBuilder();
     let optionsBuilder: QueryOptionsBuilder<T> = new QueryOptionsBuilder();
 

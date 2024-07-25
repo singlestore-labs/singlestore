@@ -52,7 +52,7 @@ export class WorkspaceDatabase<T extends WorkspaceDatabaseType> {
     return WorkspaceTable.create<T>(this._connection, this.name, schema);
   }
 
-  dropTable(name: Extract<keyof T["tables"], string>) {
+  dropTable(name: ({} & string) | Extract<keyof T["tables"], string>) {
     return WorkspaceTable.drop(this._connection, this.name, name);
   }
 }

@@ -12,8 +12,6 @@ interface SingleStoreClientDatabase {
 }
 
 async function main() {
-  const dbName = "singlestore_client";
-
   const client = new SingleStoreClient();
 
   const workspace = await client.workspace<{
@@ -25,15 +23,19 @@ async function main() {
     password: process.env.DB_PASSWORD ?? "",
   });
 
-  await workspace.dropDatabase(dbName);
+  console.dir({ workspace: workspace.name });
 
-  const db = await workspace.createDatabase<SingleStoreClientDatabase>({
-    name: dbName,
+  const db = workspace.database("singlestore_client");
+
+  await workspace.dropDatabase("singlestore_client_store");
+
+  const db2 = await workspace.createDatabase({
+    name: "singlestore_client_store",
     tables: {
-      users: {
+      products: {
         columns: {
           id: { type: "bigint", autoIncrement: true, primaryKey: true },
-          name: { type: "varchar(32)" },
+          price: { type: "int" },
         },
       },
     },
@@ -50,11 +52,12 @@ async function main() {
   console.log("Select users");
   const [users] = await db
     .table("users")
-    .select(
-      { name: { in: ["Kate", "James"] } },
-      { columns: ["id", "name"], limit: 5, orderBy: { name: "asc" }, groupBy: ["name"] },
-    );
+    .select({ name: { in: ["Kate", "James"] } }, { limit: 5, orderBy: { name: "asc" }, groupBy: ["name"] });
   console.dir({ users });
+
+  console.log("Select user ids");
+  const [userIds] = await db.table("users").select({ columns: ["id"], limit: 5, orderBy: { name: "asc" } });
+  console.dir({ userIds });
 
   console.log("Update user");
   const updatedUser = await db.table("users").update({ name: "Test" }, { id: users[1]?.id || 1 });

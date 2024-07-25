@@ -1,4 +1,4 @@
-import { QuerySchema } from "../types";
+import { QuerySchema } from "../schema";
 
 export type QueryOptions<T extends QuerySchema = QuerySchema> = {
   columns?: (keyof T)[];
