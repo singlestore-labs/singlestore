@@ -3,7 +3,7 @@ import { WorkspaceConnection } from "./connection";
 
 export interface WorkspaceColumnType {}
 
-export interface WorkspaceColumnSchema<T extends WorkspaceColumnType = WorkspaceColumnType> {
+export interface WorkspaceColumnSchema {
   name: string;
   type: string;
   nullable?: boolean;
@@ -13,12 +13,17 @@ export interface WorkspaceColumnSchema<T extends WorkspaceColumnType = Workspace
   clauses?: string[];
 }
 
-export class WorkspaceColumn<T extends WorkspaceColumnType = WorkspaceColumnType> {
+export class WorkspaceColumn {
+  private _path: string;
+
   constructor(
     private _connection: WorkspaceConnection,
-    private _tablePath: string,
+    public databaseName: string,
+    public tableName: string,
     public name: string,
-  ) {}
+  ) {
+    this._path = [databaseName, tableName].join(".");
+  }
 
   static schemaToClauses(schema: WorkspaceColumnSchema) {
     const clauses: string[] = [`\`${schema.name}\``];
@@ -30,38 +35,34 @@ export class WorkspaceColumn<T extends WorkspaceColumnType = WorkspaceColumnType
     return [...clauses, ...(schema.clauses || [])].filter(Boolean).join(" ");
   }
 
-  static async add<T extends WorkspaceColumnType = WorkspaceColumnType>(
-    connection: WorkspaceConnection,
-    tablePath: string,
-    schema: WorkspaceColumnSchema<T>,
-  ) {
+  static async add(connection: WorkspaceConnection, databaseName: string, tableName: string, schema: WorkspaceColumnSchema) {
     const clauses = WorkspaceColumn.schemaToClauses(schema);
     await connection.client.execute<ResultSetHeader>(`\
-      ALTER TABLE ${tablePath} ADD COLUMN ${clauses}
+      ALTER TABLE ${databaseName}.${tableName} ADD COLUMN ${clauses}
     `);
-    return new WorkspaceColumn<T>(connection, tablePath, schema.name);
+    return new WorkspaceColumn(connection, databaseName, tableName, schema.name);
   }
 
-  static drop(connection: WorkspaceConnection, tablePath: string, name: WorkspaceColumnSchema["name"]) {
+  static drop(connection: WorkspaceConnection, databaseName: string, tableName: string, name: string) {
     return connection.client.execute<ResultSetHeader>(`\
-      ALTER TABLE ${tablePath} DROP COLUMN ${name}
+      ALTER TABLE ${databaseName}.${tableName} DROP COLUMN ${name}
     `);
   }
 
   drop() {
-    return WorkspaceColumn.drop(this._connection, this._tablePath, this.name);
+    return WorkspaceColumn.drop(this._connection, this.databaseName, this.tableName, this.name);
   }
 
   modify(schema: Partial<Omit<WorkspaceColumnSchema, "name">>) {
     const clauses = WorkspaceColumn.schemaToClauses({ type: "", ...schema, name: this.name });
     return this._connection.client.execute<ResultSetHeader>(`\
-      ALTER TABLE ${this._tablePath} MODIFY COLUMN ${clauses}
+      ALTER TABLE ${this._path} MODIFY COLUMN ${clauses}
     `);
   }
 
-  rename(newName: WorkspaceColumnSchema["name"]) {
+  rename(newName: string) {
     return this._connection.client.execute<ResultSetHeader>(`\
-      ALTER TABLE ${this._tablePath} CHANGE ${this.name} ${newName}
+      ALTER TABLE ${this._path} CHANGE ${this.name} ${newName}
     `);
   }
 }

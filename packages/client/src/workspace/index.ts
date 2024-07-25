@@ -1,21 +1,19 @@
-import { FlexKeyOf } from "../types/helpers";
 import { WorkspaceConnection, WorkspaceConnectionConfig } from "./connection";
 import { WorkspaceDatabase, WorkspaceDatabaseSchema, WorkspaceDatabaseType } from "./database";
 
 export interface WorkspaceType {
-  name?: string;
   databases: Record<string, WorkspaceDatabaseType>;
 }
 
-export interface WorkspaceSchema<T extends WorkspaceType = WorkspaceType> {
-  name: Exclude<T["name"], undefined>;
+export interface WorkspaceSchema<T extends WorkspaceType> {
+  name: string;
   databases: { [K in keyof T["databases"]]: Omit<WorkspaceDatabaseSchema<T["databases"][K]>, "name"> };
 }
 
-export class Workspace<T extends WorkspaceType = WorkspaceType> {
+export class Workspace<T extends WorkspaceType> {
   constructor(
-    public name: WorkspaceSchema["name"],
     public connection: WorkspaceConnection,
+    public name: string,
   ) {}
 
   static async connect<T extends WorkspaceType>({
@@ -24,18 +22,18 @@ export class Workspace<T extends WorkspaceType = WorkspaceType> {
   }: Pick<WorkspaceSchema<T>, "name"> & Omit<WorkspaceConnectionConfig, "name">) {
     const connection = new WorkspaceConnection(config);
     await connection.connect();
-    return new Workspace<T>(name, connection);
+    return new Workspace<T>(connection, name);
   }
 
-  database<U extends FlexKeyOf<T["databases"]>>(name: U) {
-    return new WorkspaceDatabase<T["databases"][U]>(this.connection, name);
+  database<U extends Extract<keyof T["databases"], string>>(name: U) {
+    return new WorkspaceDatabase<T["databases"][U]>(this.connection, this.name, name);
   }
 
   createDatabase<T extends WorkspaceDatabaseType>(schema: WorkspaceDatabaseSchema<T>) {
-    return WorkspaceDatabase.create<T>(this.connection, schema);
+    return WorkspaceDatabase.create<T>(this.connection, this.name, schema);
   }
 
-  dropDatabase(name: FlexKeyOf<T["databases"]>) {
+  dropDatabase(name: Extract<keyof T["databases"], string>) {
     return WorkspaceDatabase.drop(this.connection, name);
   }
 }

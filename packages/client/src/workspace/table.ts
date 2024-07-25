@@ -1,35 +1,33 @@
 import { ResultSetHeader, RowDataPacket } from "mysql2";
-import { FlexKeyOf } from "../types/helpers";
 import { WorkspaceColumn, WorkspaceColumnSchema, WorkspaceColumnType } from "./column";
 import { WorkspaceConnection } from "./connection";
 import { QueryBuilder } from "../query/builder";
 import { QueryFilters } from "../query/filters/builder";
 
 export interface WorkspaceTableType {
-  name?: string;
   columns: Record<string, WorkspaceColumnType>;
 }
 
-export interface WorkspaceTableSchema<T extends WorkspaceTableType = WorkspaceTableType> {
-  name: Exclude<T["name"], undefined>;
-  columns: { [K in keyof T["columns"]]: Omit<WorkspaceColumnSchema<T["columns"][K]>, "name"> };
+export interface WorkspaceTableSchema<T extends WorkspaceTableType> {
+  name: string;
+  columns: { [K in keyof T["columns"]]: Omit<WorkspaceColumnSchema, "name"> };
   primaryKeys?: string[];
   fulltextKeys?: string[];
   clauses?: string[];
 }
 
-export class WorkspaceTable<T extends WorkspaceTableType = WorkspaceTableType> {
+export class WorkspaceTable<T extends WorkspaceTableType> {
   private _path: string;
 
   constructor(
     private _connection: WorkspaceConnection,
-    private _dbName: string,
-    public name: WorkspaceTableSchema["name"],
+    public databaseName: string,
+    public name: string,
   ) {
-    this._path = `${this._dbName}.${this.name}`;
+    this._path = [databaseName, name].join(".");
   }
 
-  static schemaToClauses(schema: WorkspaceTableSchema) {
+  static schemaToClauses(schema: WorkspaceTableSchema<any>) {
     const clauses: string[] = [
       ...Object.entries(schema.columns).map(([name, schema]) => {
         return WorkspaceColumn.schemaToClauses({ ...schema, name });
@@ -42,36 +40,36 @@ export class WorkspaceTable<T extends WorkspaceTableType = WorkspaceTableType> {
 
   static async create<T extends WorkspaceTableType>(
     connection: WorkspaceConnection,
-    dbName: string,
+    databaseName: string,
     schema: WorkspaceTableSchema<T>,
   ) {
     const clauses = WorkspaceTable.schemaToClauses(schema);
     await connection.client.execute<ResultSetHeader>(`\
-      CREATE TABLE IF NOT EXISTS ${dbName}.${schema.name} (${clauses})
+      CREATE TABLE IF NOT EXISTS ${databaseName}.${schema.name} (${clauses})
     `);
-    return new WorkspaceTable<T>(connection, dbName, schema.name);
+    return new WorkspaceTable<T>(connection, databaseName, schema.name);
   }
 
-  static drop(connection: WorkspaceConnection, dbName: string, name: WorkspaceTableSchema["name"]) {
+  static drop(connection: WorkspaceConnection, databaseName: string, name: string) {
     return connection.client.execute<ResultSetHeader>(`\
-      DROP TABLE IF EXISTS ${dbName}.${name}
+      DROP TABLE IF EXISTS ${databaseName}.${name}
     `);
   }
 
   drop() {
-    return WorkspaceTable.drop(this._connection, this._dbName, this.name);
+    return WorkspaceTable.drop(this._connection, this.databaseName, this.name);
   }
 
-  column(name: FlexKeyOf<T["columns"]>) {
-    return new WorkspaceColumn(this._connection, this._path, name);
+  column(name: Extract<keyof T["columns"], string>) {
+    return new WorkspaceColumn(this._connection, this.databaseName, this.name, name);
   }
 
-  addColumn<T extends WorkspaceColumnType>(schema: WorkspaceColumnSchema<T>) {
-    return WorkspaceColumn.add<T>(this._connection, this._path, schema);
+  addColumn(schema: WorkspaceColumnSchema) {
+    return WorkspaceColumn.add(this._connection, this.databaseName, this.name, schema);
   }
 
-  dropColumn(name: FlexKeyOf<T["columns"]>) {
-    return WorkspaceColumn.drop(this._connection, this._path, name);
+  dropColumn(name: Extract<keyof T["columns"], string>) {
+    return WorkspaceColumn.drop(this._connection, this.databaseName, this.name, name);
   }
 
   truncate() {
@@ -80,12 +78,13 @@ export class WorkspaceTable<T extends WorkspaceTableType = WorkspaceTableType> {
     `);
   }
 
-  rename(newName: WorkspaceTableSchema["name"]) {
+  rename(newName: string) {
     return this._connection.client.execute<ResultSetHeader>(`\
       ALTER TABLE ${this._path} RENAME TO ${newName}
     `);
   }
 
+  // TODO: Omit a primary key field; Remove the `Partial` part from the data arg
   insert(data: Partial<T["columns"]> | Partial<T["columns"]>[]) {
     const _data = Array.isArray(data) ? data : [data];
     const keys = Object.keys(_data[0]!);
@@ -95,7 +94,8 @@ export class WorkspaceTable<T extends WorkspaceTableType = WorkspaceTableType> {
     return this._connection.client.execute<ResultSetHeader>(query, values);
   }
 
-  select(...args: ConstructorParameters<typeof QueryBuilder<T["columns"]>>) {
+  // TODO: Add returned columns typing
+  select<U extends T["columns"]>(...args: ConstructorParameters<typeof QueryBuilder<U>>) {
     const { columns, clause, values } = new QueryBuilder(...args);
     const query = `SELECT ${columns} FROM ${this._path} ${clause}`;
     return this._connection.client.execute<(T["columns"] & RowDataPacket)[]>(query, values);
