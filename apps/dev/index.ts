@@ -23,19 +23,15 @@ async function main() {
     password: process.env.DB_PASSWORD ?? "",
   });
 
-  console.dir({ workspace: workspace.name });
+  await workspace.dropDatabase("singlestore_client");
 
-  const db = workspace.database("singlestore_client");
-
-  await workspace.dropDatabase("singlestore_client_store");
-
-  const db2 = await workspace.createDatabase({
-    name: "singlestore_client_store",
+  const db = await workspace.createDatabase<SingleStoreClientDatabase>({
+    name: "singlestore_client",
     tables: {
-      products: {
+      users: {
         columns: {
           id: { type: "bigint", autoIncrement: true, primaryKey: true },
-          price: { type: "int" },
+          name: { type: "varchar(32)" },
         },
       },
     },

@@ -85,14 +85,17 @@ export class WorkspaceTable<T extends WorkspaceTableType> {
     `);
   }
 
-  // TODO: Omit a primary key field; Remove the `Partial` part from the data arg
   insert(data: Partial<T["columns"]> | Partial<T["columns"]>[]) {
     const _data = Array.isArray(data) ? data : [data];
     const keys = Object.keys(_data[0]!);
-    const placeholders = _data.map(() => `(${keys.map(() => "?").join(", ")})`).join(", ");
-    const values = _data.flatMap((value) => Object.values(value));
-    const query = `INSERT INTO ${this._path} (${keys}) VALUES ${placeholders}`;
-    return this._connection.client.execute<ResultSetHeader>(query, values);
+    const placeholders = `(${keys.map(() => "?").join(", ")})`;
+
+    return Promise.all(
+      _data.map((data) => {
+        const query = `INSERT INTO ${this._path} (${keys}) VALUES ${placeholders}`;
+        return this._connection.client.execute<ResultSetHeader>(query, Object.values(data));
+      }),
+    );
   }
 
   select<U extends QueryBuilderArgs<T["columns"]>>(...args: U) {
