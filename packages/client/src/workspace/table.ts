@@ -1,4 +1,4 @@
-import { ResultSetHeader, RowDataPacket } from "mysql2";
+import { type ResultSetHeader, type RowDataPacket } from "mysql2/promise";
 import { WorkspaceColumn, WorkspaceColumnSchema, WorkspaceColumnType } from "./column";
 import { WorkspaceConnection } from "./connection";
 import { QueryBuilder, QueryBuilderArgs } from "../query/builder";
