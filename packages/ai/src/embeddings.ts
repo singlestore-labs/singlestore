@@ -1,4 +1,4 @@
-import { type Embedder } from "./embedder";
+import type { Embedder } from "./embedder";
 
 export class Embeddings<T extends Embedder> {
   constructor(

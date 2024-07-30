@@ -1,5 +1,5 @@
 import { ResultSetHeader, SingleStoreClient } from "@singlestore/client";
-import { SingleStoreAI } from "@singlestore/ai";
+import { AI } from "@singlestore/ai";
 
 async function main() {
   interface SingleStoreClientDatabase {
@@ -70,12 +70,19 @@ async function main() {
 }
 
 async function ai() {
-  const singleStoreAI = new SingleStoreAI({
+  const ai = new AI({
     openAIApiKey: process.env.OPENAI_API_KEY || "",
   });
 
-  const testEmbedding = await singleStoreAI.embeddings.create("test");
-  console.dir({ testEmbedding }, { depth: 3 });
+  const chatCompletionStream = await ai.llm.createChatCompletion("Where is Vancouver located?");
+  let chatCompletion = "";
+  for await (const chunk of chatCompletionStream) {
+    chatCompletion += chunk.choices[0]?.delta.content || "";
+  }
+  console.dir({ chatCompletion });
+
+  const vancouverEmbedding = await ai.embeddings.create("Vancouver");
+  console.dir({ vancouverEmbedding }, { depth: 3 });
 }
 
 // main();
