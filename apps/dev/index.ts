@@ -1,17 +1,18 @@
 import { ResultSetHeader, SingleStoreClient } from "@singlestore/client";
-
-interface SingleStoreClientDatabase {
-  tables: {
-    users: {
-      columns: {
-        id: number;
-        name: string;
-      };
-    };
-  };
-}
+import { SingleStoreAI } from "@singlestore/ai";
 
 async function main() {
+  interface SingleStoreClientDatabase {
+    tables: {
+      users: {
+        columns: {
+          id: number;
+          name: string;
+        };
+      };
+    };
+  }
+
   const client = new SingleStoreClient();
 
   const workspace = await client.workspace<{
@@ -68,4 +69,14 @@ async function main() {
   console.dir({ queryResult }, { depth: 3 });
 }
 
-main();
+async function ai() {
+  const singleStoreAI = new SingleStoreAI({
+    openAIApiKey: process.env.OPENAI_API_KEY || "",
+  });
+
+  const testEmbedding = await singleStoreAI.embeddings.create("test");
+  console.dir({ testEmbedding }, { depth: 3 });
+}
+
+// main();
+ai();

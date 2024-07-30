@@ -9,6 +9,7 @@
   "devDependencies": {
     "@repo/eslint-config": "*",
     "@repo/typescript-config": "*",
+    "@singlestore/ai": "*",
     "@singlestore/client": "*",
     "dotenv-cli": "^7.4.2",
     "tsx": "^4.16.2",
