@@ -55,4 +55,10 @@ export class WorkspaceDatabase<T extends WorkspaceDatabaseType> {
   dropTable(name: ({} & string) | Extract<keyof T["tables"], string>) {
     return WorkspaceTable.drop(this._connection, this.name, name);
   }
+
+  async query<T extends any[]>(statement: string) {
+    const statements = [`USE ${this.name}`, statement].join(";\n");
+    const result = await this._connection.client.execute<T>(statements);
+    return result[0].slice(1) as T;
+  }
 }

@@ -1,4 +1,4 @@
-import { SingleStoreClient } from "@singlestore/client";
+import { ResultSetHeader, SingleStoreClient } from "@singlestore/client";
 
 interface SingleStoreClientDatabase {
   tables: {
@@ -62,6 +62,10 @@ async function main() {
   console.log("Delete user");
   const deletedUser = await db.table("users").delete({ id: users[0]?.id || 1 });
   console.dir(deletedUser);
+
+  console.log("Query");
+  const queryResult = await db.query<[{ id: number }[], ResultSetHeader]>("SELECT id FROM users; SET @var = 1");
+  console.dir({ queryResult }, { depth: 3 });
 }
 
 main();

@@ -19,7 +19,7 @@ export class WorkspaceConnection {
   }
 
   async connect() {
-    this._client = createPool(this.config);
+    this._client = createPool({ multipleStatements: true, ...this.config });
   }
 
   async disconnect() {
