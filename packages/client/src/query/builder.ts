@@ -3,9 +3,9 @@ import { QueryOptions, QueryOptionsBuilder } from "./options/builder";
 import { QuerySchema } from "./schema";
 
 export type QueryBuilderArgs<T extends QuerySchema> =
-  | [filters: QueryFilters<T>]
-  | [options: QueryOptions<T>]
-  | [filters: QueryFilters<T>, options: QueryOptions<T>];
+  | [filters?: QueryFilters<T>]
+  | [options?: QueryOptions<T>]
+  | [filters?: QueryFilters<T>, options?: QueryOptions<T>];
 
 export class QueryBuilder<T extends QuerySchema> {
   columns: string = "*";
@@ -23,7 +23,7 @@ export class QueryBuilder<T extends QuerySchema> {
     let optionsBuilder: QueryOptionsBuilder<T> = new QueryOptionsBuilder();
 
     if (args.length === 1) {
-      if ("orderBy" in args[0] || "limit" in args[0]) {
+      if (args[0] && ("orderBy" in args[0] || "limit" in args[0])) {
         optionsBuilder = new QueryOptionsBuilder(args[0] as QueryOptions<T>);
       } else {
         filtersBuilder = new QueryFiltersBuilder(args[0] as QueryFilters<T>);

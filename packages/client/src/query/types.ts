@@ -1,7 +1,8 @@
 import { QueryBuilderArgs } from "./builder";
 import { QueryOptions } from "./options/builder";
+import { QuerySchema } from "./schema";
 
-export type ExtractQueryBuilderOptionsArg<T extends QueryBuilderArgs<any>> = T extends [infer A]
+export type ExtractQueryOptions<T extends QueryBuilderArgs<any>> = T extends [infer A]
   ? A extends QueryOptions<any>
     ? A
     : never
@@ -10,3 +11,9 @@ export type ExtractQueryBuilderOptionsArg<T extends QueryBuilderArgs<any>> = T e
       ? B
       : never
     : never;
+
+export type ExtractQueryColumns<T extends QuerySchema, U extends ExtractQueryOptions<any>> = U["columns"] extends never
+  ? T
+  : U["columns"] extends string[]
+    ? Pick<T, U["columns"][number]>
+    : T;

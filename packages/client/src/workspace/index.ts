@@ -1,3 +1,4 @@
+import type { AI } from "@singlestore/ai";
 import { WorkspaceConnection, WorkspaceConnectionConfig } from "./connection";
 import { WorkspaceDatabase, WorkspaceDatabaseSchema, WorkspaceDatabaseType } from "./database";
 
@@ -14,23 +15,25 @@ export class Workspace<T extends WorkspaceType> {
   constructor(
     public connection: WorkspaceConnection,
     public name: string,
+    private _ai?: AI,
   ) {}
 
   static async connect<T extends WorkspaceType>({
+    ai,
     name,
     ...config
-  }: Pick<WorkspaceSchema<T>, "name"> & Omit<WorkspaceConnectionConfig, "name">) {
+  }: Pick<WorkspaceSchema<T>, "name"> & Omit<WorkspaceConnectionConfig, "name"> & { ai?: AI }) {
     const connection = new WorkspaceConnection(config);
     await connection.connect();
-    return new Workspace<T>(connection, name);
+    return new Workspace<T>(connection, name, ai);
   }
 
   database<U extends Extract<keyof T["databases"], string>>(name: U) {
-    return new WorkspaceDatabase<T["databases"][U]>(this.connection, this.name, name);
+    return new WorkspaceDatabase<T["databases"][U]>(this.connection, this.name, name, this._ai);
   }
 
   createDatabase<T extends WorkspaceDatabaseType>(schema: WorkspaceDatabaseSchema<T>) {
-    return WorkspaceDatabase.create<T>(this.connection, this.name, schema);
+    return WorkspaceDatabase.create<T>(this.connection, this.name, schema, this._ai);
   }
 
   dropDatabase(name: ({} & string) | Extract<keyof T["databases"], string>) {

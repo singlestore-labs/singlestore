@@ -31,7 +31,9 @@
   "peerDependencies": {
     "mysql2": "^3.10.2"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@singlestore/ai": "*"
+  },
   "engines": {
     "node": ">=18"
   },

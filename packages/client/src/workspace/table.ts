@@ -1,9 +1,11 @@
 import { type ResultSetHeader, type RowDataPacket } from "mysql2/promise";
-import { WorkspaceColumn, WorkspaceColumnSchema, WorkspaceColumnType } from "./column";
+import type { AI } from "@singlestore/ai";
+import { WorkspaceColumn, type WorkspaceColumnSchema, type WorkspaceColumnType } from "./column";
 import { WorkspaceConnection } from "./connection";
-import { QueryBuilder, QueryBuilderArgs } from "../query/builder";
-import { QueryFilters } from "../query/filters/builder";
-import { ExtractQueryBuilderOptionsArg } from "../query/types";
+import { QueryBuilder, type QueryBuilderArgs } from "../query/builder";
+import type { QueryFilters } from "../query/filters/builder";
+import type { ExtractQueryColumns, ExtractQueryOptions } from "../query/types";
+import type { QuerySchema } from "../query/schema";
 
 export interface WorkspaceTableType {
   columns: Record<string, WorkspaceColumnType>;
@@ -24,8 +26,17 @@ export class WorkspaceTable<T extends WorkspaceTableType> {
     private _connection: WorkspaceConnection,
     public databaseName: string,
     public name: string,
+    private _ai?: AI,
   ) {
     this._path = [databaseName, name].join(".");
+  }
+
+  private get ai() {
+    if (!this._ai) {
+      throw new Error("AI instance is undefined. Ensure ai is properly initialized before accessing.");
+    }
+
+    return this._ai;
   }
 
   static schemaToClauses(schema: WorkspaceTableSchema<any>) {
@@ -43,12 +54,13 @@ export class WorkspaceTable<T extends WorkspaceTableType> {
     connection: WorkspaceConnection,
     databaseName: string,
     schema: WorkspaceTableSchema<T>,
+    ai?: AI,
   ) {
     const clauses = WorkspaceTable.schemaToClauses(schema);
     await connection.client.execute<ResultSetHeader>(`\
       CREATE TABLE IF NOT EXISTS ${databaseName}.${schema.name} (${clauses})
     `);
-    return new WorkspaceTable<T>(connection, databaseName, schema.name);
+    return new WorkspaceTable<T>(connection, databaseName, schema.name, ai);
   }
 
   static drop(connection: WorkspaceConnection, databaseName: string, name: string) {
@@ -99,17 +111,11 @@ export class WorkspaceTable<T extends WorkspaceTableType> {
   }
 
   select<U extends QueryBuilderArgs<T["columns"]>>(...args: U) {
-    type Options = ExtractQueryBuilderOptionsArg<U>;
-
-    type ResultColumns = Options["columns"] extends never
-      ? T["columns"]
-      : Options["columns"] extends string[]
-        ? Pick<T["columns"], Options["columns"][number]>
-        : T["columns"];
-
+    type Options = ExtractQueryOptions<U>;
+    type SelectedColumns = ExtractQueryColumns<T["columns"], Options> & { v_score: number };
     const { columns, clause, values } = new QueryBuilder(...args);
     const query = `SELECT ${columns} FROM ${this._path} ${clause}`;
-    return this._connection.client.execute<(ResultColumns & RowDataPacket)[]>(query, values);
+    return this._connection.client.execute<(SelectedColumns & RowDataPacket)[]>(query, values);
   }
 
   update(data: Partial<T["columns"]>, filters: QueryFilters<T["columns"]>) {
@@ -125,5 +131,34 @@ export class WorkspaceTable<T extends WorkspaceTableType> {
     const { clause, values } = new QueryBuilder(filters);
     const query = `DELETE FROM ${this._path} ${clause}`;
     return this._connection.client.execute<ResultSetHeader>(query, values);
+  }
+
+  async vectorSearch<U extends QueryBuilderArgs<_S>, _S extends QuerySchema = T["columns"] & { v_score: number }>(
+    ...[search, ...args]: [search: { prompt: string; field: Extract<keyof T["columns"], string> }, ...U]
+  ) {
+    type Options = ExtractQueryOptions<U>;
+    type SelectedColumns = ExtractQueryColumns<_S, Options> & { v_score: number };
+    const { columns, clauses, values } = new QueryBuilder<_S>(...args);
+    const promptEmbedding = (await this.ai.embeddings.create(search.prompt))[0] || [];
+    const vScoreKey = "v_score";
+    let orderByClause = `ORDER BY ${vScoreKey} DESC`;
+
+    if (clauses.orderBy) {
+      if (clauses.orderBy.includes(vScoreKey)) {
+        orderByClause = clauses.orderBy;
+      } else {
+        orderByClause += clauses.orderBy.replace(/^ORDER BY /, ", ");
+      }
+    }
+
+    const query = `\
+      SET @promptEmbedding = '${JSON.stringify(promptEmbedding)}' :> vector(${promptEmbedding.length}) :> blob;
+      SELECT ${[columns, `${search.field} <*> @promptEmbedding AS ${vScoreKey}`].join(", ")}
+      FROM ${this._path}
+      ${[clauses.where, clauses.groupBy, orderByClause, clauses.limit].join(" ")}
+    `;
+
+    const result = await this._connection.client.execute<[any, (SelectedColumns & RowDataPacket)[]]>(query, values);
+    return result[0][1];
   }
 }

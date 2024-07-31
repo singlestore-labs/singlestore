@@ -8,7 +8,7 @@ export type AIConfig = {
   openAIApiKey?: string;
 };
 
-export class AI<T extends AIConfig> {
+export class AI<T extends AIConfig = AIConfig> {
   public embeddings;
 
   constructor(config: T) {
