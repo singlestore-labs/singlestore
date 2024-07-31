@@ -1,6 +1,6 @@
-import { QueryFilters, QueryFiltersBuilder } from "./filters/builder";
-import { QueryOptions, QueryOptionsBuilder } from "./options/builder";
-import { QuerySchema } from "./schema";
+import { type QueryFilters, QueryFiltersBuilder } from "./filters/builder";
+import { type QueryOptions, QueryOptionsBuilder } from "./options/builder";
+import type { QuerySchema } from "./schema";
 
 export type QueryBuilderArgs<T extends QuerySchema> =
   | [filters?: QueryFilters<T>]

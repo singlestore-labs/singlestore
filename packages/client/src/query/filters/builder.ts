@@ -1,4 +1,4 @@
-import { QuerySchema } from "../schema";
+import type { QuerySchema } from "../schema";
 
 type QueryFilterOperators<T = any> = {
   eq?: T;

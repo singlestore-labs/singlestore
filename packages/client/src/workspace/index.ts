@@ -1,6 +1,6 @@
 import type { AI } from "@singlestore/ai";
-import { WorkspaceConnection, WorkspaceConnectionConfig } from "./connection";
-import { WorkspaceDatabase, WorkspaceDatabaseSchema, WorkspaceDatabaseType } from "./database";
+import { WorkspaceConnection, type WorkspaceConnectionConfig } from "./connection";
+import { WorkspaceDatabase, type WorkspaceDatabaseSchema, type WorkspaceDatabaseType } from "./database";
 
 export interface WorkspaceType {
   databases: Record<string, WorkspaceDatabaseType>;

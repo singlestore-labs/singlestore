@@ -1,7 +1,7 @@
 import type { ResultSetHeader } from "mysql2/promise";
 import type { AI } from "@singlestore/ai";
 import { WorkspaceConnection } from "./connection";
-import { WorkspaceTable, WorkspaceTableSchema, WorkspaceTableType } from "./table";
+import { WorkspaceTable, type WorkspaceTableSchema, type WorkspaceTableType } from "./table";
 
 export interface WorkspaceDatabaseType {
   tables: Record<string, WorkspaceTableType>;

@@ -1,7 +1,7 @@
 import { OpenAI } from "openai";
 import { type DefaultEmbedder, type Embedder, Embeddings } from "./embeddings";
 
-export type { Embedder } from "./embeddings";
+export type * from "./types";
 
 export type AIConfig = {
   embedder?: Embedder;

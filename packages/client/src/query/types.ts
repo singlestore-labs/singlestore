@@ -1,6 +1,6 @@
-import { QueryBuilderArgs } from "./builder";
-import { QueryOptions } from "./options/builder";
-import { QuerySchema } from "./schema";
+import type { QueryBuilderArgs } from "./builder";
+import type { QueryOptions } from "./options/builder";
+import type { QuerySchema } from "./schema";
 
 export type ExtractQueryOptions<T extends QueryBuilderArgs<any>> = T extends [infer A]
   ? A extends QueryOptions<any>

@@ -1,4 +1,4 @@
-import { type ResultSetHeader, type RowDataPacket } from "mysql2/promise";
+import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import type { AI } from "@singlestore/ai";
 import { WorkspaceColumn, type WorkspaceColumnSchema, type WorkspaceColumnType } from "./column";
 import { WorkspaceConnection } from "./connection";
