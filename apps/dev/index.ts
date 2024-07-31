@@ -74,15 +74,8 @@ async function ai() {
     openAIApiKey: process.env.OPENAI_API_KEY || "",
   });
 
-  const chatCompletionStream = await ai.llm.createChatCompletion("Where is Vancouver located?");
-  let chatCompletion = "";
-  for await (const chunk of chatCompletionStream) {
-    chatCompletion += chunk.choices[0]?.delta.content || "";
-  }
-  console.dir({ chatCompletion });
-
-  const vancouverEmbedding = await ai.embeddings.create("Vancouver");
-  console.dir({ vancouverEmbedding }, { depth: 3 });
+  const embedding = await ai.embeddings.create("Vancouver");
+  console.dir({ embedding }, { depth: 3 });
 }
 
 // main();

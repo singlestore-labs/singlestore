@@ -1,19 +1,23 @@
-import type { Embedder } from "./embedder";
+import type { OpenAI } from "openai";
+import type { EmbeddingCreateParams } from "openai/resources/embeddings";
+
+export type Embedder<T = any> = (input: string | string[], options?: T) => Promise<number[][]>;
+
+export type DefaultEmbedder = Embedder<Partial<Omit<EmbeddingCreateParams, "input">>>;
 
 export class Embeddings<T extends Embedder> {
   constructor(
+    private _openai: OpenAI,
     private _embedder?: T,
-    private _openAIApiKey?: string,
   ) {}
 
-  async create(input: string | string[], options?: Parameters<T>[1]): Promise<number[][]> {
+  async create(...[input, options]: Parameters<T>): Promise<number[][]> {
     if (this._embedder) {
       return this._embedder(input, options);
     }
 
     const _input = Array.isArray(input) ? input : [input];
-    const openai = new (await import("openai")).default({ apiKey: this._openAIApiKey });
-    const response = await openai.embeddings.create({ model: "text-embedding-3-small", ...options, input: _input });
-    return response.data.map(({ embedding }) => embedding);
+    const response = await this._openai.embeddings.create({ model: "text-embedding-3-small", ...options, input: _input });
+    return response.data.map((data) => data.embedding);
   }
 }
