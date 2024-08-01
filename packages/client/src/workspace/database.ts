@@ -3,6 +3,8 @@ import type { AI } from "@singlestore/ai";
 import { WorkspaceConnection } from "./connection";
 import { WorkspaceTable, type WorkspaceTableSchema, type WorkspaceTableType } from "./table";
 
+export type DatabaseTablesToRecords<T extends WorkspaceDatabaseType["tables"]> = { [K in keyof T]: T[K]["columns"][] };
+
 export interface WorkspaceDatabaseType {
   tables: Record<string, WorkspaceTableType>;
 }
@@ -47,7 +49,7 @@ export class WorkspaceDatabase<T extends WorkspaceDatabaseType> {
     return WorkspaceDatabase.drop(this._connection, this.name);
   }
 
-  table<U extends Extract<keyof T["tables"], string>>(name: U) {
+  table<U extends Extract<keyof T["tables"], string> | (string & {})>(name: U) {
     return new WorkspaceTable<T["tables"][U]>(this._connection, this.name, name, this._ai);
   }
 

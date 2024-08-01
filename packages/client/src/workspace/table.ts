@@ -73,7 +73,7 @@ export class WorkspaceTable<T extends WorkspaceTableType> {
     return WorkspaceTable.drop(this._connection, this.databaseName, this.name);
   }
 
-  column(name: Extract<keyof T["columns"], string>) {
+  column(name: Extract<keyof T["columns"], string> | (string & {})) {
     return new WorkspaceColumn(this._connection, this.databaseName, this.name, name);
   }
 
@@ -91,10 +91,15 @@ export class WorkspaceTable<T extends WorkspaceTableType> {
     `);
   }
 
-  rename(newName: string) {
-    return this._connection.client.execute<ResultSetHeader>(`\
+  async rename(newName: string) {
+    const result = await this._connection.client.execute<ResultSetHeader>(`\
       ALTER TABLE ${this._path} RENAME TO ${newName}
     `);
+
+    this.name = newName;
+    this._path = [this.databaseName, newName].join(".");
+
+    return result;
   }
 
   insert(data: Partial<T["columns"]> | Partial<T["columns"]>[]) {

@@ -60,9 +60,13 @@ export class WorkspaceColumn {
     `);
   }
 
-  rename(newName: string) {
-    return this._connection.client.execute<ResultSetHeader>(`\
+  async rename(newName: string) {
+    const result = await this._connection.client.execute<ResultSetHeader>(`\
       ALTER TABLE ${this._path} CHANGE ${this.name} ${newName}
     `);
+
+    this.name = newName;
+
+    return result;
   }
 }

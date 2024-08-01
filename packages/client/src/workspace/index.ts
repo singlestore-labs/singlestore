@@ -28,7 +28,7 @@ export class Workspace<T extends WorkspaceType> {
     return new Workspace<T>(connection, name, ai);
   }
 
-  database<U extends Extract<keyof T["databases"], string>>(name: U) {
+  database<U extends Extract<keyof T["databases"], string> | (string & {})>(name: U) {
     return new WorkspaceDatabase<T["databases"][U]>(this.connection, this.name, name, this._ai);
   }
 
