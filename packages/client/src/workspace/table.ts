@@ -21,6 +21,7 @@ export interface WorkspaceTableSchema<T extends WorkspaceTableType> {
 
 export class WorkspaceTable<T extends WorkspaceTableType> {
   private _path: string;
+  vScoreKey = "v_score";
 
   constructor(
     private _connection: WorkspaceConnection,
@@ -145,11 +146,10 @@ export class WorkspaceTable<T extends WorkspaceTableType> {
     type SelectedColumns = ExtractQueryColumns<_S, Options> & { v_score: number };
     const { columns, clauses, values } = new QueryBuilder<_S>(...args);
     const promptEmbedding = (await this.ai.embeddings.create(search.prompt))[0] || [];
-    const vScoreKey = "v_score";
-    let orderByClause = `ORDER BY ${vScoreKey} DESC`;
+    let orderByClause = `ORDER BY ${this.vScoreKey} DESC`;
 
     if (clauses.orderBy) {
-      if (clauses.orderBy.includes(vScoreKey)) {
+      if (clauses.orderBy.includes(this.vScoreKey)) {
         orderByClause = clauses.orderBy;
       } else {
         orderByClause += clauses.orderBy.replace(/^ORDER BY /, ", ");
@@ -158,12 +158,37 @@ export class WorkspaceTable<T extends WorkspaceTableType> {
 
     const query = `\
       SET @promptEmbedding = '${JSON.stringify(promptEmbedding)}' :> vector(${promptEmbedding.length}) :> blob;
-      SELECT ${[columns, `${search.vColumn} <*> @promptEmbedding AS ${vScoreKey}`].join(", ")}
+      SELECT ${[columns, `${search.vColumn} <*> @promptEmbedding AS ${this.vScoreKey}`].join(", ")}
       FROM ${this._path}
       ${[clauses.where, clauses.groupBy, orderByClause, clauses.limit].join(" ")}
     `;
 
     const result = await this._connection.client.execute<[any, (SelectedColumns & RowDataPacket)[]]>(query, values);
     return result[0][1];
+  }
+
+  async createChatCompletion<
+    U extends QueryBuilderArgs<_S>,
+    _S extends QuerySchema = T["columns"] & { v_score: number },
+    _O extends Parameters<AI["llm"]["createChatCompletion"]>[1] = Parameters<AI["llm"]["createChatCompletion"]>[1],
+  >(
+    ...[{ prompt, vColumn, template, systemRole, ...createChatCompletionOptions }, ...args]: [
+      search: { prompt: string; vColumn: Extract<keyof T["columns"], string>; template?: string } & _O,
+      ...U,
+    ]
+  ) {
+    const _systemRole =
+      systemRole ||
+      `\
+      You are a helpful assistant.\
+      Answer the user's question based on the context provided.\
+      If the context provided doesn't answer the question asked don't answer the user's question.\
+      `;
+
+    const _template = template || `The user asked: <question>\nThe most similar context: <context>`;
+    const context = await this.vectorSearch<U, _S>({ prompt, vColumn }, ...args);
+    const _prompt = _template.replace("<question>", prompt).replace("<context>", JSON.stringify(context));
+
+    return this.ai.llm.createChatCompletion(_prompt, { ...createChatCompletionOptions, systemRole: _systemRole });
   }
 }

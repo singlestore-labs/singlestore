@@ -115,56 +115,48 @@ async function main() {
         ),
     );
 
-    const prompt_14 = "This product can suppress surrounding noise.";
-    console.log(`14. Find noise cancelling headphone name and description using vector search.\nPrompt: ${prompt_14}`);
-    console.log(
-      await db
-        .table("products")
-        .vectorSearch({ prompt: prompt_14, vColumn: "description_v" }, { columns: ["name", "description"], limit: 1 }),
-    );
-
-    console.log("15. Select all users executing custom query");
+    console.log("14. Select all users executing custom query");
     console.log(await db.query<[Database["tables"]["users"]["columns"][]]>("SELECT * FROM users"));
 
     const usersTable = db.table("users");
 
-    console.log("16. Create a chat completion.\nPrompt: 'What is 4+4?");
+    console.log("15. Create a chat completion.\nPrompt: 'What is 4+4?");
     console.log(await ai.llm.createChatCompletion("What is 4+4?"));
 
-    console.log("17. Column methods");
+    console.log("16. Column methods");
 
-    console.log('17.1. Add the an "age_new" column to the users table');
+    console.log('16.1. Add the an "age_new" column to the users table');
     await usersTable.addColumn({ name: "age_new", type: "int" });
 
-    console.log('17.2. Rename the "age_new" column to "age"');
+    console.log('16.2. Rename the "age_new" column to "age"');
     console.log(await usersTable.column("age_new").rename("age"));
 
-    console.log('17.3. Drop the "age" column');
+    console.log('16.3. Drop the "age" column');
     console.log(await usersTable.column("age").drop());
 
-    console.log("18. Table methods");
+    console.log("17. Table methods");
 
-    console.log("18.1. Insert a new user named John into the users table");
+    console.log("17.1. Insert a new user named John into the users table");
     console.log(await usersTable.insert({ name: "John" }));
 
-    console.log("18.2. Change the user name John to John Wick");
+    console.log("17.2. Change the user name John to John Wick");
     console.log(await usersTable.update({ name: "John Wick" }, { name: "John" }));
 
-    console.log("18.3. Delete the user named John Wick");
+    console.log("17.3. Delete the user named John Wick");
     console.log(await usersTable.delete({ name: "John Wick" }));
 
-    console.log('18.4. Rename the users table to "users_old"');
+    console.log('17.4. Rename the users table to "users_old"');
     console.log(await usersTable.rename("users_old"));
 
-    console.log('18.5. Truncate the "users_old" table');
+    console.log('17.5. Truncate the "users_old" table');
     console.log(await usersTable.truncate());
 
-    console.log('18.6. Drop the "users_old" table');
+    console.log('17.6. Drop the "users_old" table');
     console.log(await usersTable.drop());
 
-    console.log("19. Database methods");
+    console.log("18. Database methods");
 
-    console.log('19.1. Create a "users" table');
+    console.log('18.1. Create a "users" table');
     await db.createTable<Database["tables"]["users"]>({
       name: "users",
       columns: {
@@ -173,8 +165,31 @@ async function main() {
       },
     });
 
-    console.log('19.3. Use the "users" table');
+    console.log('18.2. Use the "users" table');
     db.table("users");
+
+    console.log("19. Table AI methods");
+
+    const prompt_19_1 = "This product can suppress surrounding noise.";
+    console.log(`19.1. Find noise cancelling headphone name and description using vector search.\nPrompt: ${prompt_19_1}`);
+    console.log(
+      await db
+        .table("products")
+        .vectorSearch({ prompt: prompt_19_1, vColumn: "description_v" }, { columns: ["name", "description"], limit: 1 }),
+    );
+
+    const prompt_19_2 = "What monitor do I have in my store?";
+    console.log(
+      `19.2. Create a chat completion based on vector search results from the products table and a prompt.\nPrompt: ${prompt_19_2}`,
+    );
+    console.log(
+      await db
+        .table("products")
+        .createChatCompletion(
+          { prompt: prompt_19_2, vColumn: "description_v" },
+          { columns: ["name", "description", "price"], limit: 1 },
+        ),
+    );
 
     console.log("Done!");
     process.exit(0);
