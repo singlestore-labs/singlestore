@@ -81,15 +81,15 @@ async function main() {
 
   // await db.dropTable("cities");
 
-  const citiesTable = await db.createTable<CitiesTable>({
-    name: "cities",
-    columns: {
-      id: { type: "bigint", autoIncrement: true, primaryKey: true },
-      name: { type: "varchar(64)" },
-      description: { type: "text" },
-      description_embedding: { type: "VECTOR(1536)" },
-    },
-  });
+  // const citiesTable = await db.createTable<CitiesTable>({
+  //   name: "cities",
+  //   columns: {
+  //     id: { type: "bigint", autoIncrement: true, primaryKey: true },
+  //     name: { type: "varchar(64)" },
+  //     description: { type: "text" },
+  //     description_embedding: { type: "VECTOR(1536)" },
+  //   },
+  // });
 
   // const cities: Omit<CitiesTable["columns"], "id" | "description_embedding">[] = [
   //   {
@@ -125,11 +125,23 @@ async function main() {
 
   // await citiesTable.insert(citiesWithEmbeddings);
 
-  const vectorSearch = await citiesTable.vectorSearch(
-    { prompt: "A vibrant city in Brazil", field: "description_embedding" },
-    { columns: ["id", "name", "description"], limit: 3 },
-  );
-  console.dir({ vectorSearch }, { depth: 3 });
+  // const vectorSearch = await citiesTable.vectorSearch(
+  //   { prompt: "A vibrant city in Brazil", field: "description_embedding" },
+  //   { columns: ["id", "name", "description"], limit: 3 },
+  // );
+  // console.dir({ vectorSearch }, { depth: 3 });
+
+  const completionStream = await ai.llm.createChatCompletion("Could you tell me a story in 12 words?", { stream: true });
+  const completionStreamText = await ai.llm.handleChatCompleitonStream(completionStream, console.log);
+  console.dir({ completionStreamText });
+
+  // const completionText = await ai.llm.createChatCompletion("Could you tell me a story in 80 words?");
+  // console.dir({ completionText });
+
+  // const completionTextWithHistory = await ai.llm.createChatCompletion("What was my last question?", {
+  //   history: [{ role: "user", content: "Hi, what is the oldest city in Canada?" }],
+  // });
+  // console.dir({ completionTextWithHistory });
 }
 
 main();
