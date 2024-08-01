@@ -134,7 +134,7 @@ export class WorkspaceTable<T extends WorkspaceTableType> {
   }
 
   async vectorSearch<U extends QueryBuilderArgs<_S>, _S extends QuerySchema = T["columns"] & { v_score: number }>(
-    ...[search, ...args]: [search: { prompt: string; field: Extract<keyof T["columns"], string> }, ...U]
+    ...[search, ...args]: [search: { prompt: string; vColumn: Extract<keyof T["columns"], string> }, ...U]
   ) {
     type Options = ExtractQueryOptions<U>;
     type SelectedColumns = ExtractQueryColumns<_S, Options> & { v_score: number };
@@ -153,7 +153,7 @@ export class WorkspaceTable<T extends WorkspaceTableType> {
 
     const query = `\
       SET @promptEmbedding = '${JSON.stringify(promptEmbedding)}' :> vector(${promptEmbedding.length}) :> blob;
-      SELECT ${[columns, `${search.field} <*> @promptEmbedding AS ${vScoreKey}`].join(", ")}
+      SELECT ${[columns, `${search.vColumn} <*> @promptEmbedding AS ${vScoreKey}`].join(", ")}
       FROM ${this._path}
       ${[clauses.where, clauses.groupBy, orderByClause, clauses.limit].join(" ")}
     `;
