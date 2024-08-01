@@ -122,4 +122,4 @@ async function main() {
   // console.dir({ completionTextWithHistory });
 }
 
-main();
+// main();
