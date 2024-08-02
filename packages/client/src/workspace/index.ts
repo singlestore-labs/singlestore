@@ -27,8 +27,13 @@ export class Workspace<T extends WorkspaceType> {
     return new Workspace<T>(connection, name, ai);
   }
 
-  database<U extends Extract<keyof T["databases"], string> | (string & {})>(name: U) {
-    return new WorkspaceDatabase<T["databases"][U]>(this.connection, this.name, name, this._ai);
+  database<U, K extends keyof T["databases"] | (string & {}) = keyof T["databases"] | (string & {})>(name: K) {
+    return new WorkspaceDatabase<U extends WorkspaceDatabaseType ? U : T["databases"][K]>(
+      this.connection,
+      this.name,
+      name as string,
+      this._ai,
+    );
   }
 
   createDatabase<T extends WorkspaceDatabaseType>(schema: WorkspaceDatabaseSchema<T>) {

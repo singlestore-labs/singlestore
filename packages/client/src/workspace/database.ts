@@ -49,8 +49,13 @@ export class WorkspaceDatabase<T extends WorkspaceDatabaseType> {
     return WorkspaceDatabase.drop(this._connection, this.name);
   }
 
-  table<U extends Extract<keyof T["tables"], string> | (string & {})>(name: U) {
-    return new WorkspaceTable<T["tables"][U]>(this._connection, this.name, name, this._ai);
+  table<U, K extends keyof T["tables"] | (string & {}) = keyof T["tables"] | (string & {})>(name: K) {
+    return new WorkspaceTable<U extends WorkspaceTableType ? U : T["tables"][K]>(
+      this._connection,
+      this.name,
+      name as string,
+      this._ai,
+    );
   }
 
   createTable<T extends WorkspaceTableType>(schema: WorkspaceTableSchema<T>) {

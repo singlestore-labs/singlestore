@@ -74,8 +74,8 @@ export class WorkspaceTable<T extends WorkspaceTableType> {
     return WorkspaceTable.drop(this._connection, this.databaseName, this.name);
   }
 
-  column(name: Extract<keyof T["columns"], string> | (string & {})) {
-    return new WorkspaceColumn(this._connection, this.databaseName, this.name, name);
+  column(name: keyof T["columns"] | (string & {})) {
+    return new WorkspaceColumn(this._connection, this.databaseName, this.name, name as string);
   }
 
   addColumn(schema: WorkspaceColumnSchema) {
