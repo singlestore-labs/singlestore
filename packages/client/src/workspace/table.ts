@@ -118,7 +118,7 @@ export class WorkspaceTable<T extends WorkspaceTableType> {
 
   async select<U extends QueryBuilderArgs<T["columns"]>>(...args: U) {
     type Options = ExtractQueryOptions<U>;
-    type SelectedColumns = ExtractQueryColumns<T["columns"], Options> & { v_score: number };
+    type SelectedColumns = ExtractQueryColumns<T["columns"], Options>;
     const { columns, clause, values } = new QueryBuilder(...args);
     const query = `SELECT ${columns} FROM ${this._path} ${clause}`;
     const result = await this._connection.client.execute<(SelectedColumns & RowDataPacket)[]>(query, values);
