@@ -38,7 +38,16 @@
   "publishConfig": {
     "access": "public"
   },
+  "homepage": "https://github.com/singlestore-labs/singlestore",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/singlestore-labs/singlestore.git"
+  },
+  "bugs": {
+    "url": "https://github.com/singlestore-labs/singlestore/issues"
+  },
   "keywords": [
+    "singlestore",
     "ai"
   ]
 }

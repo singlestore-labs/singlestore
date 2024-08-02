@@ -4,8 +4,8 @@ import type {
   ChatCompletionChunk,
   ChatCompletionMessageParam,
 } from "openai/resources/chat/completions";
-import type { Stream } from "openai/streaming.mjs";
-import type { LLM } from ".";
+import type { Stream as OpenAIStream } from "openai/streaming.mjs";
+import type { LLM, ChatCompletionStream } from ".";
 
 type CreateChatCompletionOptions = Partial<Omit<ChatCompletionCreateParams, "input">> & {
   systemRole?: string;
@@ -17,7 +17,7 @@ export class OpenAILLM implements LLM {
 
   async createChatCompletion<
     T extends CreateChatCompletionOptions,
-    _ReturnType = T extends { stream: true } ? AsyncIterable<string> : string,
+    _ReturnType = T extends { stream: true } ? ChatCompletionStream : string,
   >(prompt: string, options?: T): Promise<_ReturnType> {
     const { systemRole = "You are a helpful assistant", history = [], ..._options } = options ?? ({} as T);
 
@@ -34,9 +34,9 @@ export class OpenAILLM implements LLM {
       messages,
     });
 
-    const isStreamResponse = (_response: any): _response is Stream<ChatCompletionChunk> => !!_options?.stream;
+    const isStreamResponse = (_response: any): _response is OpenAIStream<ChatCompletionChunk> => !!_options?.stream;
     if (isStreamResponse(response)) {
-      async function* asyncIterableFromStream(stream: Stream<ChatCompletionChunk>): AsyncIterable<string> {
+      async function* asyncIterableFromStream(stream: OpenAIStream<ChatCompletionChunk>): ChatCompletionStream {
         for await (const chunk of stream) {
           yield chunk.choices[0]?.delta.content || "";
         }
@@ -49,7 +49,7 @@ export class OpenAILLM implements LLM {
   }
 
   async handleChatCompleitonStream(
-    stream: AsyncIterable<string>,
+    stream: ChatCompletionStream,
     onChunk?: (chunk: string) => Promise<void> | void,
   ): Promise<string> {
     let text = "";

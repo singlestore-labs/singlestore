@@ -1,5 +1,7 @@
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 
+export type ChatCompletionStream = AsyncIterable<string>;
+
 export interface LLM {
   createChatCompletion<
     T extends {
@@ -11,7 +13,7 @@ export interface LLM {
   >(
     prompt: string,
     options?: T,
-  ): Promise<T extends { stream: true } ? AsyncIterable<string> : string>;
+  ): Promise<T extends { stream: true } ? ChatCompletionStream : string>;
 
-  handleChatCompleitonStream(stream: AsyncIterable<string>, onChunk?: (chunk: string) => Promise<void> | void): Promise<string>;
+  handleChatCompleitonStream(stream: ChatCompletionStream, onChunk?: (chunk: string) => Promise<void> | void): Promise<string>;
 }
