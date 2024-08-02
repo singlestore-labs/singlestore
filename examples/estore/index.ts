@@ -12,9 +12,9 @@ async function main() {
     console.log("3. Connect to a workspace");
     const workspace = client.workspace({
       name: "workspace-1",
-      host: process.env.DB_HOST ?? "",
-      user: process.env.DB_USER ?? "",
-      password: process.env.DB_PASSWORD ?? "",
+      host: process.env.DB_HOST,
+      user: process.env.DB_USER,
+      password: process.env.DB_PASSWORD,
     });
 
     console.log("4. Create a database schema for better TypeScript experience");

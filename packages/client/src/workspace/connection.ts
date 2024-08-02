@@ -1,10 +1,6 @@
 import { createPool, type Pool, type PoolOptions } from "mysql2/promise";
 
-export interface WorkspaceConnectionConfig extends Partial<Omit<PoolOptions, "host" | "user" | "password" | "database">> {
-  host: string;
-  user: string;
-  password: string;
-}
+export interface WorkspaceConnectionConfig extends Partial<Omit<PoolOptions, "database">> {}
 
 export class WorkspaceConnection {
   client: Pool;
