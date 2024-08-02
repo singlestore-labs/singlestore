@@ -116,12 +116,13 @@ export class WorkspaceTable<T extends WorkspaceTableType> {
     );
   }
 
-  select<U extends QueryBuilderArgs<T["columns"]>>(...args: U) {
+  async select<U extends QueryBuilderArgs<T["columns"]>>(...args: U) {
     type Options = ExtractQueryOptions<U>;
     type SelectedColumns = ExtractQueryColumns<T["columns"], Options> & { v_score: number };
     const { columns, clause, values } = new QueryBuilder(...args);
     const query = `SELECT ${columns} FROM ${this._path} ${clause}`;
-    return this._connection.client.execute<(SelectedColumns & RowDataPacket)[]>(query, values);
+    const result = await this._connection.client.execute<(SelectedColumns & RowDataPacket)[]>(query, values);
+    return result[0];
   }
 
   update(data: Partial<T["columns"]>, filters: QueryFilters<T["columns"]>) {
