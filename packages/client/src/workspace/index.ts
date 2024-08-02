@@ -18,13 +18,12 @@ export class Workspace<T extends WorkspaceType> {
     private _ai?: AI,
   ) {}
 
-  static async connect<T extends WorkspaceType>({
+  static connect<T extends WorkspaceType>({
     ai,
     name,
     ...config
   }: Pick<WorkspaceSchema<T>, "name"> & Omit<WorkspaceConnectionConfig, "name"> & { ai?: AI }) {
     const connection = new WorkspaceConnection(config);
-    await connection.connect();
     return new Workspace<T>(connection, name, ai);
   }
 

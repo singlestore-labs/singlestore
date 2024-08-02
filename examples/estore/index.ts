@@ -10,7 +10,7 @@ async function main() {
     const client = new SingleStoreClient({ ai });
 
     console.log("3. Connect to a workspace");
-    const workspace = await client.workspace({
+    const workspace = client.workspace({
       name: "workspace-1",
       host: process.env.DB_HOST ?? "",
       user: process.env.DB_USER ?? "",

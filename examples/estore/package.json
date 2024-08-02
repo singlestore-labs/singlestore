@@ -5,8 +5,7 @@
   "license": "MIT",
   "scripts": {
     "build": "tsup",
-    "start": "dotenv -- node dist/index.js",
-    "dev": "dotenv -- tsx watch ./index.ts"
+    "start": "dotenv -- node dist/index.js"
   },
   "dependencies": {
     "@singlestore/ai": "*",

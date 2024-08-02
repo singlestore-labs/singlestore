@@ -7,23 +7,17 @@ export interface WorkspaceConnectionConfig extends Partial<Omit<PoolOptions, "ho
 }
 
 export class WorkspaceConnection {
-  private _client: Pool | undefined;
+  client: Pool;
 
-  constructor(public config: WorkspaceConnectionConfig) {}
-
-  get client() {
-    if (!this._client) {
-      throw new Error("Not connected");
-    }
-    return this._client;
+  constructor(public config: WorkspaceConnectionConfig) {
+    this.client = createPool({ multipleStatements: true, ...this.config });
   }
 
-  async connect() {
-    this._client = createPool({ multipleStatements: true, ...this.config });
+  static create(config: WorkspaceConnectionConfig) {
+    return new WorkspaceConnection(config);
   }
 
   async disconnect() {
     await this.client.end();
-    this._client = undefined;
   }
 }
