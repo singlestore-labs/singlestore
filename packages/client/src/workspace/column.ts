@@ -1,5 +1,5 @@
-import type { ResultSetHeader } from "mysql2/promise";
-import { WorkspaceConnection } from "./connection";
+import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
+import type { WorkspaceConnection } from "./connection";
 
 export interface WorkspaceColumnType {}
 
@@ -11,6 +11,15 @@ export interface WorkspaceColumnSchema {
   autoIncrement?: boolean;
   default?: any;
   clauses?: string[];
+}
+
+export interface ColumnShowInfo<T extends string = string> {
+  name: T;
+  type: string;
+  null: string;
+  key: string;
+  default: any;
+  extra: string;
 }
 
 export class WorkspaceColumn {
@@ -49,8 +58,26 @@ export class WorkspaceColumn {
     `);
   }
 
+  static normalizeShowInfo<T extends string>(info: any): ColumnShowInfo<T> {
+    return {
+      name: info.Field,
+      type: info.Type,
+      null: info.Null,
+      key: info.Key,
+      default: info.Default,
+      extra: info.Extra,
+    };
+  }
+
   drop() {
     return WorkspaceColumn.drop(this._connection, this.databaseName, this.tableName, this.name);
+  }
+
+  async showInfo() {
+    const result = await this._connection.client.query<(any & RowDataPacket)[]>(
+      `SHOW COLUMNS IN ${this.tableName} IN ${this.databaseName} LIKE '${this.name}'`,
+    );
+    return WorkspaceColumn.normalizeShowInfo(result[0][0]);
   }
 
   modify(schema: Partial<Omit<WorkspaceColumnSchema, "name">>) {

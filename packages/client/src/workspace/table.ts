@@ -1,7 +1,7 @@
 import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import type { AI } from "@singlestore/ai";
 import { WorkspaceColumn, type WorkspaceColumnSchema, type WorkspaceColumnType } from "./column";
-import { WorkspaceConnection } from "./connection";
+import type { WorkspaceConnection } from "./connection";
 import { QueryBuilder, type QueryBuilderArgs } from "../query/builder";
 import type { QueryFilters } from "../query/filters/builder";
 import type { ExtractQueryColumns, ExtractQueryOptions } from "../query/types";
@@ -123,6 +123,13 @@ export class WorkspaceTable<
 
   dropColumn(name: _ColumnNames | ({} & string)) {
     return WorkspaceColumn.drop(this._connection, this.databaseName, this.name, name);
+  }
+
+  async showColumnsInfo() {
+    const result = await this._connection.client.query<(any & RowDataPacket)[]>(
+      `SHOW COLUMNS IN ${this.name} IN ${this.databaseName}`,
+    );
+    return result[0].map((result) => WorkspaceColumn.normalizeShowInfo<_ColumnNames>(result));
   }
 
   truncate() {
