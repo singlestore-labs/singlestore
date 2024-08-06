@@ -1,6 +1,6 @@
-import type { ResultSetHeader } from "mysql2/promise";
+import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import type { AI } from "@singlestore/ai";
-import { WorkspaceConnection } from "./connection";
+import type { WorkspaceConnection } from "./connection";
 import { WorkspaceTable, type WorkspaceTableSchema, type WorkspaceTableType } from "./table";
 
 export type DatabaseTablesToRecords<T extends WorkspaceDatabaseType["tables"]> = { [K in keyof T]: T[K]["columns"][] };
@@ -14,7 +14,30 @@ export interface WorkspaceDatabaseSchema<T extends WorkspaceDatabaseType> {
   tables: { [K in keyof T["tables"]]: Omit<WorkspaceTableSchema<T["tables"][K]>, "name"> };
 }
 
-export class WorkspaceDatabase<T extends WorkspaceDatabaseType> {
+export interface DatabaseShowInfo<T extends string = string> {
+  name: T;
+  commits: number;
+  role: string;
+  state: string;
+  position: string;
+  details: string;
+  asyncSlaves: number;
+  syncSlaves: string;
+  consensusSlaves: number;
+  committedPosition: string;
+  hardenedPosition: string;
+  replayPosition: string;
+  term: number;
+  lastPageTerm: number;
+  memoryMBs: number;
+  pendingIOs: number;
+  pendingBlobFSyncs: number;
+}
+
+export class WorkspaceDatabase<
+  T extends WorkspaceDatabaseType,
+  _TableNames extends Extract<keyof T["tables"], string> = Extract<keyof T["tables"], string>,
+> {
   constructor(
     private _connection: WorkspaceConnection,
     public name: string,
@@ -45,11 +68,47 @@ export class WorkspaceDatabase<T extends WorkspaceDatabaseType> {
     return connection.client.execute<ResultSetHeader>(`DROP DATABASE IF EXISTS ${name}`);
   }
 
+  static normalizeShowInfo<T extends string, U extends boolean>(info: { Database: T; [K: string]: any }, extended?: U) {
+    let result = { name: info.Database } as any;
+
+    if (extended) {
+      result = {
+        ...result,
+        commits: info.Commits,
+        role: info.Role,
+        state: info.State,
+        position: info.Position,
+        details: info.Details,
+        asyncSlaves: info.AsyncSlaves,
+        syncSlaves: info.SyncSlaves,
+        consensusSlaves: info.ConsensusSlaves,
+        committedPosition: info.CommittedPosition,
+        hardenedPosition: info.HardenedPosition,
+        replayPosition: info.ReplayPosition,
+        term: info.Term,
+        lastPageTerm: info.LastPageTerm,
+        memoryMBs: info["Memory (MBs)"],
+        pendingIOs: info["Pending IOs"],
+        pendingBlobFSyncs: info["Pending blob fsyncs"],
+      };
+    }
+
+    return result as U extends true ? DatabaseShowInfo<T> : Pick<DatabaseShowInfo<T>, "name">;
+  }
+
   drop() {
     return WorkspaceDatabase.drop(this._connection, this.name);
   }
 
-  table<U, K extends keyof T["tables"] | (string & {}) = keyof T["tables"] | (string & {})>(name: K) {
+  async showInfo<U extends boolean>(extended?: U) {
+    const clauses = ["SHOW DATABASES"];
+    if (extended) clauses.push("EXTENDED");
+    clauses.push(`LIKE '${this.name}'`);
+    const result = await this._connection.client.query<(any & RowDataPacket)[]>(clauses.join(" "));
+    return WorkspaceDatabase.normalizeShowInfo<string, U>({ ...result[0][0], Database: this.name }, extended);
+  }
+
+  table<U, K extends _TableNames | (string & {}) = _TableNames | (string & {})>(name: K) {
     return new WorkspaceTable<U extends WorkspaceTableType ? U : T["tables"][K]>(
       this._connection,
       this.name,
@@ -62,8 +121,15 @@ export class WorkspaceDatabase<T extends WorkspaceDatabaseType> {
     return WorkspaceTable.create<T>(this._connection, this.name, schema, this._ai);
   }
 
-  dropTable(name: ({} & string) | Extract<keyof T["tables"], string>) {
+  dropTable(name: _TableNames | ({} & string)) {
     return WorkspaceTable.drop(this._connection, this.name, name);
+  }
+
+  async showTablesInfo<U extends boolean>(extended?: U) {
+    const clauses = [`SHOW TABLES IN ${this.name}`];
+    if (extended) clauses.push("EXTENDED");
+    const result = await this._connection.client.query<(any & RowDataPacket)[]>(clauses.join(" "));
+    return result[0].map((result) => WorkspaceTable.normalizeShowInfo<_TableNames, U>(result, extended));
   }
 
   async query<T extends any[]>(statement: string) {

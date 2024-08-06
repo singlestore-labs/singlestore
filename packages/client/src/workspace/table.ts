@@ -19,7 +19,17 @@ export interface WorkspaceTableSchema<T extends WorkspaceTableType> {
   clauses?: string[];
 }
 
-export class WorkspaceTable<T extends WorkspaceTableType> {
+export interface TableShowInfo<T extends string = string> {
+  name: T;
+  tableType: string;
+  distributed: boolean;
+  storageType: string;
+}
+
+export class WorkspaceTable<
+  T extends WorkspaceTableType,
+  _ColumnNames extends Extract<keyof T["columns"], string> = Extract<keyof T["columns"], string>,
+> {
   private _path: string;
   vScoreKey = "v_score";
 
@@ -70,11 +80,40 @@ export class WorkspaceTable<T extends WorkspaceTableType> {
     `);
   }
 
+  static normalizeShowInfo<T extends string, U extends boolean>(info: any, extended?: U) {
+    const nameKey = Object.keys(info).find((key) => key.startsWith("Tables_in_")) as keyof typeof info;
+    const name = info[nameKey] as T;
+
+    let result = { name } as any;
+
+    if (extended) {
+      result = {
+        ...result,
+        tableType: info.Table_type,
+        distributed: !!info.distributed,
+        storageType: info.Storage_type,
+      };
+    }
+
+    return result as U extends true ? TableShowInfo<T> : Pick<TableShowInfo<T>, "name">;
+  }
+
   drop() {
     return WorkspaceTable.drop(this._connection, this.databaseName, this.name);
   }
 
-  column(name: keyof T["columns"] | (string & {})) {
+  async showInfo<U extends boolean>(extended?: U) {
+    const clauses = [`SHOW TABLES IN ${this.databaseName}`];
+    if (extended) clauses.push("EXTENDED");
+    clauses.push(`LIKE '${this.name}'`);
+    const result = await this._connection.client.query<(any & RowDataPacket)[]>(clauses.join(" "));
+    return WorkspaceTable.normalizeShowInfo<string, U>(
+      { ...result[0][0], [`Tables_in_${this.databaseName}`]: this.name },
+      extended,
+    );
+  }
+
+  column(name: _ColumnNames | (string & {})) {
     return new WorkspaceColumn(this._connection, this.databaseName, this.name, name as string);
   }
 
@@ -82,7 +121,7 @@ export class WorkspaceTable<T extends WorkspaceTableType> {
     return WorkspaceColumn.add(this._connection, this.databaseName, this.name, schema);
   }
 
-  dropColumn(name: ({} & string) | Extract<keyof T["columns"], string>) {
+  dropColumn(name: _ColumnNames | ({} & string)) {
     return WorkspaceColumn.drop(this._connection, this.databaseName, this.name, name);
   }
 
@@ -141,7 +180,7 @@ export class WorkspaceTable<T extends WorkspaceTableType> {
   }
 
   async vectorSearch<U extends QueryBuilderArgs<_S>, _S extends QuerySchema = T["columns"] & { v_score: number }>(
-    ...[search, ...args]: [search: { prompt: string; vColumn: Extract<keyof T["columns"], string> }, ...U]
+    ...[search, ...args]: [search: { prompt: string; vColumn: _ColumnNames }, ...U]
   ) {
     type Options = ExtractQueryOptions<U>;
     type SelectedColumns = ExtractQueryColumns<_S, Options> & { v_score: number };
@@ -174,7 +213,7 @@ export class WorkspaceTable<T extends WorkspaceTableType> {
     _O extends Parameters<AI["llm"]["createChatCompletion"]>[1] = Parameters<AI["llm"]["createChatCompletion"]>[1],
   >(
     ...[{ prompt, vColumn, template, systemRole, ...createChatCompletionOptions }, ...args]: [
-      search: { prompt: string; vColumn: Extract<keyof T["columns"], string>; template?: string } & _O,
+      search: { prompt: string; vColumn: _ColumnNames; template?: string } & _O,
       ...U,
     ]
   ) {

@@ -1,3 +1,4 @@
+import type { RowDataPacket } from "mysql2";
 import type { AI } from "@singlestore/ai";
 import { WorkspaceConnection, type WorkspaceConnectionConfig } from "./connection";
 import { WorkspaceDatabase, type WorkspaceDatabaseSchema, type WorkspaceDatabaseType } from "./database";
@@ -11,7 +12,10 @@ export interface WorkspaceSchema<T extends WorkspaceType> {
   databases: { [K in keyof T["databases"]]: Omit<WorkspaceDatabaseSchema<T["databases"][K]>, "name"> };
 }
 
-export class Workspace<T extends WorkspaceType> {
+export class Workspace<
+  T extends WorkspaceType,
+  _DatabaseNames extends Extract<keyof T["databases"], string> = Extract<keyof T["databases"], string>,
+> {
   constructor(
     public connection: WorkspaceConnection,
     public name?: string,
@@ -27,7 +31,7 @@ export class Workspace<T extends WorkspaceType> {
     return new Workspace<T>(connection, name, ai);
   }
 
-  database<U, K extends keyof T["databases"] | (string & {}) = keyof T["databases"] | (string & {})>(name: K) {
+  database<U, K extends _DatabaseNames | (string & {}) = _DatabaseNames | (string & {})>(name: K) {
     return new WorkspaceDatabase<U extends WorkspaceDatabaseType ? U : T["databases"][K]>(
       this.connection,
       name as string,
@@ -40,7 +44,14 @@ export class Workspace<T extends WorkspaceType> {
     return WorkspaceDatabase.create<T>(this.connection, schema, this.name, this._ai);
   }
 
-  dropDatabase(name: ({} & string) | Extract<keyof T["databases"], string>) {
+  dropDatabase(name: _DatabaseNames | ({} & string)) {
     return WorkspaceDatabase.drop(this.connection, name);
+  }
+
+  async showDatabasesInfo<U extends boolean>(extended?: U) {
+    const clauses = ["SHOW DATABASES"];
+    if (extended) clauses.push("EXTENDED");
+    const result = await this.connection.client.query<(any & RowDataPacket)[]>(clauses.join(" "));
+    return result[0].map((result) => WorkspaceDatabase.normalizeShowInfo<_DatabaseNames, U>(result, extended));
   }
 }
