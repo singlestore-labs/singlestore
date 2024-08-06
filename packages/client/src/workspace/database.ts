@@ -17,15 +17,15 @@ export interface WorkspaceDatabaseSchema<T extends WorkspaceDatabaseType> {
 export class WorkspaceDatabase<T extends WorkspaceDatabaseType> {
   constructor(
     private _connection: WorkspaceConnection,
-    public workspaceName: string,
     public name: string,
+    public workspaceName?: string,
     private _ai?: AI,
   ) {}
 
   static async create<T extends WorkspaceDatabaseType>(
     connection: WorkspaceConnection,
-    workspaceName: string,
     schema: WorkspaceDatabaseSchema<T>,
+    workspaceName?: string,
     ai?: AI,
   ) {
     const clauses: string[] = [`CREATE DATABASE IF NOT EXISTS ${schema.name}`];
@@ -38,7 +38,7 @@ export class WorkspaceDatabase<T extends WorkspaceDatabaseType> {
       }),
     );
 
-    return new WorkspaceDatabase<T>(connection, workspaceName, schema.name, ai);
+    return new WorkspaceDatabase<T>(connection, schema.name, workspaceName, ai);
   }
 
   static drop(connection: WorkspaceConnection, name: string) {
