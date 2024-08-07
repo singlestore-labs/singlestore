@@ -13,7 +13,7 @@ export interface WorkspaceSchema<T extends WorkspaceType> {
 }
 
 export class Workspace<
-  T extends WorkspaceType,
+  T extends WorkspaceType = WorkspaceType,
   _DatabaseNames extends Extract<keyof T["databases"], string> = Extract<keyof T["databases"], string>,
 > {
   constructor(

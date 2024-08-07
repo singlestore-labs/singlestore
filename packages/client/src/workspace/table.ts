@@ -11,7 +11,7 @@ export interface WorkspaceTableType {
   columns: Record<string, WorkspaceColumnType>;
 }
 
-export interface WorkspaceTableSchema<T extends WorkspaceTableType> {
+export interface WorkspaceTableSchema<T extends WorkspaceTableType = WorkspaceTableType> {
   name: string;
   columns: { [K in keyof T["columns"]]: Omit<WorkspaceColumnSchema, "name"> };
   primaryKeys?: string[];

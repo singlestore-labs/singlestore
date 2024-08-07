@@ -11,7 +11,7 @@ export interface WorkspaceDatabaseType {
 
 export interface WorkspaceDatabaseSchema<T extends WorkspaceDatabaseType> {
   name: string;
-  tables: { [K in keyof T["tables"]]: Omit<WorkspaceTableSchema<T["tables"][K]>, "name"> };
+  tables?: { [K in keyof T["tables"]]: Omit<WorkspaceTableSchema<T["tables"][K]>, "name"> };
 }
 
 export interface DatabaseShowInfo<T extends string = string> {
@@ -35,7 +35,7 @@ export interface DatabaseShowInfo<T extends string = string> {
 }
 
 export class WorkspaceDatabase<
-  T extends WorkspaceDatabaseType,
+  T extends WorkspaceDatabaseType = WorkspaceDatabaseType,
   _TableNames extends Extract<keyof T["tables"], string> = Extract<keyof T["tables"], string>,
 > {
   constructor(
@@ -55,11 +55,13 @@ export class WorkspaceDatabase<
     if (workspaceName) clauses.push(`ON WORKSPACE \`${workspaceName}\``);
     await connection.client.execute<ResultSetHeader>(clauses.join(" "));
 
-    await Promise.all(
-      Object.entries(schema.tables).map(([name, tableSchema]) => {
-        return WorkspaceTable.create(connection, schema.name, { ...tableSchema, name });
-      }),
-    );
+    if (schema.tables) {
+      await Promise.all(
+        Object.entries(schema.tables).map(([name, tableSchema]) => {
+          return WorkspaceTable.create(connection, schema.name, { ...tableSchema, name });
+        }),
+      );
+    }
 
     return new WorkspaceDatabase<T>(connection, schema.name, workspaceName, ai);
   }
