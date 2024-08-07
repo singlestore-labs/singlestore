@@ -6,12 +6,12 @@ import { OpenAILLM } from "./llm/openai";
 export type * from "./types";
 
 export type AIConfig = {
-  llm?: LLM;
-  embedder?: Embedder;
-  openAIApiKey?: string;
+  llm: LLM;
+  embedder: Embedder;
+  openAIApiKey: string;
 };
 
-export class AI<T extends AIConfig = AIConfig> {
+export class AI<T extends Partial<AIConfig> = Partial<AIConfig>> {
   public llm;
   public embeddings;
 
