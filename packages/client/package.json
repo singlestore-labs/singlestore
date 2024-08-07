@@ -1,6 +1,6 @@
 {
   "name": "@singlestore/client",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "license": "Apache-2.0",
   "sideEffects": false,
   "main": "./dist/index.js",
@@ -28,11 +28,9 @@
     "tsup": "^8.1.0",
     "typescript": "^5.3.3"
   },
-  "peerDependencies": {
-    "mysql2": "^3.10.2"
-  },
   "dependencies": {
-    "@singlestore/ai": "*"
+    "@singlestore/ai": "*",
+    "mysql2": "^3.10.2"
   },
   "engines": {
     "node": ">=18"
