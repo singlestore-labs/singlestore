@@ -1,15 +1,11 @@
 import type { OpenAI } from "openai";
-import type {
-  ChatCompletionCreateParams,
-  ChatCompletionChunk,
-  ChatCompletionMessageParam,
-} from "openai/resources/chat/completions";
+import type { ChatCompletionCreateParams, ChatCompletionChunk } from "openai/resources/chat/completions";
 import type { Stream as OpenAIStream } from "openai/streaming.mjs";
-import type { LLM, ChatCompletionStream } from ".";
+import type { LLM, ChatCompletionStream, ChatCompletionMessage } from ".";
 
 type CreateChatCompletionOptions = Partial<Omit<ChatCompletionCreateParams, "input">> & {
   systemRole?: string;
-  history?: ChatCompletionMessageParam[];
+  history?: ChatCompletionMessage[];
 };
 
 export class OpenAILLM implements LLM {
@@ -21,7 +17,7 @@ export class OpenAILLM implements LLM {
   >(prompt: string, options?: T): Promise<_ReturnType> {
     const { systemRole = "You are a helpful assistant", history = [], ..._options } = options ?? ({} as T);
 
-    const messages: ChatCompletionMessageParam[] = _options?.messages || [
+    const messages: ChatCompletionMessage[] = _options?.messages || [
       { role: "system", content: systemRole },
       ...(history || []),
       { role: "user", content: prompt },
