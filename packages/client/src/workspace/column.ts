@@ -1,7 +1,7 @@
 import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import type { WorkspaceConnection } from "./connection";
 
-export interface WorkspaceColumnType {}
+export type WorkspaceColumnType = any;
 
 export interface WorkspaceColumnSchema {
   name: string;
