@@ -10,6 +10,7 @@ export interface ChatMessagesTable {
 
 export class ChatMessage {
   constructor(
+    private _database: WorkspaceDatabase,
     public id: number | undefined,
     public createdAt: string | undefined,
     public sessionId: ChatSession["id"],
@@ -42,6 +43,14 @@ export class ChatMessage {
       id = rows?.[0].insertId;
     }
 
-    return new ChatMessage(id, createdAt, sessionId, role, content, store, tableName);
+    return new ChatMessage(database, id, createdAt, sessionId, role, content, store, tableName);
+  }
+
+  static delete(database: WorkspaceDatabase, tableName: ChatMessage["tableName"], id: ChatMessage["id"]) {
+    return database.table<ChatMessagesTable>(tableName).delete({ id });
+  }
+
+  delete() {
+    return ChatMessage.delete(this._database, this.tableName, this.id);
   }
 }

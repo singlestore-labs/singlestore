@@ -21,7 +21,7 @@ export class RAG<T extends WorkspaceDatabase = WorkspaceDatabase, U extends AI =
     return Chat.create(this.database, this.ai, config);
   }
 
-  deleteChat(tableName: Chat["tableName"], value: Chat["id"] | Chat["name"]) {
-    return Chat.delete(this.database, tableName, value);
+  deleteChat(tableName: Chat["tableName"], id: Chat["id"]) {
+    return Chat.delete(this.database, tableName, id);
   }
 }

@@ -1,6 +1,6 @@
 import type { AI, ChatCompletionCreateOptions } from "@singlestore/ai";
 import type { WorkspaceDatabase } from "@singlestore/client";
-import { ChatMessage } from "./message";
+import { ChatMessage, type ChatMessagesTable } from "./message";
 import type { Chat } from ".";
 
 export interface ChatSessionConfig
@@ -38,19 +38,16 @@ export class ChatSession<T extends WorkspaceDatabase = WorkspaceDatabase, U exte
   }
 
   static async create<T extends WorkspaceDatabase, U extends AI = AI>(database: T, ai: U, config?: Partial<ChatSessionConfig>) {
-    const createdAt: Chat["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 19);
+    const createdAt: ChatSession["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 19);
 
-    const _config = Object.assign(
-      {
-        chatId: undefined,
-        name: createdAt,
-        systemRole: "You are a helpfull assistant",
-        store: true,
-        tableName: "chat_sessions",
-        messagesTableName: "chat_messages",
-      } satisfies ChatSessionConfig,
-      config,
-    );
+    const _config: ChatSessionConfig = {
+      chatId: config?.chatId ?? undefined,
+      name: config?.name ?? createdAt,
+      systemRole: config?.systemRole ?? "You are a helpfull assistant",
+      store: config?.store ?? true,
+      tableName: config?.tableName ?? "chat_sessions",
+      messagesTableName: config?.messagesTableName ?? "chat_messages",
+    };
 
     const { chatId, name, systemRole, store, tableName, messagesTableName } = _config;
     let id: ChatSession["id"];
@@ -63,6 +60,14 @@ export class ChatSession<T extends WorkspaceDatabase = WorkspaceDatabase, U exte
     return new ChatSession(database, ai, id, createdAt, chatId, name, systemRole, store, tableName, messagesTableName);
   }
 
+  static delete(database: WorkspaceDatabase, tableName: ChatSession["tableName"], id: ChatSession["id"]) {
+    return database.table<ChatSessionsTable>(tableName).delete({ id });
+  }
+
+  delete() {
+    return ChatSession.delete(this._database, this.tableName, this.id);
+  }
+
   createMessage(role: ChatMessage["role"], content: ChatMessage["content"]) {
     return ChatMessage.create(this._database, {
       sessionId: this.id,
@@ -71,5 +76,9 @@ export class ChatSession<T extends WorkspaceDatabase = WorkspaceDatabase, U exte
       store: this.store,
       tableName: this.messagesTableName,
     });
+  }
+
+  deleteMessage(id: ChatMessage["id"]) {
+    return ChatMessage.delete(this._database, this.messagesTableName, id);
   }
 }

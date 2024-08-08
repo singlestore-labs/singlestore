@@ -1,7 +1,7 @@
 import type { AI } from "@singlestore/ai";
-import type { ResultSetHeader, WorkspaceDatabase } from "@singlestore/client";
-import { ChatSession } from "./session";
-import { ChatMessage } from "./message";
+import type { WorkspaceDatabase } from "@singlestore/client";
+import { ChatSession, ChatSessionsTable } from "./session";
+import { ChatMessage, ChatMessagesTable } from "./message";
 
 export interface ChatConfig
   extends Pick<Chat, "name" | "systemRole" | "store" | "tableName" | "sessionsTableName" | "messagesTableName"> {}
@@ -44,17 +44,14 @@ export class Chat<T extends WorkspaceDatabase = WorkspaceDatabase, U extends AI 
   static async create<T extends WorkspaceDatabase, U extends AI = AI>(database: T, ai: U, config?: Partial<ChatConfig>) {
     const createdAt: Chat["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 19);
 
-    const _config = Object.assign(
-      {
-        name: createdAt,
-        systemRole: "You are a helpfull assistant",
-        store: true,
-        tableName: "chats",
-        sessionsTableName: "chat_sessions",
-        messagesTableName: "chat_messages",
-      } satisfies ChatConfig,
-      config,
-    );
+    const _config: ChatConfig = {
+      name: config?.name ?? createdAt,
+      systemRole: config?.systemRole ?? "You are a helpfull assistant",
+      store: config?.store ?? true,
+      tableName: config?.tableName ?? "chats",
+      sessionsTableName: config?.sessionsTableName ?? "chat_sessions",
+      messagesTableName: config?.messagesTableName ?? "chat_messages",
+    };
 
     const { name, systemRole, store, tableName, sessionsTableName, messagesTableName } = _config;
     let id: Chat["id"];
@@ -82,12 +79,12 @@ export class Chat<T extends WorkspaceDatabase = WorkspaceDatabase, U extends AI 
     return new Chat(database, ai, id, createdAt, name, systemRole, store, tableName, sessionsTableName, messagesTableName);
   }
 
-  static delete(database: WorkspaceDatabase, tableName: Chat["tableName"], value: Chat["id"] | Chat["name"]) {
-    return database.query<[ResultSetHeader]>(`DELETE FROM ${tableName} WHERE id = ${value} OR name = '${value}'`);
+  static delete(database: WorkspaceDatabase, tableName: Chat["tableName"], id: Chat["id"]) {
+    return database.table<ChatsTable>(tableName).delete({ id });
   }
 
   delete() {
-    return Chat.delete(this._database, this.tableName, this.id || this.name);
+    return Chat.delete(this._database, this.tableName, this.id);
   }
 
   createSession(name?: ChatSession["name"]) {
@@ -99,5 +96,9 @@ export class Chat<T extends WorkspaceDatabase = WorkspaceDatabase, U extends AI 
       tableName: this.sessionsTableName,
       messagesTableName: this.messagesTableName,
     });
+  }
+
+  deleteSession(id: ChatSession["id"]) {
+    return ChatSession.delete(this._database, this.sessionsTableName, id);
   }
 }
