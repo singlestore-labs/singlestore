@@ -1,10 +1,19 @@
 import type { OpenAI } from "openai";
-import type { Embeddings } from ".";
+import type { Embeddings, EmbeddingsCreateOptions } from ".";
+
+export type OpenAIEmbeddingModel = "text-embedding-3-small" | "text-embedding-3-large" | "text-embedding-ada-002";
+
+export type OpenAIChatEmbeddingsCreateOptions = EmbeddingsCreateOptions<OpenAIEmbeddingModel> &
+  Omit<Parameters<OpenAI["embeddings"]["create"]>[0], "input" | keyof EmbeddingsCreateOptions>;
 
 export class OpenAIEmbeddings implements Embeddings {
   constructor(private _openai: OpenAI) {}
 
-  async create<T extends Omit<Parameters<typeof this._openai.embeddings.create>[0], "input">>(
+  getModels(): OpenAIEmbeddingModel[] {
+    return ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"];
+  }
+
+  async create<T extends OpenAIChatEmbeddingsCreateOptions>(
     input: string | string[],
     options?: Partial<T>,
   ): Promise<number[][]> {

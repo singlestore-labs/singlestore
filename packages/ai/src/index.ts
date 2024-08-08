@@ -1,28 +1,28 @@
 import { OpenAI } from "openai";
-import type { LLM } from "./llm";
-import { OpenAILLM } from "./llm/openai";
+import type { ChatCompletions } from "./chat-completions";
+import { OpenAIChatCompletions } from "./chat-completions/openai";
 import type { Embeddings } from "./embeddings";
 import { OpenAIEmbeddings } from "./embeddings/openai";
 
 export type * from "./types";
 
 export type AIConfig = {
-  llm: LLM;
   embeddings: Embeddings;
+  chatCompletions: ChatCompletions;
   openAIApiKey: string;
 };
 
-export class AI<T extends AIConfig = AIConfig> {
-  public llm;
+export class AI<T extends Partial<AIConfig> = Partial<AIConfig>> {
   public embeddings;
+  public chatCompletions;
 
-  constructor(config: Partial<T>) {
+  constructor(config: T) {
     const openai = new OpenAI({ apiKey: config.openAIApiKey });
-
-    type _LLM = T extends { llm: LLM } ? T["llm"] : OpenAILLM;
-    this.llm = (config.llm || new OpenAILLM(openai)) as _LLM;
 
     type _Embeddings = T extends { embeddings: Embeddings } ? T["embeddings"] : OpenAIEmbeddings;
     this.embeddings = (config.embeddings || new OpenAIEmbeddings(openai)) as _Embeddings;
+
+    type _ChatCompletions = T extends { chatCompletions: ChatCompletions } ? T["chatCompletions"] : OpenAIChatCompletions;
+    this.chatCompletions = (config.chatCompletions || new OpenAIChatCompletions(openai)) as _ChatCompletions;
   }
 }

@@ -4,20 +4,20 @@ export type ChatCompletionStream = AsyncIterable<string>;
 
 export type ChatCompletionMessage = ChatCompletionMessageParam;
 
-export type ChatCompletionOptions<T = any> = {
-  model: T;
+export interface ChatCompletionCreateOptions<T = any> {
+  model: T | (string & {});
   systemRole: string;
   stream: boolean;
   history: ChatCompletionMessage[];
-};
+}
 
-export interface LLM {
-  getModels(): Promise<string[]>;
+export interface ChatCompletions {
+  getModels(): string[];
 
-  createChatCompletion<T extends Partial<ChatCompletionOptions> & { [K: string]: any }>(
+  create<T extends ChatCompletionCreateOptions & { [K: string]: any }>(
     prompt: string,
-    options?: T,
+    options?: Partial<T>,
   ): Promise<T extends { stream: true } ? ChatCompletionStream : string>;
 
-  handleChatCompleitonStream(stream: ChatCompletionStream, onChunk?: (chunk: string) => Promise<void> | void): Promise<string>;
+  handleStream(stream: ChatCompletionStream, onChunk?: (chunk: string) => Promise<void> | void): Promise<string>;
 }
