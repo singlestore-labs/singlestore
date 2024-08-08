@@ -13,7 +13,7 @@ export class RAG<T extends WorkspaceDatabase = WorkspaceDatabase> {
     this.ai = config.ai;
   }
 
-  createChat<U extends Partial<ChatConfig>>(config?: U) {
+  createChat<T extends Partial<ChatConfig>>(config?: T) {
     return Chat.create(this.database, this.ai, config);
   }
 
