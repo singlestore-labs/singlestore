@@ -1,49 +1,30 @@
-import { nanoid } from "nanoid";
-
-import type { AI, ChatCompletionOptions } from "@singlestore/ai";
+import type { AI } from "@singlestore/ai";
 import type { ResultSetHeader, WorkspaceDatabase } from "@singlestore/client";
 import { ChatSession } from "./session";
+import { ChatMessage } from "./message";
 
-export interface ChatConfig {
-  name: string;
-  systemRole: ChatCompletionOptions["systemRole"];
-  store: boolean;
-  tableName: string;
-  sessionsTableName: string;
-  messagesTableName: string;
-}
+export interface ChatConfig
+  extends Pick<Chat, "name" | "systemRole" | "store" | "tableName" | "sessionsTableName" | "messagesTableName"> {}
 
 export interface ChatsTable {
-  columns: ChatConfig & {
-    id: number;
-    createdAt: string;
-  };
+  columns: Pick<Chat, "id" | "createdAt"> & ChatConfig;
 }
 
-export class Chat<T extends WorkspaceDatabase = WorkspaceDatabase, U extends ChatConfig = ChatConfig> {
-  name;
-  systemRole;
-  store;
-  tableName;
-  sessionsTableName;
-  messagesTableName;
-
+export class Chat<T extends WorkspaceDatabase = WorkspaceDatabase> {
   constructor(
     private _database: T,
     private _ai: AI,
-    public id: ChatsTable["columns"]["id"] | undefined,
-    public createdAt: ChatsTable["columns"]["createdAt"] | undefined,
-    config: U,
-  ) {
-    this.name = config.name;
-    this.systemRole = config.systemRole;
-    this.store = config.store;
-    this.tableName = config.tableName;
-    this.sessionsTableName = config.sessionsTableName;
-    this.messagesTableName = config.messagesTableName;
-  }
+    public id: number | undefined,
+    public createdAt: string | undefined,
+    public name: string,
+    public systemRole: ChatSession["systemRole"],
+    public store: ChatSession["store"],
+    public tableName: string,
+    public sessionsTableName: ChatSession["tableName"],
+    public messagesTableName: ChatSession["messagesTableName"],
+  ) {}
 
-  private static _createTable(database: WorkspaceDatabase, name: string) {
+  private static _createTable(database: WorkspaceDatabase, name: Chat["tableName"]) {
     return database.createTable<ChatsTable>({
       name,
       columns: {
@@ -60,13 +41,12 @@ export class Chat<T extends WorkspaceDatabase = WorkspaceDatabase, U extends Cha
     });
   }
 
-  static async create<T extends WorkspaceDatabase, U extends ChatConfig>(database: T, ai: AI, config?: Partial<U>) {
-    let id: Chat["id"];
-    let createdAt: Chat["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 19);
+  static async create<T extends WorkspaceDatabase>(database: T, ai: AI, config?: Partial<ChatConfig>) {
+    const createdAt: Chat["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 19);
 
     const _config = Object.assign(
       {
-        name: nanoid(),
+        name: createdAt,
         systemRole: "You are a helpfull assistant",
         store: true,
         tableName: "chats",
@@ -76,16 +56,30 @@ export class Chat<T extends WorkspaceDatabase = WorkspaceDatabase, U extends Cha
       config,
     );
 
-    if (_config.store) {
+    const { name, systemRole, store, tableName, sessionsTableName, messagesTableName } = _config;
+    let id: Chat["id"];
+
+    if (store) {
       const [chatsTable] = await Promise.all([
-        Chat._createTable(database, _config.tableName),
-        ChatSession.createTable(database, _config.sessionsTableName),
+        Chat._createTable(database, tableName),
+        ChatSession.createTable(database, sessionsTableName),
+        ChatMessage.createTable(database, messagesTableName),
       ]);
-      const insertedChat = await chatsTable.insert({ ..._config, createdAt });
-      id = insertedChat[0]?.[0].insertId;
+
+      const [rows] = await chatsTable.insert({
+        createdAt,
+        name,
+        systemRole,
+        store,
+        tableName,
+        sessionsTableName,
+        messagesTableName,
+      });
+
+      id = rows?.[0].insertId;
     }
 
-    return new Chat(database, ai, id, createdAt, _config);
+    return new Chat(database, ai, id, createdAt, name, systemRole, store, tableName, sessionsTableName, messagesTableName);
   }
 
   static delete(database: WorkspaceDatabase, tableName: Chat["tableName"], value: Chat["id"] | Chat["name"]) {
@@ -96,7 +90,7 @@ export class Chat<T extends WorkspaceDatabase = WorkspaceDatabase, U extends Cha
     return Chat.delete(this._database, this.tableName, this.id || this.name);
   }
 
-  createSession(name: ChatSession["name"] = nanoid()) {
+  createSession(name?: ChatSession["name"]) {
     return ChatSession.create(this._database, this._ai, {
       chatId: this.id,
       name,
