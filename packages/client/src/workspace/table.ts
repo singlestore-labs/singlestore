@@ -217,7 +217,7 @@ export class WorkspaceTable<
   async createChatCompletion<
     U extends QueryBuilderArgs<_S>,
     _S extends QuerySchema = T["columns"] & { v_score: number },
-    _O extends Parameters<AI["llm"]["createChatCompletion"]>[1] = Parameters<AI["llm"]["createChatCompletion"]>[1],
+    _O extends Parameters<AI["chatCompletions"]["create"]>[1] = Parameters<AI["chatCompletions"]["create"]>[1],
   >(
     ...[{ prompt, vColumn, template, systemRole, ...createChatCompletionOptions }, ...args]: [
       search: { prompt: string; vColumn: _ColumnNames; template?: string } & _O,
@@ -236,6 +236,6 @@ export class WorkspaceTable<
     const context = await this.vectorSearch<U, _S>({ prompt, vColumn }, ...args);
     const _prompt = _template.replace("<question>", prompt).replace("<context>", JSON.stringify(context));
 
-    return this.ai.llm.createChatCompletion(_prompt, { ...createChatCompletionOptions, systemRole: _systemRole });
+    return this.ai.chatCompletions.create(_prompt, { ...createChatCompletionOptions, systemRole: _systemRole });
   }
 }
