@@ -10,10 +10,10 @@ export interface ChatSessionsTable {
   columns: Pick<ChatSession, "id" | "createdAt" | "chatId" | "name">;
 }
 
-export class ChatSession<T extends WorkspaceDatabase = WorkspaceDatabase> {
+export class ChatSession<T extends WorkspaceDatabase = WorkspaceDatabase, U extends AI = AI> {
   constructor(
     private _database: T,
-    private _ai: AI,
+    private _ai: U,
     public id: number | undefined,
     public createdAt: string | undefined,
     public chatId: Chat["id"],
@@ -37,7 +37,7 @@ export class ChatSession<T extends WorkspaceDatabase = WorkspaceDatabase> {
     });
   }
 
-  static async create<T extends WorkspaceDatabase>(database: T, ai: AI, config?: Partial<ChatSessionConfig>) {
+  static async create<T extends WorkspaceDatabase, U extends AI = AI>(database: T, ai: U, config?: Partial<ChatSessionConfig>) {
     const createdAt: Chat["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 19);
 
     const _config = Object.assign(
