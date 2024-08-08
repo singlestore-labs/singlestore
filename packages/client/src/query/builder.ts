@@ -1,5 +1,5 @@
 import { type QueryFilters, QueryFiltersBuilder } from "./filters/builder";
-import { type QueryOptions, QueryOptionsBuilder } from "./options/builder";
+import { queryOptionKeys, type QueryOptions, QueryOptionsBuilder } from "./options/builder";
 import type { QuerySchema } from "./schema";
 
 export type QueryBuilderArgs<T extends QuerySchema> =
@@ -14,6 +14,7 @@ export class QueryBuilder<T extends QuerySchema> {
     groupBy: "",
     orderBy: "",
     limit: "",
+    offset: "",
   };
   clause: string;
   values: T[keyof T][] = [];
@@ -23,7 +24,7 @@ export class QueryBuilder<T extends QuerySchema> {
     let optionsBuilder: QueryOptionsBuilder<T> = new QueryOptionsBuilder();
 
     if (args.length === 1) {
-      if (args[0] && ("columns" in args[0] || "groupBy" in args[0] || "orderBy" in args[0] || "limit" in args[0])) {
+      if (args[0] && queryOptionKeys.some((key) => key in args[0]!)) {
         optionsBuilder = new QueryOptionsBuilder(args[0] as QueryOptions<T>);
       } else {
         filtersBuilder = new QueryFiltersBuilder(args[0] as QueryFilters<T>);

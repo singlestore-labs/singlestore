@@ -5,14 +5,18 @@ export type QueryOptions<T extends QuerySchema = QuerySchema> = {
   groupBy?: (keyof T)[];
   orderBy?: { [K in keyof T]?: "asc" | "desc" };
   limit?: number;
+  offset?: number;
 };
+
+export const queryOptionKeys: Exclude<keyof QueryOptions, undefined>[] = ["columns", "groupBy", "orderBy", "limit", "offset"];
 
 export class QueryOptionsBuilder<T extends QuerySchema> {
   columns: string = "*";
-  clauses: { groupBy: string; orderBy: string; limit: string } = {
+  clauses: Record<Exclude<keyof QueryOptions, "columns">, string> = {
     groupBy: "",
     orderBy: "",
     limit: "",
+    offset: "",
   };
 
   constructor(public options?: QueryOptions<T>) {
@@ -21,6 +25,7 @@ export class QueryOptionsBuilder<T extends QuerySchema> {
       groupBy: this._buildGroupByClause(options?.groupBy),
       orderBy: this._buildOrderByClause(options?.orderBy),
       limit: this._buildLimitClause(options?.limit),
+      offset: this._buildOffsetClause(options?.offset),
     };
   }
 
@@ -32,7 +37,7 @@ export class QueryOptionsBuilder<T extends QuerySchema> {
     return groupBy?.length ? `GROUP BY ${groupBy.join(", ")}` : "";
   }
 
-  private _buildOrderByClause(orderBy: QueryOptions<T>["orderBy"]): string {
+  private _buildOrderByClause(orderBy?: QueryOptions<T>["orderBy"]): string {
     if (!orderBy) return "";
 
     const condition = Object.entries(orderBy)
@@ -44,5 +49,9 @@ export class QueryOptionsBuilder<T extends QuerySchema> {
 
   private _buildLimitClause(limit?: QueryOptions<T>["limit"]): string {
     return limit ? `LIMIT ${limit}` : "";
+  }
+
+  private _buildOffsetClause(offset?: QueryOptions<T>["offset"]): string {
+    return offset ? `OFFSET ${offset}` : "";
   }
 }
