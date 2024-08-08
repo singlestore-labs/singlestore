@@ -1,4 +1,4 @@
-import type { AI, ChatCompletionOptions } from "@singlestore/ai";
+import type { AI, ChatCompletionCreateOptions } from "@singlestore/ai";
 import type { WorkspaceDatabase } from "@singlestore/client";
 import { ChatMessage } from "./message";
 import type { Chat } from ".";
@@ -18,7 +18,7 @@ export class ChatSession<T extends WorkspaceDatabase = WorkspaceDatabase, U exte
     public createdAt: string | undefined,
     public chatId: Chat["id"],
     public name: string,
-    public systemRole: ChatCompletionOptions["systemRole"],
+    public systemRole: ChatCompletionCreateOptions["systemRole"],
     public store: ChatMessage["store"],
     public tableName: string,
     public messagesTableName: ChatMessage["tableName"],

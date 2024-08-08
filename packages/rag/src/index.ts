@@ -14,7 +14,7 @@ export class RAG<T extends WorkspaceDatabase = WorkspaceDatabase, U extends AI =
   }
 
   getModels() {
-    return this.ai.llm.getModels();
+    return this.ai.chatCompletions.getModels();
   }
 
   createChat<T extends Partial<ChatConfig>>(config?: T) {
