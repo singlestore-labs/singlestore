@@ -4,13 +4,16 @@ export type ChatCompletionStream = AsyncIterable<string>;
 
 export type ChatCompletionMessage = ChatCompletionMessageParam;
 
-export type ChatCompletionOptions = {
+export type ChatCompletionOptions<T = any> = {
+  model: T;
   systemRole: string;
   stream: boolean;
   history: ChatCompletionMessage[];
 };
 
 export interface LLM {
+  getModels(): Promise<string[]>;
+
   createChatCompletion<T extends Partial<ChatCompletionOptions> & { [K: string]: any }>(
     prompt: string,
     options?: T,

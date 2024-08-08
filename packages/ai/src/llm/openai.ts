@@ -2,12 +2,19 @@ import type { OpenAI } from "openai";
 import type { ChatCompletionCreateParams, ChatCompletionChunk } from "openai/resources/chat/completions";
 import type { Stream as OpenAIStream } from "openai/streaming.mjs";
 import type { LLM, ChatCompletionStream, ChatCompletionMessage, ChatCompletionOptions } from ".";
+import type { ChatModel } from "openai/resources/index.mjs";
 
-type CreateChatCompletionOptions = Partial<ChatCompletionOptions> &
-  Partial<Omit<ChatCompletionCreateParams, "input" | keyof ChatCompletionOptions>>;
+type CreateChatCompletionOptions = Partial<
+  ChatCompletionOptions<ChatModel> & Omit<ChatCompletionCreateParams, keyof ChatCompletionOptions>
+>;
 
 export class OpenAILLM implements LLM {
   constructor(private _openai: OpenAI) {}
+
+  async getModels(): Promise<ChatModel[]> {
+    const list = await this._openai.models.list();
+    return list.data.map((model) => model.id as ChatModel);
+  }
 
   async createChatCompletion<
     T extends CreateChatCompletionOptions,
