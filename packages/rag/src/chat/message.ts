@@ -54,6 +54,18 @@ export class ChatMessage {
     return database.table<ChatMessagesTable>(tableName).delete(filters);
   }
 
+  async update(data: Parameters<WorkspaceTable<ChatMessagesTable>["update"]>[0]) {
+    const result = await this._database.table<ChatMessagesTable>(this.tableName).update(data, { id: this.id });
+
+    for (const [key, value] of Object.entries(data)) {
+      if (key in this) {
+        (this as any)[key] = value;
+      }
+    }
+
+    return result;
+  }
+
   delete() {
     return ChatMessage.delete(this._database, this.tableName, { id: this.id });
   }

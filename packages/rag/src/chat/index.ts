@@ -28,7 +28,7 @@ export class Chat<T extends WorkspaceDatabase = WorkspaceDatabase, U extends AI 
     return database.createTable<ChatsTable>({
       name,
       columns: {
-        id: { type: "bigint", autoIncrement: true },
+        id: { type: "bigint", autoIncrement: true, primaryKey: true },
         createdAt: { type: "DATETIME", default: "CURRENT_TIMESTAMP()" },
         name: { type: "varchar(128)", nullable: false },
         systemRole: { type: "text" },
@@ -37,7 +37,6 @@ export class Chat<T extends WorkspaceDatabase = WorkspaceDatabase, U extends AI 
         sessionsTableName: { type: "varchar(128)", nullable: false, default: "'chat_sessions'" },
         messagesTableName: { type: "varchar(128)", nullable: false, default: "'chat_messages'" },
       },
-      clauses: ["KEY(id)", "SHARD KEY (name)", `CONSTRAINT ${name}_name_uk UNIQUE (name)`],
     });
   }
 
@@ -93,6 +92,18 @@ export class Chat<T extends WorkspaceDatabase = WorkspaceDatabase, U extends AI 
       table.delete(filters),
       ChatSession.delete(database, sessionsTable, messagesTableName, { chatId: { in: deletedRowIds.map(({ id }) => id) } }),
     ]);
+  }
+
+  async update(data: Parameters<WorkspaceTable<ChatsTable>["update"]>[0]) {
+    const result = await this._database.table<ChatsTable>(this.tableName).update(data, { id: this.id });
+
+    for (const [key, value] of Object.entries(data)) {
+      if (key in this) {
+        (this as any)[key] = value;
+      }
+    }
+
+    return result;
   }
 
   delete() {
