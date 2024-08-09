@@ -180,7 +180,9 @@ export class WorkspaceTable<
     return this._connection.client.execute<ResultSetHeader>(query, [...Object.values(data), ...values]);
   }
 
-  delete(filters: QueryFilters<T["columns"]>) {
+  delete(filters?: QueryFilters<T["columns"]>) {
+    if (!filters) return this.truncate();
+
     const { clause, values } = new QueryBuilder(filters);
     const query = `DELETE FROM ${this._path} ${clause}`;
     return this._connection.client.execute<ResultSetHeader>(query, values);
