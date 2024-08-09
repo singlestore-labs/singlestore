@@ -1,6 +1,6 @@
 import type { AI } from "@singlestore/ai";
 import type { WorkspaceDatabase, WorkspaceTable } from "@singlestore/client";
-import { ChatSession } from "./session";
+import { ChatSession, type ChatSessionsTable } from "./session";
 import { ChatMessage } from "./message";
 
 export interface ChatConfig
@@ -108,6 +108,25 @@ export class Chat<T extends WorkspaceDatabase = WorkspaceDatabase, U extends AI 
       tableName: this.sessionsTableName,
       messagesTableName: this.messagesTableName,
     });
+  }
+
+  async selectSessions(...args: Parameters<WorkspaceTable<ChatSessionsTable>["select"]>) {
+    const rows = await this._database.table<ChatSessionsTable>(this.sessionsTableName).select(...args);
+    return rows.map(
+      (row) =>
+        new ChatSession(
+          this._database,
+          this._ai,
+          row.id,
+          row.createdAt,
+          row.chatId,
+          row.name,
+          this.systemRole,
+          this.store,
+          this.sessionsTableName,
+          this.messagesTableName,
+        ),
+    );
   }
 
   deleteSessions(filters: Parameters<typeof ChatSession.delete>[3] = { chatId: this.id }) {

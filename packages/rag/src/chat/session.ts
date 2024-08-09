@@ -1,6 +1,6 @@
 import type { AI, ChatCompletionCreateOptions } from "@singlestore/ai";
 import type { WorkspaceDatabase, WorkspaceTable } from "@singlestore/client";
-import { ChatMessage } from "./message";
+import { ChatMessage, type ChatMessagesTable } from "./message";
 import type { Chat } from ".";
 
 export interface ChatSessionConfig
@@ -86,6 +86,22 @@ export class ChatSession<T extends WorkspaceDatabase = WorkspaceDatabase, U exte
       content,
       store: this.store,
       tableName: this.messagesTableName,
+    });
+  }
+
+  async selectMessages(...args: Parameters<WorkspaceTable<ChatMessagesTable>["select"]>) {
+    const rows = await this._database.table<ChatMessagesTable>(this.messagesTableName).select(...args);
+    return rows.map((row) => {
+      return new ChatMessage(
+        this._database,
+        row.id,
+        row.createdAt,
+        row.sessionId,
+        row.role,
+        row.content,
+        this.store,
+        this.messagesTableName,
+      );
     });
   }
 
