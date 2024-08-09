@@ -1,6 +1,6 @@
 import type { AI, ChatCompletionCreateOptions } from "@singlestore/ai";
-import type { WorkspaceDatabase } from "@singlestore/client";
-import { ChatMessage, type ChatMessagesTable } from "./message";
+import type { WorkspaceDatabase, WorkspaceTable } from "@singlestore/client";
+import { ChatMessage } from "./message";
 import type { Chat } from ".";
 
 export interface ChatSessionConfig
@@ -60,12 +60,23 @@ export class ChatSession<T extends WorkspaceDatabase = WorkspaceDatabase, U exte
     return new ChatSession(database, ai, id, createdAt, chatId, name, systemRole, store, tableName, messagesTableName);
   }
 
-  static delete(database: WorkspaceDatabase, tableName: ChatSession["tableName"], id: ChatSession["id"]) {
-    return database.table<ChatSessionsTable>(tableName).delete({ id });
+  static async delete(
+    database: WorkspaceDatabase,
+    tableName: ChatSession["tableName"],
+    messagesTableName: ChatSession["messagesTableName"],
+    filters?: Parameters<WorkspaceTable<ChatSessionsTable>["delete"]>[0],
+  ) {
+    const table = database.table<ChatSessionsTable>(tableName);
+    const deletedRowIds = await table.select(filters, { columns: ["id"] });
+
+    return Promise.all([
+      table.delete(filters),
+      ChatMessage.delete(database, messagesTableName, { sessionId: { in: deletedRowIds.map(({ id }) => id) } }),
+    ]);
   }
 
   delete() {
-    return ChatSession.delete(this._database, this.tableName, this.id);
+    return ChatSession.delete(this._database, this.tableName, this.messagesTableName, { id: this.id });
   }
 
   createMessage(role: ChatMessage["role"], content: ChatMessage["content"]) {
@@ -78,7 +89,7 @@ export class ChatSession<T extends WorkspaceDatabase = WorkspaceDatabase, U exte
     });
   }
 
-  deleteMessage(id: ChatMessage["id"]) {
-    return ChatMessage.delete(this._database, this.messagesTableName, id);
+  deleteMessages(filters: Parameters<typeof ChatMessage.delete>[2] = { sessionId: this.id }) {
+    return ChatMessage.delete(this._database, this.messagesTableName, filters);
   }
 }

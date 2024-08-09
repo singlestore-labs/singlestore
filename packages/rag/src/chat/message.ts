@@ -1,4 +1,4 @@
-import type { WorkspaceDatabase } from "@singlestore/client";
+import type { WorkspaceDatabase, WorkspaceTable } from "@singlestore/client";
 import type { ChatCompletionMessage } from "@singlestore/ai";
 import type { ChatSession } from "./session";
 
@@ -46,11 +46,15 @@ export class ChatMessage {
     return new ChatMessage(database, id, createdAt, sessionId, role, content, store, tableName);
   }
 
-  static delete(database: WorkspaceDatabase, tableName: ChatMessage["tableName"], id: ChatMessage["id"]) {
-    return database.table<ChatMessagesTable>(tableName).delete({ id });
+  static delete(
+    database: WorkspaceDatabase,
+    tableName: ChatMessage["tableName"],
+    filters?: Parameters<WorkspaceTable<ChatMessagesTable>["delete"]>[0],
+  ) {
+    return database.table<ChatMessagesTable>(tableName).delete(filters);
   }
 
   delete() {
-    return ChatMessage.delete(this._database, this.tableName, this.id);
+    return ChatMessage.delete(this._database, this.tableName, { id: this.id });
   }
 }

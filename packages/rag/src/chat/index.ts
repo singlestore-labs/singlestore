@@ -1,7 +1,7 @@
 import type { AI } from "@singlestore/ai";
-import type { WorkspaceDatabase } from "@singlestore/client";
-import { ChatSession, ChatSessionsTable } from "./session";
-import { ChatMessage, ChatMessagesTable } from "./message";
+import type { WorkspaceDatabase, WorkspaceTable } from "@singlestore/client";
+import { ChatSession } from "./session";
+import { ChatMessage } from "./message";
 
 export interface ChatConfig
   extends Pick<Chat, "name" | "systemRole" | "store" | "tableName" | "sessionsTableName" | "messagesTableName"> {}
@@ -79,12 +79,24 @@ export class Chat<T extends WorkspaceDatabase = WorkspaceDatabase, U extends AI 
     return new Chat(database, ai, id, createdAt, name, systemRole, store, tableName, sessionsTableName, messagesTableName);
   }
 
-  static delete(database: WorkspaceDatabase, tableName: Chat["tableName"], id: Chat["id"]) {
-    return database.table<ChatsTable>(tableName).delete({ id });
+  static async delete(
+    database: WorkspaceDatabase,
+    tableName: Chat["tableName"],
+    sessionsTable: Chat["sessionsTableName"],
+    messagesTableName: Chat["messagesTableName"],
+    filters?: Parameters<WorkspaceTable<ChatsTable>["delete"]>[0],
+  ) {
+    const table = database.table<ChatsTable>(tableName);
+    const deletedRowIds = await table.select(filters, { columns: ["id"] });
+
+    return Promise.all([
+      table.delete(filters),
+      ChatSession.delete(database, sessionsTable, messagesTableName, { chatId: { in: deletedRowIds.map(({ id }) => id) } }),
+    ]);
   }
 
   delete() {
-    return Chat.delete(this._database, this.tableName, this.id);
+    return Chat.delete(this._database, this.tableName, this.sessionsTableName, this.messagesTableName, { id: this.id });
   }
 
   createSession(name?: ChatSession["name"]) {
@@ -98,7 +110,7 @@ export class Chat<T extends WorkspaceDatabase = WorkspaceDatabase, U extends AI 
     });
   }
 
-  deleteSession(id: ChatSession["id"]) {
-    return ChatSession.delete(this._database, this.sessionsTableName, id);
+  deleteSessions(filters: Parameters<typeof ChatSession.delete>[3] = { chatId: this.id }) {
+    return ChatSession.delete(this._database, this.sessionsTableName, this.messagesTableName, filters);
   }
 }
