@@ -50,6 +50,24 @@ export class WorkspaceTable<
     return this._ai;
   }
 
+  static normalizeShowInfo<T extends string, U extends boolean>(info: any, extended?: U) {
+    const nameKey = Object.keys(info).find((key) => key.startsWith("Tables_in_")) as keyof typeof info;
+    const name = info[nameKey] as T;
+
+    let result = { name } as any;
+
+    if (extended) {
+      result = {
+        ...result,
+        tableType: info.Table_type,
+        distributed: !!info.distributed,
+        storageType: info.Storage_type,
+      };
+    }
+
+    return result as U extends true ? TableShowInfo<T> : Pick<TableShowInfo<T>, "name">;
+  }
+
   static schemaToClauses(schema: WorkspaceTableSchema<any>) {
     const clauses: string[] = [
       ...Object.entries(schema.columns).map(([name, schema]) => {
@@ -80,28 +98,6 @@ export class WorkspaceTable<
     `);
   }
 
-  static normalizeShowInfo<T extends string, U extends boolean>(info: any, extended?: U) {
-    const nameKey = Object.keys(info).find((key) => key.startsWith("Tables_in_")) as keyof typeof info;
-    const name = info[nameKey] as T;
-
-    let result = { name } as any;
-
-    if (extended) {
-      result = {
-        ...result,
-        tableType: info.Table_type,
-        distributed: !!info.distributed,
-        storageType: info.Storage_type,
-      };
-    }
-
-    return result as U extends true ? TableShowInfo<T> : Pick<TableShowInfo<T>, "name">;
-  }
-
-  drop() {
-    return WorkspaceTable.drop(this._connection, this.databaseName, this.name);
-  }
-
   async showInfo<U extends boolean>(extended?: U) {
     const clauses = [`SHOW TABLES IN ${this.databaseName}`];
     if (extended) clauses.push("EXTENDED");
@@ -113,8 +109,19 @@ export class WorkspaceTable<
     );
   }
 
+  drop() {
+    return WorkspaceTable.drop(this._connection, this.databaseName, this.name);
+  }
+
   column(name: _ColumnNames | (string & {})) {
     return new WorkspaceColumn(this._connection, this.databaseName, this.name, name as string);
+  }
+
+  async showColumnsInfo() {
+    const result = await this._connection.client.query<(any & RowDataPacket)[]>(
+      `SHOW COLUMNS IN ${this.name} IN ${this.databaseName}`,
+    );
+    return result[0].map((result) => WorkspaceColumn.normalizeShowInfo<_ColumnNames>(result));
   }
 
   addColumn(schema: WorkspaceColumnSchema) {
@@ -123,13 +130,6 @@ export class WorkspaceTable<
 
   dropColumn(name: _ColumnNames | ({} & string)) {
     return WorkspaceColumn.drop(this._connection, this.databaseName, this.name, name);
-  }
-
-  async showColumnsInfo() {
-    const result = await this._connection.client.query<(any & RowDataPacket)[]>(
-      `SHOW COLUMNS IN ${this.name} IN ${this.databaseName}`,
-    );
-    return result[0].map((result) => WorkspaceColumn.normalizeShowInfo<_ColumnNames>(result));
   }
 
   truncate() {

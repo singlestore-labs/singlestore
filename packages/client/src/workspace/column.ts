@@ -34,6 +34,17 @@ export class WorkspaceColumn {
     this._path = [databaseName, tableName].join(".");
   }
 
+  static normalizeShowInfo<T extends string>(info: any): ColumnShowInfo<T> {
+    return {
+      name: info.Field,
+      type: info.Type,
+      null: info.Null,
+      key: info.Key,
+      default: info.Default,
+      extra: info.Extra,
+    };
+  }
+
   static schemaToClauses(schema: WorkspaceColumnSchema) {
     const clauses: string[] = [`\`${schema.name}\``];
     if (schema.type) clauses.push(schema.type);
@@ -58,26 +69,15 @@ export class WorkspaceColumn {
     `);
   }
 
-  static normalizeShowInfo<T extends string>(info: any): ColumnShowInfo<T> {
-    return {
-      name: info.Field,
-      type: info.Type,
-      null: info.Null,
-      key: info.Key,
-      default: info.Default,
-      extra: info.Extra,
-    };
-  }
-
-  drop() {
-    return WorkspaceColumn.drop(this._connection, this.databaseName, this.tableName, this.name);
-  }
-
   async showInfo() {
     const result = await this._connection.client.query<(any & RowDataPacket)[]>(
       `SHOW COLUMNS IN ${this.tableName} IN ${this.databaseName} LIKE '${this.name}'`,
     );
     return WorkspaceColumn.normalizeShowInfo(result[0][0]);
+  }
+
+  drop() {
+    return WorkspaceColumn.drop(this._connection, this.databaseName, this.tableName, this.name);
   }
 
   modify(schema: Partial<Omit<WorkspaceColumnSchema, "name">>) {
