@@ -1,7 +1,12 @@
-import type { RowDataPacket } from "mysql2";
 import type { AI } from "@singlestore/ai";
 import { WorkspaceConnection, type WorkspaceConnectionConfig } from "./connection";
-import { WorkspaceDatabase, type WorkspaceDatabaseSchema, type WorkspaceDatabaseType } from "./database";
+import {
+  WorkspaceDatabase,
+  WorkspaceDatabaseShowInfo,
+  WorkspaceDatabaseShowInfoExtended,
+  type WorkspaceDatabaseSchema,
+  type WorkspaceDatabaseType,
+} from "./database";
 
 export interface WorkspaceType {
   databases: Record<string, WorkspaceDatabaseType>;
@@ -48,10 +53,20 @@ export class Workspace<
     return WorkspaceDatabase.drop(this.connection, name);
   }
 
-  async showDatabasesInfo<U extends boolean>(extended?: U) {
+  async showDatabasesInfo<
+    U extends boolean,
+    _ReturnType = U extends true ? WorkspaceDatabaseShowInfoExtended[] : WorkspaceDatabaseShowInfo[],
+  >(extended?: U): Promise<_ReturnType> {
     const clauses = ["SHOW DATABASES"];
-    if (extended) clauses.push("EXTENDED");
-    const result = await this.connection.client.query<(any & RowDataPacket)[]>(clauses.join(" "));
-    return result[0].map((result) => WorkspaceDatabase.normalizeShowInfo<_DatabaseNames, U>(result, extended));
+    const [rows] = await this.connection.client.query<any[]>(clauses.join(" "));
+    const databaseNames = rows.map((row) => Object.values(row)[0] as string);
+
+    if (!extended) {
+      return databaseNames.map((name) => ({ name }) satisfies WorkspaceDatabaseShowInfo) as _ReturnType;
+    }
+
+    return (await Promise.all(
+      databaseNames.map((name) => WorkspaceDatabase.showInfo(this.connection, name, extended)),
+    )) as _ReturnType;
   }
 }

@@ -1,7 +1,12 @@
-import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
+import type { ResultSetHeader } from "mysql2/promise";
 import type { AI } from "@singlestore/ai";
 import type { WorkspaceConnection } from "./connection";
-import { WorkspaceTable, type WorkspaceTableSchema, type WorkspaceTableType } from "./table";
+import {
+  WorkspaceTable,
+  type WorkspaceTableSchema,
+  type WorkspaceTableType,
+  type WorksaceTableShowInfoExtended,
+} from "./table";
 
 export type DatabaseTablesToRecords<T extends WorkspaceDatabaseType["tables"]> = { [K in keyof T]: T[K]["columns"][] };
 
@@ -14,8 +19,11 @@ export interface WorkspaceDatabaseSchema<T extends WorkspaceDatabaseType> {
   tables?: { [K in keyof T["tables"]]: Omit<WorkspaceTableSchema<T["tables"][K]>, "name"> };
 }
 
-export interface DatabaseShowInfo<T extends string = string> {
-  name: T;
+export interface WorkspaceDatabaseShowInfo {
+  name: string;
+}
+
+export interface WorkspaceDatabaseShowInfoExtended extends WorkspaceDatabaseShowInfo {
   commits: number;
   role: string;
   state: string;
@@ -32,6 +40,7 @@ export interface DatabaseShowInfo<T extends string = string> {
   memoryMBs: number;
   pendingIOs: number;
   pendingBlobFSyncs: number;
+  tables: WorksaceTableShowInfoExtended[];
 }
 
 export class WorkspaceDatabase<
@@ -45,32 +54,45 @@ export class WorkspaceDatabase<
     private _ai?: AI,
   ) {}
 
-  static normalizeShowInfo<T extends string, U extends boolean>(info: { Database: T; [K: string]: any }, extended?: U) {
-    let result = { name: info.Database } as any;
+  static async showInfo<
+    K extends boolean,
+    _ReturnType = K extends true ? WorkspaceDatabaseShowInfoExtended : WorkspaceDatabaseShowInfo,
+  >(connection: WorkspaceConnection, databaseName: string, extended?: K) {
+    const clauses = ["SHOW DATABASES"];
+    if (extended) clauses.push("EXTENDED");
+    clauses.push(`LIKE '${databaseName}'`);
 
-    if (extended) {
-      result = {
-        ...result,
-        commits: info.Commits,
-        role: info.Role,
-        state: info.State,
-        position: info.Position,
-        details: info.Details,
-        asyncSlaves: info.AsyncSlaves,
-        syncSlaves: info.SyncSlaves,
-        consensusSlaves: info.ConsensusSlaves,
-        committedPosition: info.CommittedPosition,
-        hardenedPosition: info.HardenedPosition,
-        replayPosition: info.ReplayPosition,
-        term: info.Term,
-        lastPageTerm: info.LastPageTerm,
-        memoryMBs: info["Memory (MBs)"],
-        pendingIOs: info["Pending IOs"],
-        pendingBlobFSyncs: info["Pending blob fsyncs"],
-      };
-    }
+    const [rows] = await connection.client.query<any[]>(clauses.join(" "));
+    const name = rows[0][Object.keys(rows[0]).find((key) => key.startsWith(`Database`)) as string];
+    if (!extended) return { name } as _ReturnType;
 
-    return result as U extends true ? DatabaseShowInfo<T> : Pick<DatabaseShowInfo<T>, "name">;
+    const [tableRows] = await connection.client.query<any[]>(`SHOW TABLES IN ${databaseName}`);
+
+    return {
+      name,
+      commits: rows[0].Commits,
+      role: rows[0].Role,
+      state: rows[0].State,
+      position: rows[0].Position,
+      details: rows[0].Details,
+      asyncSlaves: rows[0].AsyncSlaves,
+      syncSlaves: rows[0].SyncSlaves,
+      consensusSlaves: rows[0].ConsensusSlaves,
+      committedPosition: rows[0].CommittedPosition,
+      hardenedPosition: rows[0].HardenedPosition,
+      replayPosition: rows[0].ReplayPosition,
+      term: rows[0].Term,
+      lastPageTerm: rows[0].LastPageTerm,
+      memoryMBs: rows[0]["Memory (MBs)"],
+      pendingIOs: rows[0]["Pending IOs"],
+      pendingBlobFSyncs: rows[0]["Pending blob fsyncs"],
+      tables: await Promise.all(
+        tableRows.map((row) => {
+          const tableName = Object.values(row)[0] as string;
+          return WorkspaceTable.showInfo(connection, databaseName, tableName, true);
+        }),
+      ),
+    } as _ReturnType;
   }
 
   static async create<T extends WorkspaceDatabaseType>(
@@ -98,12 +120,8 @@ export class WorkspaceDatabase<
     return connection.client.execute<ResultSetHeader>(`DROP DATABASE IF EXISTS ${name}`);
   }
 
-  async showInfo<U extends boolean>(extended?: U) {
-    const clauses = ["SHOW DATABASES"];
-    if (extended) clauses.push("EXTENDED");
-    clauses.push(`LIKE '${this.name}'`);
-    const result = await this._connection.client.query<(any & RowDataPacket)[]>(clauses.join(" "));
-    return WorkspaceDatabase.normalizeShowInfo<string, U>({ ...result[0][0], Database: this.name }, extended);
+  showInfo<U extends boolean>(extended?: U) {
+    return WorkspaceDatabase.showInfo(this._connection, this.name, extended);
   }
 
   drop() {
@@ -117,13 +135,6 @@ export class WorkspaceDatabase<
       name as string,
       this._ai,
     );
-  }
-
-  async showTablesInfo<U extends boolean>(extended?: U) {
-    const clauses = [`SHOW TABLES IN ${this.name}`];
-    if (extended) clauses.push("EXTENDED");
-    const result = await this._connection.client.query<(any & RowDataPacket)[]>(clauses.join(" "));
-    return result[0].map((result) => WorkspaceTable.normalizeShowInfo<_TableNames, U>(result, extended));
   }
 
   createTable<T extends WorkspaceTableType>(schema: WorkspaceTableSchema<T>) {
