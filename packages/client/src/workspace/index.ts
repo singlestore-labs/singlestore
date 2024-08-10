@@ -1,12 +1,6 @@
 import type { AI } from "@singlestore/ai";
 import { WorkspaceConnection, type WorkspaceConnectionConfig } from "./connection";
-import {
-  WorkspaceDatabase,
-  WorkspaceDatabaseShowInfo,
-  WorkspaceDatabaseShowInfoExtended,
-  type WorkspaceDatabaseSchema,
-  type WorkspaceDatabaseType,
-} from "./database";
+import { WorkspaceDatabase, type WorkspaceDatabaseSchema, type WorkspaceDatabaseType } from "./database";
 
 export interface WorkspaceType {
   databases: Record<string, WorkspaceDatabaseType>;
@@ -53,20 +47,10 @@ export class Workspace<
     return WorkspaceDatabase.drop(this.connection, name);
   }
 
-  async showDatabasesInfo<
-    U extends boolean,
-    _ReturnType = U extends true ? WorkspaceDatabaseShowInfoExtended[] : WorkspaceDatabaseShowInfo[],
-  >(extended?: U): Promise<_ReturnType> {
+  async showDatabasesInfo<U extends boolean>(extended?: U) {
     const clauses = ["SHOW DATABASES"];
+    if (extended) clauses.push("EXTENDED");
     const [rows] = await this.connection.client.query<any[]>(clauses.join(" "));
-    const databaseNames = rows.map((row) => Object.values(row)[0] as string);
-
-    if (!extended) {
-      return databaseNames.map((name) => ({ name }) satisfies WorkspaceDatabaseShowInfo) as _ReturnType;
-    }
-
-    return (await Promise.all(
-      databaseNames.map((name) => WorkspaceDatabase.showInfo(this.connection, name, extended)),
-    )) as _ReturnType;
+    return rows.map((row) => WorkspaceDatabase.normalizeInfo<_DatabaseNames, U>(row, extended));
   }
 }

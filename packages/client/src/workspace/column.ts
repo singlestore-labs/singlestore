@@ -13,8 +13,8 @@ export interface WorkspaceColumnSchema {
   clauses?: string[];
 }
 
-export interface WorkspaceColumnShowInfo {
-  name: string;
+export interface WorkspaceColumnInfo<T extends string> {
+  name: T;
   type: string;
   null: string;
   key: string;
@@ -34,6 +34,17 @@ export class WorkspaceColumn {
     this._path = [databaseName, tableName].join(".");
   }
 
+  static normalizeInfo<T extends string>(info: any): WorkspaceColumnInfo<T> {
+    return {
+      name: info.Field,
+      type: info.Type,
+      null: info.Null,
+      key: info.Key,
+      default: info.Default,
+      extra: info.Extra,
+    };
+  }
+
   static schemaToClauses(schema: WorkspaceColumnSchema) {
     const clauses: string[] = [`\`${schema.name}\``];
     if (schema.type) clauses.push(schema.type);
@@ -42,23 +53,6 @@ export class WorkspaceColumn {
     if (schema.autoIncrement) clauses.push("AUTO_INCREMENT");
     if (schema.default !== undefined) clauses.push(`DEFAULT ${schema.default}`);
     return [...clauses, ...(schema.clauses || [])].filter(Boolean).join(" ");
-  }
-
-  static async showInfo(
-    connection: WorkspaceConnection,
-    databaseName: string,
-    tableName: string,
-    columnName: string,
-  ): Promise<WorkspaceColumnShowInfo> {
-    const [rows] = await connection.client.query<any[]>(`SHOW COLUMNS IN ${tableName} IN ${databaseName} LIKE '${columnName}'`);
-    return {
-      name: rows[0].Field,
-      type: rows[0].Type,
-      null: rows[0].Null,
-      key: rows[0].Key,
-      default: rows[0].Default,
-      extra: rows[0].Extra,
-    };
   }
 
   static async add(connection: WorkspaceConnection, databaseName: string, tableName: string, schema: WorkspaceColumnSchema) {
@@ -75,8 +69,11 @@ export class WorkspaceColumn {
     `);
   }
 
-  showInfo() {
-    return WorkspaceColumn.showInfo(this._connection, this.databaseName, this.tableName, this.name);
+  async showInfo() {
+    const [rows] = await this._connection.client.query<any[]>(
+      `SHOW COLUMNS IN ${this.tableName} IN ${this.databaseName} LIKE '${this.name}'`,
+    );
+    return WorkspaceColumn.normalizeInfo<string>(rows[0]);
   }
 
   drop() {

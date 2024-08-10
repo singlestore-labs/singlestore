@@ -1,6 +1,6 @@
 import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 import type { AI } from "@singlestore/ai";
-import { type WorkspaceColumnShowInfo, WorkspaceColumn, type WorkspaceColumnSchema, type WorkspaceColumnType } from "./column";
+import { WorkspaceColumn, type WorkspaceColumnSchema, type WorkspaceColumnType } from "./column";
 import type { WorkspaceConnection } from "./connection";
 import { QueryBuilder, type QueryBuilderArgs } from "../query/builder";
 import type { QueryFilters } from "../query/filters/builder";
@@ -19,15 +19,14 @@ export interface WorkspaceTableSchema<T extends WorkspaceTableType = WorkspaceTa
   clauses?: string[];
 }
 
-export interface WorkspaceTableShowInfo {
-  name: string;
+export interface WorkspaceTableInfo<T extends string> {
+  name: T;
 }
 
-export interface WorksaceTableShowInfoExtended extends WorkspaceTableShowInfo {
+export interface WorksaceTableInfoExtended<T extends string> extends WorkspaceTableInfo<T> {
   tableType: string;
   distributed: boolean;
   storageType: string;
-  columns: WorkspaceColumnShowInfo[];
 }
 
 export class WorkspaceTable<
@@ -54,6 +53,22 @@ export class WorkspaceTable<
     return this._ai;
   }
 
+  static normalizeInfo<
+    T extends string,
+    U extends boolean,
+    _ReturnType = U extends true ? WorksaceTableInfoExtended<T> : WorkspaceTableInfo<T>,
+  >(info: any, extended?: U): _ReturnType {
+    const name = info[Object.keys(info).find((key) => key.startsWith("Tables_in_")) as string];
+    if (!extended) return { name } as _ReturnType;
+
+    return {
+      name,
+      tableType: info.Table_type,
+      distributed: !!info.distributed,
+      storageType: info.Storage_type,
+    } as _ReturnType;
+  }
+
   static schemaToClauses(schema: WorkspaceTableSchema<any>) {
     const clauses: string[] = [
       ...Object.entries(schema.columns).map(([name, schema]) => {
@@ -63,31 +78,6 @@ export class WorkspaceTable<
     if (schema.primaryKeys?.length) clauses.push(`PRIMARY KEY (${schema.primaryKeys.join(", ")})`);
     if (schema.fulltextKeys?.length) clauses.push(`FULLTEXT KEY (${schema.fulltextKeys.join(", ")})`);
     return [...clauses, ...(schema.clauses || [])].filter(Boolean).join(", ");
-  }
-
-  static async showInfo<
-    K extends boolean,
-    _ReturnType = K extends true ? WorksaceTableShowInfoExtended : WorkspaceTableShowInfo,
-  >(connection: WorkspaceConnection, databaseName: string, tableName: string, extended?: K): Promise<_ReturnType> {
-    const clauses = [`SHOW TABLES IN ${databaseName}`];
-    if (extended) clauses.push("EXTENDED");
-    clauses.push(`LIKE '${tableName}'`);
-
-    const [rows] = await connection.client.query<any[]>(clauses.join(" "));
-    const name = rows[0][Object.keys(rows[0]).find((key) => key.startsWith(`Tables_in_${databaseName}`)) as string];
-    if (!extended) return { name } as _ReturnType;
-
-    const [columnRows] = await connection.client.query<any[]>(`SHOW COLUMNS IN ${tableName} IN ${databaseName}`);
-
-    return {
-      name,
-      tableType: rows[0].Table_type,
-      distributed: !!rows[0].distributed,
-      storageType: rows[0].Storage_type,
-      columns: await Promise.all(
-        columnRows.map((result) => WorkspaceColumn.showInfo(connection, databaseName, tableName, result.Field)),
-      ),
-    } as _ReturnType;
   }
 
   static async create<T extends WorkspaceTableType>(
@@ -109,8 +99,12 @@ export class WorkspaceTable<
     `);
   }
 
-  showInfo<U extends boolean>(extended?: U) {
-    return WorkspaceTable.showInfo(this._connection, this.databaseName, this.name, extended);
+  async showInfo<U extends boolean>(extended?: U) {
+    const clauses = [`SHOW TABLES IN ${this.databaseName}`];
+    if (extended) clauses.push("EXTENDED");
+    clauses.push(`LIKE '${this.name}'`);
+    const [rows] = await this._connection.client.query<any[]>(clauses.join(" "));
+    return WorkspaceTable.normalizeInfo<string, U>(rows[0], extended);
   }
 
   drop() {
@@ -119,6 +113,11 @@ export class WorkspaceTable<
 
   column(name: _ColumnNames | (string & {})) {
     return new WorkspaceColumn(this._connection, this.databaseName, this.name, name as string);
+  }
+
+  async showColumnsInfo() {
+    const [rows] = await this._connection.client.query<any[]>(`SHOW COLUMNS IN ${this.name} IN ${this.databaseName}`);
+    return rows.map((row) => WorkspaceColumn.normalizeInfo<_ColumnNames>(row));
   }
 
   addColumn(schema: WorkspaceColumnSchema) {
