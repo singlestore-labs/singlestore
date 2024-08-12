@@ -39,13 +39,14 @@ export interface WorkspaceDatabaseInfoExtended<T extends string> extends Workspa
 
 export class WorkspaceDatabase<
   T extends WorkspaceDatabaseType = WorkspaceDatabaseType,
+  U extends AI = AI,
   _TableNames extends Extract<keyof T["tables"], string> = Extract<keyof T["tables"], string>,
 > {
   constructor(
     private _connection: WorkspaceConnection,
     public name: string,
     public workspaceName?: string,
-    private _ai?: AI,
+    private _ai?: U,
   ) {}
 
   static normalizeInfo<
@@ -77,11 +78,11 @@ export class WorkspaceDatabase<
     } as _ReturnType;
   }
 
-  static async create<T extends WorkspaceDatabaseType>(
+  static async create<T extends WorkspaceDatabaseType, U extends AI = AI>(
     connection: WorkspaceConnection,
     schema: WorkspaceDatabaseSchema<T>,
     workspaceName?: string,
-    ai?: AI,
+    ai?: U,
   ) {
     const clauses: string[] = [`CREATE DATABASE IF NOT EXISTS ${schema.name}`];
     if (workspaceName) clauses.push(`ON WORKSPACE \`${workspaceName}\``);
@@ -95,7 +96,7 @@ export class WorkspaceDatabase<
       );
     }
 
-    return new WorkspaceDatabase<T>(connection, schema.name, workspaceName, ai);
+    return new WorkspaceDatabase<T, U>(connection, schema.name, workspaceName, ai);
   }
 
   static drop(connection: WorkspaceConnection, name: string) {
@@ -124,8 +125,8 @@ export class WorkspaceDatabase<
     return WorkspaceDatabase.drop(this._connection, this.name);
   }
 
-  table<U, K extends _TableNames | (string & {}) = _TableNames | (string & {})>(name: K) {
-    return new WorkspaceTable<U extends WorkspaceTableType ? U : T["tables"][K]>(
+  table<N, K extends _TableNames | (string & {}) = _TableNames | (string & {})>(name: K) {
+    return new WorkspaceTable<N extends WorkspaceTableType ? N : T["tables"][K], U>(
       this._connection,
       this.name,
       name as string,
@@ -141,7 +142,7 @@ export class WorkspaceDatabase<
   }
 
   createTable<T extends WorkspaceTableType>(schema: WorkspaceTableSchema<T>) {
-    return WorkspaceTable.create<T>(this._connection, this.name, schema, this._ai);
+    return WorkspaceTable.create<T, U>(this._connection, this.name, schema, this._ai);
   }
 
   dropTable(name: _TableNames | ({} & string)) {

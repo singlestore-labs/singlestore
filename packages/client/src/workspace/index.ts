@@ -13,25 +13,26 @@ export interface WorkspaceSchema<T extends WorkspaceType> {
 
 export class Workspace<
   T extends WorkspaceType = WorkspaceType,
+  U extends AI = AI,
   _DatabaseNames extends Extract<keyof T["databases"], string> = Extract<keyof T["databases"], string>,
 > {
   constructor(
     public connection: WorkspaceConnection,
     public name?: string,
-    private _ai?: AI,
+    private _ai?: U,
   ) {}
 
-  static connect<T extends WorkspaceType>({
+  static connect<T extends WorkspaceType, U extends AI = AI>({
     ai,
     name,
     ...config
-  }: Partial<Pick<WorkspaceSchema<T>, "name">> & Omit<WorkspaceConnectionConfig, "name"> & { ai?: AI }) {
+  }: Partial<Pick<WorkspaceSchema<T>, "name">> & Omit<WorkspaceConnectionConfig, "name"> & { ai?: U }) {
     const connection = new WorkspaceConnection(config);
-    return new Workspace<T>(connection, name, ai);
+    return new Workspace<T, U>(connection, name, ai);
   }
 
-  database<U, K extends _DatabaseNames | (string & {}) = _DatabaseNames | (string & {})>(name: K) {
-    return new WorkspaceDatabase<U extends WorkspaceDatabaseType ? U : T["databases"][K]>(
+  database<N, K extends _DatabaseNames | (string & {}) = _DatabaseNames | (string & {})>(name: K) {
+    return new WorkspaceDatabase<N extends WorkspaceDatabaseType ? N : T["databases"][K], U>(
       this.connection,
       name as string,
       this.name,
@@ -40,7 +41,7 @@ export class Workspace<
   }
 
   createDatabase<T extends WorkspaceDatabaseType>(schema: WorkspaceDatabaseSchema<T>) {
-    return WorkspaceDatabase.create<T>(this.connection, schema, this.name, this._ai);
+    return WorkspaceDatabase.create<T, U>(this.connection, schema, this.name, this._ai);
   }
 
   dropDatabase(name: _DatabaseNames | ({} & string)) {

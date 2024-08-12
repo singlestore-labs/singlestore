@@ -31,6 +31,7 @@ export interface WorksaceTableInfoExtended<T extends string> extends WorkspaceTa
 
 export class WorkspaceTable<
   T extends WorkspaceTableType,
+  U extends AI = AI,
   _ColumnNames extends Extract<keyof T["columns"], string> = Extract<keyof T["columns"], string>,
 > {
   private _path: string;
@@ -40,7 +41,7 @@ export class WorkspaceTable<
     private _connection: WorkspaceConnection,
     public databaseName: string,
     public name: string,
-    private _ai?: AI,
+    private _ai?: U,
   ) {
     this._path = [databaseName, name].join(".");
   }
@@ -80,17 +81,17 @@ export class WorkspaceTable<
     return [...clauses, ...(schema.clauses || [])].filter(Boolean).join(", ");
   }
 
-  static async create<T extends WorkspaceTableType>(
+  static async create<T extends WorkspaceTableType, U extends AI = AI>(
     connection: WorkspaceConnection,
     databaseName: string,
     schema: WorkspaceTableSchema<T>,
-    ai?: AI,
+    ai?: U,
   ) {
     const clauses = WorkspaceTable.schemaToClauses(schema);
     await connection.client.execute<ResultSetHeader>(`\
       CREATE TABLE IF NOT EXISTS ${databaseName}.${schema.name} (${clauses})
     `);
-    return new WorkspaceTable<T>(connection, databaseName, schema.name, ai);
+    return new WorkspaceTable<T, U>(connection, databaseName, schema.name, ai);
   }
 
   static drop(connection: WorkspaceConnection, databaseName: string, name: string) {
@@ -213,13 +214,13 @@ export class WorkspaceTable<
   }
 
   async createChatCompletion<
-    U extends QueryBuilderArgs<_S>,
+    Q extends QueryBuilderArgs<_S>,
     _S extends QuerySchema = T["columns"] & { v_score: number },
-    _O extends Parameters<AI["chatCompletions"]["create"]>[1] = Parameters<AI["chatCompletions"]["create"]>[1],
+    _O extends Parameters<U["chatCompletions"]["create"]>[1] = Parameters<U["chatCompletions"]["create"]>[1],
   >(
     ...[{ prompt, vColumn, template, systemRole, ...createChatCompletionOptions }, ...args]: [
       search: { prompt: string; vColumn: _ColumnNames; template?: string } & _O,
-      ...U,
+      ...Q,
     ]
   ) {
     const _systemRole =
@@ -231,7 +232,7 @@ export class WorkspaceTable<
       `;
 
     const _template = template || `The user asked: <question>\nThe most similar context: <context>`;
-    const context = await this.vectorSearch<U, _S>({ prompt, vColumn }, ...args);
+    const context = await this.vectorSearch<Q, _S>({ prompt, vColumn }, ...args);
     const _prompt = _template.replace("<question>", prompt).replace("<context>", JSON.stringify(context));
 
     return this.ai.chatCompletions.create(_prompt, { ...createChatCompletionOptions, systemRole: _systemRole });
