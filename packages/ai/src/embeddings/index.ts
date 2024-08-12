@@ -5,8 +5,5 @@ export interface EmbeddingsCreateOptions<T = any> {
 export interface Embeddings {
   getModels(): string[];
 
-  create<T extends EmbeddingsCreateOptions & { [K: string]: any }>(
-    input: string | string[],
-    options?: Partial<T>,
-  ): Promise<number[][]>;
+  create<T extends Partial<EmbeddingsCreateOptions>>(input: string | string[], options?: T): Promise<number[][]>;
 }

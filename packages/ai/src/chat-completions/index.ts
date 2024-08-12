@@ -1,7 +1,6 @@
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 
 export type ChatCompletionStream = AsyncIterable<string>;
-
 export type ChatCompletionMessage = ChatCompletionMessageParam;
 
 export interface ChatCompletionCreateOptions<T = any> {
@@ -11,13 +10,15 @@ export interface ChatCompletionCreateOptions<T = any> {
   history: ChatCompletionMessage[];
 }
 
+export type ChatCompletionCreateReturnType<T = any> = T extends { stream: true } ? ChatCompletionStream : string;
+
 export interface ChatCompletions {
   getModels(): string[];
 
-  create<T extends ChatCompletionCreateOptions & { [K: string]: any }>(
+  create<T extends Partial<ChatCompletionCreateOptions>>(
     prompt: string,
-    options?: Partial<T>,
-  ): Promise<T extends { stream: true } ? ChatCompletionStream : string>;
+    options?: T,
+  ): Promise<ChatCompletionCreateReturnType<T>>;
 
   handleStream(stream: ChatCompletionStream, onChunk?: (chunk: string) => Promise<void> | void): Promise<string>;
 }

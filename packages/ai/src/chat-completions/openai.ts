@@ -1,7 +1,13 @@
 import type { OpenAI } from "openai";
 import type { ChatCompletionChunk } from "openai/resources/chat/completions";
 import type { Stream as OpenAIStream } from "openai/streaming.mjs";
-import type { ChatCompletions, ChatCompletionStream, ChatCompletionMessage, ChatCompletionCreateOptions } from ".";
+import type {
+  ChatCompletions,
+  ChatCompletionStream,
+  ChatCompletionMessage,
+  ChatCompletionCreateOptions,
+  ChatCompletionCreateReturnType,
+} from ".";
 
 export type OpenAIChatCompletionModel =
   | "gpt-4o"
@@ -48,11 +54,11 @@ export class OpenAIChatCompletions implements ChatCompletions {
     ];
   }
 
-  async create<
-    T extends OpenAIChatCompletionsCreateOptions,
-    _ReturnType = T extends { stream: true } ? ChatCompletionStream : string,
-  >(prompt: string, options: Partial<T> = {}): Promise<_ReturnType> {
-    const { systemRole = "You are a helpful assistant", history = [], ..._options } = options;
+  async create<T extends Partial<OpenAIChatCompletionsCreateOptions>, _ReturnType = ChatCompletionCreateReturnType<T>>(
+    prompt: string,
+    options?: T,
+  ): Promise<_ReturnType> {
+    const { systemRole = "You are a helpful assistant", history = [], ..._options } = options ?? ({} as T);
 
     const messages: ChatCompletionMessage[] = _options?.messages || [
       { role: "system", content: systemRole },

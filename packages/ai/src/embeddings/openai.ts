@@ -13,9 +13,9 @@ export class OpenAIEmbeddings implements Embeddings {
     return ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"];
   }
 
-  async create<T extends OpenAIChatEmbeddingsCreateOptions>(
+  async create<T extends Partial<OpenAIChatEmbeddingsCreateOptions>>(
     input: string | string[],
-    options?: Partial<T>,
+    options?: T,
   ): Promise<number[][]> {
     const _input = Array.isArray(input) ? input : [input];
     const response = await this._openai.embeddings.create({ model: "text-embedding-3-small", ...options, input: _input });
