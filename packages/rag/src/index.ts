@@ -5,7 +5,7 @@ import { Chat, type ChatsTable, type ChatConfig } from "./chat";
 
 export type * from "./types";
 
-export class RAG<T extends WorkspaceDatabase = WorkspaceDatabase, U extends AI = AI> {
+export class RAG<T extends WorkspaceDatabase, U extends AI> {
   private _database;
   private _ai;
 
