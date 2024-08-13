@@ -184,7 +184,7 @@ export class WorkspaceTable<T extends WorkspaceTableType = any, U extends AI = A
   }
 
   async vectorSearch<U extends QueryBuilderArgs<_S>, _S extends QuerySchema = T["columns"] & { v_score: number }>(
-    ...[search, ...args]: [search: { prompt: string; vColumn: Extract<keyof T["columns"], string> }, ...U]
+    ...[search, ...args]: [search: { prompt: string; vectorColumn: Extract<keyof T["columns"], string> }, ...U]
   ) {
     type Options = ExtractQueryOptions<U>;
     type SelectedColumns = ExtractQueryColumns<_S, Options> & { v_score: number };
@@ -202,7 +202,7 @@ export class WorkspaceTable<T extends WorkspaceTableType = any, U extends AI = A
 
     const query = `\
       SET @promptEmbedding = '${JSON.stringify(promptEmbedding)}' :> vector(${promptEmbedding.length}) :> blob;
-      SELECT ${[columns, `${search.vColumn} <*> @promptEmbedding AS ${this.vScoreKey}`].join(", ")}
+      SELECT ${[columns, `${search.vectorColumn} <*> @promptEmbedding AS ${this.vScoreKey}`].join(", ")}
       FROM ${this._path}
       ${[clauses.where, clauses.groupBy, orderByClause, clauses.limit].join(" ")}
     `;
@@ -219,8 +219,8 @@ export class WorkspaceTable<T extends WorkspaceTableType = any, U extends AI = A
       undefined
     >,
   >(
-    ...[{ prompt, vColumn, template, systemRole, ...createChatCompletionOptions }, ...args]: [
-      search: { prompt: string; vColumn: Extract<keyof T["columns"], string>; template?: string } & _O,
+    ...[{ prompt, vectorColumn, template, systemRole, ...createChatCompletionOptions }, ...args]: [
+      search: { prompt: string; vectorColumn: Extract<keyof T["columns"], string>; template?: string } & _O,
       ...Q,
     ]
   ) {
@@ -233,7 +233,7 @@ export class WorkspaceTable<T extends WorkspaceTableType = any, U extends AI = A
       `;
 
     const _template = template || `The user asked: <question>\nThe most similar context: <context>`;
-    const context = await this.vectorSearch<Q, _S>({ prompt, vColumn }, ...args);
+    const context = await this.vectorSearch<Q, _S>({ prompt, vectorColumn }, ...args);
     const _prompt = _template.replace("<question>", prompt).replace("<context>", JSON.stringify(context));
 
     return this.ai.chatCompletions.create(_prompt, { ...createChatCompletionOptions, systemRole: _systemRole });

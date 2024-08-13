@@ -175,7 +175,7 @@ async function main() {
     console.log(
       await db
         .table("products")
-        .vectorSearch({ prompt: prompt_19_1, vColumn: "description_v" }, { columns: ["name", "description"], limit: 1 }),
+        .vectorSearch({ prompt: prompt_19_1, vectorColumn: "description_v" }, { columns: ["name", "description"], limit: 1 }),
     );
 
     const prompt_19_2 = "What monitor do I have in my store?";
@@ -186,7 +186,7 @@ async function main() {
       await db
         .table("products")
         .createChatCompletion(
-          { prompt: prompt_19_2, vColumn: "description_v" },
+          { prompt: prompt_19_2, vectorColumn: "description_v" },
           { columns: ["name", "description", "price"], limit: 1 },
         ),
     );
