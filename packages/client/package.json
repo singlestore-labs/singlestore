@@ -20,17 +20,19 @@
   "scripts": {
     "build": "tsup",
     "clean": "rm -rf dist",
-    "dev": "tsup --watch"
+    "dev": "tsup --watch",
+    "lint": "eslint . "
+  },
+  "dependencies": {
+    "@singlestore/ai": "*"
   },
   "devDependencies": {
     "@repo/eslint-config": "*",
     "@repo/typescript-config": "*",
+    "@types/node": "^22.2.0",
+    "mysql2": "^3.10.2",
     "tsup": "^8.1.0",
-    "typescript": "^5.3.3"
-  },
-  "dependencies": {
-    "@singlestore/ai": "*",
-    "mysql2": "^3.10.2"
+    "typescript": "^5.5.4"
   },
   "engines": {
     "node": ">=18"
@@ -47,7 +49,6 @@
     "url": "https://github.com/singlestore-labs/singlestore/issues"
   },
   "keywords": [
-    "singlestore",
-    "ai"
+    "singlestore"
   ]
 }

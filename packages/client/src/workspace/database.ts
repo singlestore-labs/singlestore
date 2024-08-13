@@ -1,6 +1,7 @@
-import type { ResultSetHeader } from "mysql2/promise";
-import type { AI } from "@singlestore/ai";
 import type { WorkspaceConnection } from "./connection";
+import type { AI } from "@singlestore/ai";
+import type { ResultSetHeader } from "mysql2/promise";
+
 import { WorkspaceTable, type WorkspaceTableSchema, type WorkspaceTableType } from "./table";
 
 export type DatabaseTablesToRecords<T extends WorkspaceDatabaseType["tables"]> = { [K in keyof T]: T[K]["columns"][] };

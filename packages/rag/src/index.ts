@@ -1,5 +1,6 @@
 import type { AI } from "@singlestore/ai";
 import type { WorkspaceDatabase, WorkspaceTable } from "@singlestore/client";
+
 import { Chat, type ChatsTable, type ChatConfig } from "./chat";
 
 export type * from "./types";

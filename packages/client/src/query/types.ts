@@ -6,7 +6,7 @@ export type ExtractQueryOptions<T extends QueryBuilderArgs<any>> = T extends [in
   ? A extends QueryOptions<any>
     ? A
     : never
-  : T extends [infer A, infer B]
+  : T extends [any, infer B]
     ? B extends QueryOptions<any>
       ? B
       : never

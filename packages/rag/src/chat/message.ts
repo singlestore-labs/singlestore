@@ -1,6 +1,6 @@
-import type { WorkspaceDatabase, WorkspaceTable } from "@singlestore/client";
-import type { ChatCompletionMessage } from "@singlestore/ai";
 import type { ChatSession } from "./session";
+import type { ChatCompletionMessage } from "@singlestore/ai";
+import type { WorkspaceDatabase, WorkspaceTable } from "@singlestore/client";
 
 export interface ChatMessageConfig extends Pick<ChatMessage, "sessionId" | "role" | "content" | "store" | "tableName"> {}
 

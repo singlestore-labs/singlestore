@@ -1,4 +1,5 @@
 import type { AI } from "@singlestore/ai";
+
 import { Workspace, type WorkspaceType } from "./workspace";
 
 export type * from "./types";

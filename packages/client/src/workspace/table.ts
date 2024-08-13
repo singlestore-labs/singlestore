@@ -1,11 +1,13 @@
-import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
-import type { AI } from "@singlestore/ai";
-import { WorkspaceColumn, type WorkspaceColumnSchema, type WorkspaceColumnType } from "./column";
 import type { WorkspaceConnection } from "./connection";
-import { QueryBuilder, type QueryBuilderArgs } from "../query/builder";
 import type { QueryFilters } from "../query/filters/builder";
-import type { ExtractQueryColumns, ExtractQueryOptions } from "../query/types";
 import type { QuerySchema } from "../query/schema";
+import type { ExtractQueryColumns, ExtractQueryOptions } from "../query/types";
+import type { AI } from "@singlestore/ai";
+import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
+
+import { QueryBuilder, type QueryBuilderArgs } from "../query/builder";
+
+import { WorkspaceColumn, type WorkspaceColumnSchema, type WorkspaceColumnType } from "./column";
 
 export interface WorkspaceTableType {
   columns: Record<string, WorkspaceColumnType>;

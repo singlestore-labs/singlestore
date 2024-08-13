@@ -1,7 +1,8 @@
+import type { Chat } from ".";
 import type { AI, ChatCompletionCreateOptions, ChatCompletionCreateReturnType, ChatCompletionStream } from "@singlestore/ai";
 import type { WorkspaceDatabase, WorkspaceTable } from "@singlestore/client";
+
 import { ChatMessage, type ChatMessagesTable } from "./message";
-import type { Chat } from ".";
 
 export interface ChatSessionConfig
   extends Pick<ChatSession, "chatId" | "name" | "systemRole" | "store" | "tableName" | "messagesTableName"> {}

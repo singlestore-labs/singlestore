@@ -1,5 +1,5 @@
-import type { OpenAI } from "openai";
 import type { Embeddings, EmbeddingsCreateOptions } from ".";
+import type { OpenAI } from "openai";
 
 export type OpenAIEmbeddingModel = "text-embedding-3-small" | "text-embedding-3-large" | "text-embedding-ada-002";
 

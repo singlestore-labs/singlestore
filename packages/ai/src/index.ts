@@ -1,7 +1,9 @@
 import { OpenAI } from "openai";
+
 import type { ChatCompletions } from "./chat-completions";
-import { OpenAIChatCompletions } from "./chat-completions/openai";
 import type { Embeddings } from "./embeddings";
+
+import { OpenAIChatCompletions } from "./chat-completions/openai";
 import { OpenAIEmbeddings } from "./embeddings/openai";
 
 export type * from "./types";

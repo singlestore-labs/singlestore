@@ -1,6 +1,3 @@
-import type { OpenAI } from "openai";
-import type { ChatCompletionChunk } from "openai/resources/chat/completions";
-import type { Stream as OpenAIStream } from "openai/streaming.mjs";
 import type {
   ChatCompletions,
   ChatCompletionStream,
@@ -8,6 +5,7 @@ import type {
   ChatCompletionCreateOptions,
   ChatCompletionCreateReturnType,
 } from ".";
+import type { OpenAI } from "openai";
 
 export type OpenAIChatCompletionModel =
   | "gpt-4o"

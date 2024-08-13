@@ -1,5 +1,5 @@
-import type { ResultSetHeader } from "mysql2/promise";
 import type { WorkspaceConnection } from "./connection";
+import type { ResultSetHeader } from "mysql2/promise";
 
 export type WorkspaceColumnType = any;
 

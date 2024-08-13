@@ -1,4 +1,5 @@
 import type { AI } from "@singlestore/ai";
+
 import { WorkspaceConnection, type WorkspaceConnectionConfig } from "./connection";
 import { WorkspaceDatabase, type WorkspaceDatabaseSchema, type WorkspaceDatabaseType } from "./database";
 
