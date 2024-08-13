@@ -25,7 +25,7 @@ export class ChatMessage {
       name,
       columns: {
         id: { type: "bigint", autoIncrement: true, primaryKey: true },
-        createdAt: { type: "DATETIME", default: "CURRENT_TIMESTAMP()" },
+        createdAt: { type: "DATETIME(6)", default: "CURRENT_TIMESTAMP(6)" },
         sessionId: { type: "bigint", nullable: false },
         role: { type: "varchar(64)", nullable: false },
         content: { type: "text", nullable: false },
@@ -35,7 +35,7 @@ export class ChatMessage {
 
   static async create(database: WorkspaceDatabase, config: ChatMessageConfig) {
     const { sessionId, role, content, store, tableName } = config;
-    const createdAt: ChatMessage["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 19);
+    const createdAt: ChatMessage["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 23);
     let id: ChatMessage["id"];
 
     if (store) {

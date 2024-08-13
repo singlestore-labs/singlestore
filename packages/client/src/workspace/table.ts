@@ -216,7 +216,10 @@ export class WorkspaceTable<
   async createChatCompletion<
     Q extends QueryBuilderArgs<_S>,
     _S extends QuerySchema = T["columns"] & { v_score: number },
-    _O extends Parameters<U["chatCompletions"]["create"]>[1] = Parameters<U["chatCompletions"]["create"]>[1],
+    _O extends Exclude<Parameters<U["chatCompletions"]["create"]>[1], undefined> = Exclude<
+      Parameters<U["chatCompletions"]["create"]>[1],
+      undefined
+    >,
   >(
     ...[{ prompt, vColumn, template, systemRole, ...createChatCompletionOptions }, ...args]: [
       search: { prompt: string; vColumn: _ColumnNames; template?: string } & _O,

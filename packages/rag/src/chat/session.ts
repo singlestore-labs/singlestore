@@ -29,7 +29,7 @@ export class ChatSession<T extends WorkspaceDatabase = WorkspaceDatabase, U exte
       name,
       columns: {
         id: { type: "bigint", autoIncrement: true, primaryKey: true },
-        createdAt: { type: "DATETIME", default: "CURRENT_TIMESTAMP()" },
+        createdAt: { type: "DATETIME(6)", default: "CURRENT_TIMESTAMP(6)" },
         chatId: { type: "bigint" },
         name: { type: "varchar(128)" },
       },
@@ -37,7 +37,7 @@ export class ChatSession<T extends WorkspaceDatabase = WorkspaceDatabase, U exte
   }
 
   static async create<T extends WorkspaceDatabase, U extends AI = AI>(database: T, ai: U, config?: Partial<ChatSessionConfig>) {
-    const createdAt: ChatSession["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 19);
+    const createdAt: ChatSession["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 23);
 
     const _config: ChatSessionConfig = {
       chatId: config?.chatId ?? undefined,
@@ -118,5 +118,12 @@ export class ChatSession<T extends WorkspaceDatabase = WorkspaceDatabase, U exte
 
   deleteMessages(filters: Parameters<typeof ChatMessage.delete>[2] = { sessionId: this.id }) {
     return ChatMessage.delete(this._database, this.messagesTableName, filters);
+  }
+
+  async createChatCompletion<T extends Exclude<Parameters<U["chatCompletions"]["create"]>[1], undefined>>(
+    prompt: string,
+    options?: T,
+  ) {
+    return await this._ai.chatCompletions.create<T>(prompt, options);
   }
 }

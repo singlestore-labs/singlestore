@@ -54,10 +54,10 @@ export class OpenAIChatCompletions implements ChatCompletions {
     ];
   }
 
-  async create<T extends Partial<OpenAIChatCompletionsCreateOptions>, _ReturnType = ChatCompletionCreateReturnType<T>>(
+  async create<T extends Partial<OpenAIChatCompletionsCreateOptions>>(
     prompt: string,
     options?: T,
-  ): Promise<_ReturnType> {
+  ): Promise<ChatCompletionCreateReturnType<T>> {
     const { systemRole = "You are a helpful assistant", history = [], ..._options } = options ?? ({} as T);
 
     const messages: ChatCompletionMessage[] = _options?.messages || [
@@ -81,10 +81,10 @@ export class OpenAIChatCompletions implements ChatCompletions {
         }
       }
 
-      return asyncIterableFromStream(response) as _ReturnType;
+      return asyncIterableFromStream(response) as ChatCompletionCreateReturnType<T>;
     }
 
-    return (response.choices[0]?.message.content || "") as _ReturnType;
+    return (response.choices[0]?.message.content || "") as ChatCompletionCreateReturnType<T>;
   }
 
   async handleStream(stream: ChatCompletionStream, onChunk?: (chunk: string) => Promise<void> | void): Promise<string> {

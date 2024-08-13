@@ -29,7 +29,7 @@ export class Chat<T extends WorkspaceDatabase = WorkspaceDatabase, U extends AI 
       name,
       columns: {
         id: { type: "bigint", autoIncrement: true, primaryKey: true },
-        createdAt: { type: "DATETIME", default: "CURRENT_TIMESTAMP()" },
+        createdAt: { type: "DATETIME(6)", default: "CURRENT_TIMESTAMP(6)" },
         name: { type: "varchar(128)", nullable: false },
         systemRole: { type: "text" },
         store: { type: "bool" },
@@ -41,7 +41,7 @@ export class Chat<T extends WorkspaceDatabase = WorkspaceDatabase, U extends AI 
   }
 
   static async create<T extends WorkspaceDatabase, U extends AI = AI>(database: T, ai: U, config?: Partial<ChatConfig>) {
-    const createdAt: Chat["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 19);
+    const createdAt: Chat["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 23);
 
     const _config: ChatConfig = {
       name: config?.name ?? createdAt,
