@@ -1,4 +1,4 @@
-import type { AI, ChatCompletionCreateOptions } from "@singlestore/ai";
+import type { AI, ChatCompletionCreateOptions, ChatCompletionCreateReturnType, ChatCompletionStream } from "@singlestore/ai";
 import type { WorkspaceDatabase, WorkspaceTable } from "@singlestore/client";
 import { ChatMessage, type ChatMessagesTable } from "./message";
 import type { Chat } from ".";
@@ -123,7 +123,30 @@ export class ChatSession<T extends WorkspaceDatabase = WorkspaceDatabase, U exte
   async createChatCompletion<T extends Exclude<Parameters<U["chatCompletions"]["create"]>[1], undefined>>(
     prompt: string,
     options?: T,
-  ) {
-    return await this._ai.chatCompletions.create<T>(prompt, options);
+  ): Promise<ChatCompletionCreateReturnType<T>> {
+    const [, response] = await Promise.all([
+      this.createMessage("user", prompt),
+      this._ai.chatCompletions.create(prompt, options),
+    ]);
+
+    const handleResponseContent = async (content: string) => {
+      await this.createMessage("assistant", content);
+    };
+
+    if (typeof response === "string") {
+      await handleResponseContent(response);
+      return response as ChatCompletionCreateReturnType<T>;
+    }
+
+    return (async function* (): ChatCompletionStream {
+      let content = "";
+
+      for await (const chunk of response as ChatCompletionStream) {
+        content += chunk;
+        yield chunk;
+      }
+
+      await handleResponseContent(content);
+    })() as ChatCompletionCreateReturnType<T>;
   }
 }
