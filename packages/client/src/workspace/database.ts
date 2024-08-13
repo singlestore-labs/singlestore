@@ -38,11 +38,7 @@ export interface WorkspaceDatabaseInfoExtended<T extends string> extends Workspa
   pendingBlobFSyncs: number;
 }
 
-export class WorkspaceDatabase<
-  T extends WorkspaceDatabaseType = WorkspaceDatabaseType,
-  U extends AI = AI,
-  _TableNames extends Extract<keyof T["tables"], string> = Extract<keyof T["tables"], string>,
-> {
+export class WorkspaceDatabase<T extends WorkspaceDatabaseType = any, U extends AI = AI> {
   constructor(
     private _connection: WorkspaceConnection,
     public name: string,
@@ -79,7 +75,7 @@ export class WorkspaceDatabase<
     } as _ReturnType;
   }
 
-  static async create<T extends WorkspaceDatabaseType, U extends AI = AI>(
+  static async create<T extends WorkspaceDatabaseType = any, U extends AI = AI>(
     connection: WorkspaceConnection,
     schema: WorkspaceDatabaseSchema<T>,
     workspaceName?: string,
@@ -126,7 +122,9 @@ export class WorkspaceDatabase<
     return WorkspaceDatabase.drop(this._connection, this.name);
   }
 
-  table<N, K extends _TableNames | (string & {}) = _TableNames | (string & {})>(name: K) {
+  table<N, K extends Extract<keyof T["tables"], string> | (string & {}) = Extract<keyof T["tables"], string> | (string & {})>(
+    name: K,
+  ) {
     return new WorkspaceTable<N extends WorkspaceTableType ? N : T["tables"][K], U>(
       this._connection,
       this.name,
@@ -139,14 +137,14 @@ export class WorkspaceDatabase<
     const clauses = [`SHOW TABLES IN ${this.name}`];
     if (extended) clauses.push("EXTENDED");
     const [rows] = await this._connection.client.query<any[]>(clauses.join(" "));
-    return rows.map((row) => WorkspaceTable.normalizeInfo<_TableNames, U>(row, extended));
+    return rows.map((row) => WorkspaceTable.normalizeInfo<Extract<keyof T["tables"], string>, U>(row, extended));
   }
 
   createTable<T extends WorkspaceTableType>(schema: WorkspaceTableSchema<T>) {
     return WorkspaceTable.create<T, U>(this._connection, this.name, schema, this._ai);
   }
 
-  dropTable(name: _TableNames | ({} & string)) {
+  dropTable(name: Extract<keyof T["tables"], string> | ({} & string)) {
     return WorkspaceTable.drop(this._connection, this.name, name);
   }
 

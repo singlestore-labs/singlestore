@@ -12,18 +12,14 @@ export interface WorkspaceSchema<T extends WorkspaceType> {
   databases: { [K in keyof T["databases"]]: Omit<WorkspaceDatabaseSchema<T["databases"][K]>, "name"> };
 }
 
-export class Workspace<
-  T extends WorkspaceType = WorkspaceType,
-  U extends AI = AI,
-  _DatabaseNames extends Extract<keyof T["databases"], string> = Extract<keyof T["databases"], string>,
-> {
+export class Workspace<T extends WorkspaceType = any, U extends AI = AI> {
   constructor(
     public connection: WorkspaceConnection,
     public name?: string,
     private _ai?: U,
   ) {}
 
-  static connect<T extends WorkspaceType, U extends AI = AI>({
+  static connect<T extends WorkspaceType = any, U extends AI = AI>({
     ai,
     name,
     ...config
@@ -32,7 +28,10 @@ export class Workspace<
     return new Workspace<T, U>(connection, name, ai);
   }
 
-  database<N, K extends _DatabaseNames | (string & {}) = _DatabaseNames | (string & {})>(name: K) {
+  database<
+    N,
+    K extends Extract<keyof T["databases"], string> | (string & {}) = Extract<keyof T["databases"], string> | (string & {}),
+  >(name: K) {
     return new WorkspaceDatabase<N extends WorkspaceDatabaseType ? N : T["databases"][K], U>(
       this.connection,
       name as string,
@@ -45,7 +44,7 @@ export class Workspace<
     return WorkspaceDatabase.create<T, U>(this.connection, schema, this.name, this._ai);
   }
 
-  dropDatabase(name: _DatabaseNames | ({} & string)) {
+  dropDatabase(name: Extract<keyof T["databases"], string> | ({} & string)) {
     return WorkspaceDatabase.drop(this.connection, name);
   }
 
@@ -53,6 +52,6 @@ export class Workspace<
     const clauses = ["SHOW DATABASES"];
     if (extended) clauses.push("EXTENDED");
     const [rows] = await this.connection.client.query<any[]>(clauses.join(" "));
-    return rows.map((row) => WorkspaceDatabase.normalizeInfo<_DatabaseNames, U>(row, extended));
+    return rows.map((row) => WorkspaceDatabase.normalizeInfo<Extract<keyof T["databases"], string>, U>(row, extended));
   }
 }

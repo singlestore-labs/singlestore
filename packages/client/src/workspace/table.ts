@@ -31,11 +31,7 @@ export interface WorksaceTableInfoExtended<T extends string> extends WorkspaceTa
   storageType: string;
 }
 
-export class WorkspaceTable<
-  T extends WorkspaceTableType,
-  U extends AI = AI,
-  _ColumnNames extends Extract<keyof T["columns"], string> = Extract<keyof T["columns"], string>,
-> {
+export class WorkspaceTable<T extends WorkspaceTableType = any, U extends AI = AI> {
   private _path: string;
   vScoreKey = "v_score";
 
@@ -83,7 +79,7 @@ export class WorkspaceTable<
     return [...clauses, ...(schema.clauses || [])].filter(Boolean).join(", ");
   }
 
-  static async create<T extends WorkspaceTableType, U extends AI = AI>(
+  static async create<T extends WorkspaceTableType = any, U extends AI = AI>(
     connection: WorkspaceConnection,
     databaseName: string,
     schema: WorkspaceTableSchema<T>,
@@ -114,20 +110,20 @@ export class WorkspaceTable<
     return WorkspaceTable.drop(this._connection, this.databaseName, this.name);
   }
 
-  column(name: _ColumnNames | (string & {})) {
+  column(name: Extract<keyof T["columns"], string> | (string & {})) {
     return new WorkspaceColumn(this._connection, this.databaseName, this.name, name as string);
   }
 
   async showColumnsInfo() {
     const [rows] = await this._connection.client.query<any[]>(`SHOW COLUMNS IN ${this.name} IN ${this.databaseName}`);
-    return rows.map((row) => WorkspaceColumn.normalizeInfo<_ColumnNames>(row));
+    return rows.map((row) => WorkspaceColumn.normalizeInfo<Extract<keyof T["columns"], string>>(row));
   }
 
   addColumn(schema: WorkspaceColumnSchema) {
     return WorkspaceColumn.add(this._connection, this.databaseName, this.name, schema);
   }
 
-  dropColumn(name: _ColumnNames | ({} & string)) {
+  dropColumn(name: Extract<keyof T["columns"], string> | ({} & string)) {
     return WorkspaceColumn.drop(this._connection, this.databaseName, this.name, name);
   }
 
@@ -188,7 +184,7 @@ export class WorkspaceTable<
   }
 
   async vectorSearch<U extends QueryBuilderArgs<_S>, _S extends QuerySchema = T["columns"] & { v_score: number }>(
-    ...[search, ...args]: [search: { prompt: string; vColumn: _ColumnNames }, ...U]
+    ...[search, ...args]: [search: { prompt: string; vColumn: Extract<keyof T["columns"], string> }, ...U]
   ) {
     type Options = ExtractQueryOptions<U>;
     type SelectedColumns = ExtractQueryColumns<_S, Options> & { v_score: number };
@@ -224,7 +220,7 @@ export class WorkspaceTable<
     >,
   >(
     ...[{ prompt, vColumn, template, systemRole, ...createChatCompletionOptions }, ...args]: [
-      search: { prompt: string; vColumn: _ColumnNames; template?: string } & _O,
+      search: { prompt: string; vColumn: Extract<keyof T["columns"], string>; template?: string } & _O,
       ...Q,
     ]
   ) {
