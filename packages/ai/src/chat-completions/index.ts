@@ -1,6 +1,6 @@
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 
-export type ChatCompletionStream = AsyncIterable<string>;
+export type ChatCompletionStream = AsyncGenerator<string>;
 export type ChatCompletionMessage = ChatCompletionMessageParam;
 
 export interface ChatCompletionCreateOptions<T = any> {

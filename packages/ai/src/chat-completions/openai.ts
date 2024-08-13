@@ -73,18 +73,15 @@ export class OpenAIChatCompletions implements ChatCompletions {
       messages,
     });
 
-    const isStreamResponse = (_response: any): _response is OpenAIStream<ChatCompletionChunk> => !!_options?.stream;
-    if (isStreamResponse(response)) {
-      async function* asyncIterableFromStream(stream: OpenAIStream<ChatCompletionChunk>): ChatCompletionStream {
-        for await (const chunk of stream) {
-          yield chunk.choices[0]?.delta.content || "";
-        }
-      }
-
-      return asyncIterableFromStream(response) as ChatCompletionCreateReturnType<T>;
+    if (typeof response === "object" && response && "choices" in response) {
+      return (response.choices[0]?.message.content || "") as ChatCompletionCreateReturnType<T>;
     }
 
-    return (response.choices[0]?.message.content || "") as ChatCompletionCreateReturnType<T>;
+    return (async function* (): ChatCompletionStream {
+      for await (const chunk of response) {
+        yield chunk.choices[0]?.delta.content || "";
+      }
+    })() as ChatCompletionCreateReturnType<T>;
   }
 
   async handleStream(stream: ChatCompletionStream, onChunk?: (chunk: string) => Promise<void> | void): Promise<string> {
