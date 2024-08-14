@@ -1,42 +1,54 @@
-import type { WorkspaceConnection } from "./connection";
-import type { QueryFilters } from "../query/filters/builder";
-import type { QuerySchema } from "../query/schema";
-import type { ExtractQueryColumns, ExtractQueryOptions } from "../query/types";
+import type { Connection } from "./connection";
+import type { QueryFilters } from "./query/filters/builder";
+import type { QuerySchema } from "./query/schema";
+import type { ExtractQueryColumns, ExtractQueryOptions } from "./query/types";
 import type { AI } from "@singlestore/ai";
 import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
-import { QueryBuilder, type QueryBuilderArgs } from "../query/builder";
+import { Column, type ColumnSchema, type ColumnType } from "./column";
+import { QueryBuilder, type QueryBuilderArgs } from "./query/builder";
 
-import { WorkspaceColumn, type WorkspaceColumnSchema, type WorkspaceColumnType } from "./column";
-
-export interface WorkspaceTableType {
-  columns: Record<string, WorkspaceColumnType>;
+export interface TableType {
+  columns: Record<string, ColumnType>;
 }
 
-export interface WorkspaceTableSchema<T extends WorkspaceTableType = WorkspaceTableType> {
+export interface TableSchema<T extends TableType> {
   name: string;
-  columns: { [K in keyof T["columns"]]: Omit<WorkspaceColumnSchema, "name"> };
+  columns: { [K in keyof T["columns"]]: Omit<ColumnSchema, "name"> };
   primaryKeys?: string[];
   fulltextKeys?: string[];
   clauses?: string[];
 }
 
-export interface WorkspaceTableInfo<T extends string> {
+export interface TableInfo<T extends string> {
   name: T;
 }
 
-export interface WorksaceTableInfoExtended<T extends string> extends WorkspaceTableInfo<T> {
+export interface TableInfoExtended<T extends string> extends TableInfo<T> {
   tableType: string;
   distributed: boolean;
   storageType: string;
 }
 
-export class WorkspaceTable<T extends WorkspaceTableType = any, U extends AI = AI> {
+export type ExtractTableColumnName<T extends TableType> = Extract<keyof T["columns"], string>;
+
+export type TableColumnName<T extends TableType> = ExtractTableColumnName<T> | (string & {});
+
+export type InsertTableValues<T extends TableType> = Partial<T["columns"]> | Partial<T["columns"]>[];
+
+export type SelectTableArgs<T extends TableType> = QueryBuilderArgs<T["columns"]>;
+
+export type UpdateTableValues<T extends TableType> = Partial<T["columns"]>;
+export type UpdateTableFilters<T extends TableType> = QueryFilters<T["columns"]>;
+
+export type DeleteTableFilters<T extends TableType> = QueryFilters<T["columns"]>;
+
+export class Table<T extends TableType = any, U extends AI = AI> {
   private _path: string;
-  vScoreKey = "v_score";
+  vScoreKey = "v_score" as const;
 
   constructor(
-    private _connection: WorkspaceConnection,
+    private _connection: Connection,
     public databaseName: string,
     public name: string,
     private _ai?: U,
@@ -52,26 +64,24 @@ export class WorkspaceTable<T extends WorkspaceTableType = any, U extends AI = A
     return this._ai;
   }
 
-  static normalizeInfo<
-    T extends string,
-    U extends boolean,
-    _ReturnType = U extends true ? WorksaceTableInfoExtended<T> : WorkspaceTableInfo<T>,
-  >(info: any, extended?: U): _ReturnType {
+  static normalizeInfo<T extends string, U extends boolean>(info: any, extended?: U) {
+    type Result<T extends string, U extends boolean> = U extends true ? TableInfoExtended<T> : TableInfo<T>;
+
     const name = info[Object.keys(info).find((key) => key.startsWith("Tables_in_")) as string];
-    if (!extended) return { name } as _ReturnType;
+    if (!extended) return { name } as Result<T, U>;
 
     return {
       name,
       tableType: info.Table_type,
       distributed: !!info.distributed,
       storageType: info.Storage_type,
-    } as _ReturnType;
+    } as Result<T, U>;
   }
 
-  static schemaToClauses(schema: WorkspaceTableSchema<any>) {
+  static schemaToClauses(schema: TableSchema<any>) {
     const clauses: string[] = [
       ...Object.entries(schema.columns).map(([name, schema]) => {
-        return WorkspaceColumn.schemaToClauses({ ...schema, name });
+        return Column.schemaToClauses({ ...schema, name });
       }),
     ];
     if (schema.primaryKeys?.length) clauses.push(`PRIMARY KEY (${schema.primaryKeys.join(", ")})`);
@@ -79,52 +89,52 @@ export class WorkspaceTable<T extends WorkspaceTableType = any, U extends AI = A
     return [...clauses, ...(schema.clauses || [])].filter(Boolean).join(", ");
   }
 
-  static async create<T extends WorkspaceTableType = any, U extends AI = AI>(
-    connection: WorkspaceConnection,
+  static async create<T extends TableType = any, U extends AI = AI>(
+    connection: Connection,
     databaseName: string,
-    schema: WorkspaceTableSchema<T>,
+    schema: TableSchema<T>,
     ai?: U,
   ) {
-    const clauses = WorkspaceTable.schemaToClauses(schema);
+    const clauses = Table.schemaToClauses(schema);
     await connection.client.execute<ResultSetHeader>(`\
       CREATE TABLE IF NOT EXISTS ${databaseName}.${schema.name} (${clauses})
     `);
-    return new WorkspaceTable<T, U>(connection, databaseName, schema.name, ai);
+    return new Table<T, U>(connection, databaseName, schema.name, ai);
   }
 
-  static drop(connection: WorkspaceConnection, databaseName: string, name: string) {
+  static drop(connection: Connection, databaseName: string, name: string) {
     return connection.client.execute<ResultSetHeader>(`\
       DROP TABLE IF EXISTS ${databaseName}.${name}
     `);
   }
 
-  async showInfo<U extends boolean>(extended?: U) {
+  async showInfo<T extends boolean>(extended?: T) {
     const clauses = [`SHOW TABLES IN ${this.databaseName}`];
     if (extended) clauses.push("EXTENDED");
     clauses.push(`LIKE '${this.name}'`);
     const [rows] = await this._connection.client.query<any[]>(clauses.join(" "));
-    return WorkspaceTable.normalizeInfo<string, U>(rows[0], extended);
+    return Table.normalizeInfo<string, T>(rows[0], extended);
   }
 
   drop() {
-    return WorkspaceTable.drop(this._connection, this.databaseName, this.name);
+    return Table.drop(this._connection, this.databaseName, this.name);
   }
 
-  column(name: Extract<keyof T["columns"], string> | (string & {})) {
-    return new WorkspaceColumn(this._connection, this.databaseName, this.name, name as string);
+  column(name: TableColumnName<T>) {
+    return new Column(this._connection, this.databaseName, this.name, name as string);
   }
 
   async showColumnsInfo() {
     const [rows] = await this._connection.client.query<any[]>(`SHOW COLUMNS IN ${this.name} IN ${this.databaseName}`);
-    return rows.map((row) => WorkspaceColumn.normalizeInfo<Extract<keyof T["columns"], string>>(row));
+    return rows.map((row) => Column.normalizeInfo<ExtractTableColumnName<T>>(row));
   }
 
-  addColumn(schema: WorkspaceColumnSchema) {
-    return WorkspaceColumn.add(this._connection, this.databaseName, this.name, schema);
+  addColumn(schema: ColumnSchema) {
+    return Column.add(this._connection, this.databaseName, this.name, schema);
   }
 
-  dropColumn(name: Extract<keyof T["columns"], string> | ({} & string)) {
-    return WorkspaceColumn.drop(this._connection, this.databaseName, this.name, name);
+  dropColumn(name: TableColumnName<T>) {
+    return Column.drop(this._connection, this.databaseName, this.name, name);
   }
 
   truncate() {
@@ -144,20 +154,20 @@ export class WorkspaceTable<T extends WorkspaceTableType = any, U extends AI = A
     return result;
   }
 
-  insert(data: Partial<T["columns"]> | Partial<T["columns"]>[]) {
-    const _data = Array.isArray(data) ? data : [data];
-    const keys = Object.keys(_data[0]!);
+  insert(values: InsertTableValues<T>) {
+    const _values = Array.isArray(values) ? values : [values];
+    const keys = Object.keys(_values[0]!);
     const placeholders = `(${keys.map(() => "?").join(", ")})`;
 
     return Promise.all(
-      _data.map((data) => {
+      _values.map((data) => {
         const query = `INSERT INTO ${this._path} (${keys}) VALUES ${placeholders}`;
         return this._connection.client.execute<ResultSetHeader>(query, Object.values(data));
       }),
     );
   }
 
-  async select<U extends QueryBuilderArgs<T["columns"]>>(...args: U) {
+  async select<U extends SelectTableArgs<T>>(...args: U) {
     type Options = ExtractQueryOptions<U>;
     type SelectedColumns = ExtractQueryColumns<T["columns"], Options>;
     const { columns, clause, values } = new QueryBuilder(...args);
@@ -166,16 +176,16 @@ export class WorkspaceTable<T extends WorkspaceTableType = any, U extends AI = A
     return result[0];
   }
 
-  update(data: Partial<T["columns"]>, filters: QueryFilters<T["columns"]>) {
-    const { clause, values } = new QueryBuilder(filters);
-    const columnAssignments = Object.keys(data)
+  update(values: UpdateTableValues<T>, filters: UpdateTableFilters<T>) {
+    const { clause, values: _values } = new QueryBuilder(filters);
+    const columnAssignments = Object.keys(values)
       .map((key) => `${key} = ?`)
       .join(", ");
     const query = `UPDATE ${this._path} SET ${columnAssignments} ${clause}`;
-    return this._connection.client.execute<ResultSetHeader>(query, [...Object.values(data), ...values]);
+    return this._connection.client.execute<ResultSetHeader>(query, [...Object.values(values), ..._values]);
   }
 
-  delete(filters?: QueryFilters<T["columns"]>) {
+  delete(filters?: DeleteTableFilters<T>) {
     if (!filters) return this.truncate();
 
     const { clause, values } = new QueryBuilder(filters);
@@ -184,7 +194,7 @@ export class WorkspaceTable<T extends WorkspaceTableType = any, U extends AI = A
   }
 
   async vectorSearch<U extends QueryBuilderArgs<_S>, _S extends QuerySchema = T["columns"] & { v_score: number }>(
-    ...[search, ...args]: [search: { prompt: string; vectorColumn: Extract<keyof T["columns"], string> }, ...U]
+    ...[search, ...args]: [search: { prompt: string; vectorColumn: ExtractTableColumnName<T> }, ...U]
   ) {
     type Options = ExtractQueryOptions<U>;
     type SelectedColumns = ExtractQueryColumns<_S, Options> & { v_score: number };
@@ -220,7 +230,7 @@ export class WorkspaceTable<T extends WorkspaceTableType = any, U extends AI = A
     >,
   >(
     ...[{ prompt, vectorColumn, template, systemRole, ...createChatCompletionOptions }, ...args]: [
-      search: { prompt: string; vectorColumn: Extract<keyof T["columns"], string>; template?: string } & _O,
+      search: { prompt: string; vectorColumn: ExtractTableColumnName<T>; template?: string } & _O,
       ...Q,
     ]
   ) {

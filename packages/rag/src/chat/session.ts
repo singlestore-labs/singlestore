@@ -1,32 +1,45 @@
-import type { Chat } from ".";
-import type { AI, ChatCompletionCreateOptions, ChatCompletionCreateReturnType, ChatCompletionStream } from "@singlestore/ai";
-import type { WorkspaceDatabase, WorkspaceTable } from "@singlestore/client";
+import type { AI, ChatCompletionStream, CreateChatCompletionResult } from "@singlestore/ai";
+import type { Database, Table } from "@singlestore/client";
 
 import { ChatMessage, type ChatMessagesTable } from "./message";
 
-export interface ChatSessionConfig
-  extends Pick<ChatSession, "chatId" | "name" | "systemRole" | "store" | "tableName" | "messagesTableName"> {}
+export interface ChatSessionConfig<T extends Database, U extends AI>
+  extends Pick<ChatSession<T, U>, "chatId" | "name" | "systemRole" | "store" | "tableName" | "messagesTableName"> {}
 
-export interface ChatSessionsTable {
-  columns: Pick<ChatSession, "id" | "createdAt" | "chatId" | "name">;
+export interface ChatSessionsTable<T extends Database, U extends AI> {
+  columns: Pick<ChatSession<T, U>, "id" | "createdAt" | "chatId" | "name">;
 }
 
-export class ChatSession<T extends WorkspaceDatabase = WorkspaceDatabase, U extends AI = AI> {
+export type CreateChatSessionConfig<T extends Database, U extends AI> = Partial<ChatSessionConfig<T, U>>;
+
+export type DeleteChatSessionFilters<T extends Database, U extends AI> = Parameters<
+  Table<ChatSessionsTable<T, U>>["delete"]
+>[0];
+
+export type UpdateChatSessionValues<T extends Database, U extends AI> = Parameters<Table<ChatSessionsTable<T, U>>["update"]>[0];
+
+export type SelectMessagesArgs<T extends Database> = Parameters<Table<ChatMessagesTable<T>>["select"]>;
+
+export type DeleteMessagesFilter = Parameters<typeof ChatMessage.delete>[2];
+
+export type CreateChatCompletionOptions<U extends AI> = Exclude<Parameters<U["chatCompletions"]["create"]>[1], undefined>;
+
+export class ChatSession<T extends Database, U extends AI> {
   constructor(
     private _database: T,
     private _ai: U,
     public id: number | undefined,
     public createdAt: string | undefined,
-    public chatId: Chat["id"],
+    public chatId: number | undefined,
     public name: string,
-    public systemRole: ChatCompletionCreateOptions["systemRole"],
-    public store: ChatMessage["store"],
+    public systemRole: CreateChatCompletionOptions<U>["systemRole"],
+    public store: ChatMessage<T>["store"],
     public tableName: string,
-    public messagesTableName: ChatMessage["tableName"],
+    public messagesTableName: ChatMessage<T>["tableName"],
   ) {}
 
-  static createTable(database: WorkspaceDatabase, name: ChatSession["tableName"]) {
-    return database.createTable<ChatSessionsTable>({
+  static createTable<T extends Database, U extends AI>(database: T, name: ChatSession<T, U>["tableName"]) {
+    return database.createTable<ChatSessionsTable<T, U>>({
       name,
       columns: {
         id: { type: "bigint", autoIncrement: true, primaryKey: true },
@@ -37,10 +50,10 @@ export class ChatSession<T extends WorkspaceDatabase = WorkspaceDatabase, U exte
     });
   }
 
-  static async create<T extends WorkspaceDatabase, U extends AI = AI>(database: T, ai: U, config?: Partial<ChatSessionConfig>) {
-    const createdAt: ChatSession["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 23);
+  static async create<T extends Database, U extends AI>(database: T, ai: U, config?: CreateChatSessionConfig<T, U>) {
+    const createdAt: ChatSession<T, U>["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 23);
 
-    const _config: ChatSessionConfig = {
+    const _config: ChatSessionConfig<T, U> = {
       chatId: config?.chatId ?? undefined,
       name: config?.name ?? createdAt,
       systemRole: config?.systemRole ?? "You are a helpfull assistant",
@@ -50,23 +63,23 @@ export class ChatSession<T extends WorkspaceDatabase = WorkspaceDatabase, U exte
     };
 
     const { chatId, name, systemRole, store, tableName, messagesTableName } = _config;
-    let id: ChatSession["id"];
+    let id: ChatSession<T, U>["id"];
 
     if (store) {
-      const [rows] = await database.table<ChatSessionsTable>(tableName).insert({ createdAt, name, chatId });
+      const [rows] = await database.table<ChatSessionsTable<T, U>>(tableName).insert({ createdAt, name, chatId });
       id = rows?.[0].insertId;
     }
 
     return new ChatSession(database, ai, id, createdAt, chatId, name, systemRole, store, tableName, messagesTableName);
   }
 
-  static async delete(
-    database: WorkspaceDatabase,
-    tableName: ChatSession["tableName"],
-    messagesTableName: ChatSession["messagesTableName"],
-    filters?: Parameters<WorkspaceTable<ChatSessionsTable>["delete"]>[0],
+  static async delete<T extends Database, U extends AI>(
+    database: Database,
+    tableName: ChatSession<T, U>["tableName"],
+    messagesTableName: ChatSession<T, U>["messagesTableName"],
+    filters?: DeleteChatSessionFilters<T, U>,
   ) {
-    const table = database.table<ChatSessionsTable>(tableName);
+    const table = database.table<ChatSessionsTable<T, U>>(tableName);
     const deletedRowIds = await table.select(filters, { columns: ["id"] });
 
     return Promise.all([
@@ -75,10 +88,10 @@ export class ChatSession<T extends WorkspaceDatabase = WorkspaceDatabase, U exte
     ]);
   }
 
-  async update(data: Parameters<WorkspaceTable<ChatSessionsTable>["update"]>[0]) {
-    const result = await this._database.table<ChatSessionsTable>(this.tableName).update(data, { id: this.id });
+  async update(values: UpdateChatSessionValues<T, U>) {
+    const result = await this._database.table<ChatSessionsTable<T, U>>(this.tableName).update(values, { id: this.id });
 
-    for (const [key, value] of Object.entries(data)) {
+    for (const [key, value] of Object.entries(values)) {
       if (key in this) {
         (this as any)[key] = value;
       }
@@ -91,7 +104,7 @@ export class ChatSession<T extends WorkspaceDatabase = WorkspaceDatabase, U exte
     return ChatSession.delete(this._database, this.tableName, this.messagesTableName, { id: this.id });
   }
 
-  createMessage(role: ChatMessage["role"], content: ChatMessage["content"]) {
+  createMessage(role: ChatMessage<T>["role"], content: ChatMessage<T>["content"]) {
     return ChatMessage.create(this._database, {
       sessionId: this.id,
       role,
@@ -101,8 +114,8 @@ export class ChatSession<T extends WorkspaceDatabase = WorkspaceDatabase, U exte
     });
   }
 
-  async selectMessages(...args: Parameters<WorkspaceTable<ChatMessagesTable>["select"]>) {
-    const rows = await this._database.table<ChatMessagesTable>(this.messagesTableName).select(...args);
+  async selectMessages(...args: SelectMessagesArgs<T>) {
+    const rows = await this._database.table<ChatMessagesTable<T>>(this.messagesTableName).select(...args);
     return rows.map((row) => {
       return new ChatMessage(
         this._database,
@@ -117,14 +130,14 @@ export class ChatSession<T extends WorkspaceDatabase = WorkspaceDatabase, U exte
     });
   }
 
-  deleteMessages(filters: Parameters<typeof ChatMessage.delete>[2] = { sessionId: this.id }) {
+  deleteMessages(filters: DeleteMessagesFilter = { sessionId: this.id }) {
     return ChatMessage.delete(this._database, this.messagesTableName, filters);
   }
 
-  async createChatCompletion<T extends Exclude<Parameters<U["chatCompletions"]["create"]>[1], undefined>>(
+  async createChatCompletion<T extends CreateChatCompletionOptions<U>>(
     prompt: string,
     options?: T,
-  ): Promise<ChatCompletionCreateReturnType<T>> {
+  ): Promise<CreateChatCompletionResult<T>> {
     const [, response] = await Promise.all([
       this.createMessage("user", prompt),
       this._ai.chatCompletions.create(prompt, options),
@@ -136,7 +149,7 @@ export class ChatSession<T extends WorkspaceDatabase = WorkspaceDatabase, U exte
 
     if (typeof response === "string") {
       await handleResponseContent(response);
-      return response as ChatCompletionCreateReturnType<T>;
+      return response as CreateChatCompletionResult<T>;
     }
 
     return (async function* (): ChatCompletionStream {
@@ -148,6 +161,6 @@ export class ChatSession<T extends WorkspaceDatabase = WorkspaceDatabase, U exte
       }
 
       await handleResponseContent(content);
-    })() as ChatCompletionCreateReturnType<T>;
+    })() as CreateChatCompletionResult<T>;
   }
 }

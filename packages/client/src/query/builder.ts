@@ -10,7 +10,7 @@ export type QueryBuilderArgs<T extends QuerySchema> =
 
 export class QueryBuilder<T extends QuerySchema> {
   columns: string = "*";
-  clauses: Record<"where" | Exclude<keyof QueryOptions, "columns">, string> = {
+  clauses: Record<"where" | Exclude<keyof QueryOptions<T>, "columns">, string> = {
     where: "",
     groupBy: "",
     orderBy: "",

@@ -1,6 +1,6 @@
 import type { QuerySchema } from "../schema";
 
-export type QueryOptions<T extends QuerySchema = QuerySchema> = {
+export type QueryOptions<T extends QuerySchema> = {
   columns?: (keyof T)[];
   groupBy?: (keyof T)[];
   orderBy?: { [K in keyof T]?: "asc" | "desc" };
@@ -8,11 +8,17 @@ export type QueryOptions<T extends QuerySchema = QuerySchema> = {
   offset?: number;
 };
 
-export const queryOptionKeys: Exclude<keyof QueryOptions, undefined>[] = ["columns", "groupBy", "orderBy", "limit", "offset"];
+export const queryOptionKeys: Exclude<keyof QueryOptions<QuerySchema>, undefined>[] = [
+  "columns",
+  "groupBy",
+  "orderBy",
+  "limit",
+  "offset",
+];
 
 export class QueryOptionsBuilder<T extends QuerySchema> {
   columns: string = "*";
-  clauses: Record<Exclude<keyof QueryOptions, "columns">, string> = {
+  clauses: Record<Exclude<keyof QueryOptions<T>, "columns">, string> = {
     groupBy: "",
     orderBy: "",
     limit: "",

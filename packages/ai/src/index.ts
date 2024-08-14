@@ -8,23 +8,19 @@ import { OpenAIEmbeddings } from "./embeddings/openai";
 
 export type * from "./types";
 
-export type AIConfig = {
-  embeddings: Embeddings;
-  chatCompletions: ChatCompletions;
-  openAIApiKey: string;
+export type AIConfig<T extends Embeddings, U extends ChatCompletions> = {
+  embeddings?: T;
+  chatCompletions?: U;
+  openAIApiKey?: string;
 };
 
-export class AI<T extends Partial<AIConfig> = Partial<AIConfig>> {
+export class AI<T extends Embeddings = OpenAIEmbeddings, U extends ChatCompletions = OpenAIChatCompletions> {
   public embeddings;
   public chatCompletions;
 
-  constructor(config: T) {
+  constructor(config: AIConfig<T, U>) {
     const openai = new OpenAI({ apiKey: config.openAIApiKey });
-
-    type _Embeddings = T extends { embeddings: Embeddings } ? T["embeddings"] : OpenAIEmbeddings;
-    this.embeddings = (config.embeddings || new OpenAIEmbeddings(openai)) as _Embeddings;
-
-    type _ChatCompletions = T extends { chatCompletions: ChatCompletions } ? T["chatCompletions"] : OpenAIChatCompletions;
-    this.chatCompletions = (config.chatCompletions || new OpenAIChatCompletions(openai)) as _ChatCompletions;
+    this.embeddings = (config.embeddings || new OpenAIEmbeddings(openai)) as T;
+    this.chatCompletions = (config.chatCompletions || new OpenAIChatCompletions(openai)) as U;
   }
 }

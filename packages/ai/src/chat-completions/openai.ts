@@ -2,8 +2,9 @@ import type {
   ChatCompletions,
   ChatCompletionStream,
   ChatCompletionMessage,
-  ChatCompletionCreateOptions,
-  ChatCompletionCreateReturnType,
+  CreateChatCompletionOptions,
+  CreateChatCompletionResult,
+  OnChatCompletionStreamChunk,
 } from ".";
 import type { OpenAI } from "openai";
 
@@ -25,8 +26,8 @@ export type OpenAIChatCompletionModel =
   | "gpt-3.5-turbo-1106"
   | "gpt-3.5-turbo-instruct";
 
-export type OpenAIChatCompletionsCreateOptions = ChatCompletionCreateOptions<OpenAIChatCompletionModel> &
-  Omit<Parameters<OpenAI["chat"]["completions"]["create"]>[0], keyof ChatCompletionCreateOptions>;
+export type CreateOpenAIChatCompletionOptions = CreateChatCompletionOptions<OpenAIChatCompletionModel> &
+  Omit<Parameters<OpenAI["chat"]["completions"]["create"]>[0], keyof CreateChatCompletionOptions>;
 
 export class OpenAIChatCompletions implements ChatCompletions {
   constructor(private _openai: OpenAI) {}
@@ -52,10 +53,10 @@ export class OpenAIChatCompletions implements ChatCompletions {
     ];
   }
 
-  async create<T extends Partial<OpenAIChatCompletionsCreateOptions>>(
+  async create<T extends Partial<CreateOpenAIChatCompletionOptions>>(
     prompt: string,
     options?: T,
-  ): Promise<ChatCompletionCreateReturnType<T>> {
+  ): Promise<CreateChatCompletionResult<T>> {
     const { systemRole = "You are a helpful assistant", history = [], ..._options } = options ?? ({} as T);
 
     const messages: ChatCompletionMessage[] = _options?.messages || [
@@ -72,17 +73,17 @@ export class OpenAIChatCompletions implements ChatCompletions {
     });
 
     if (typeof response === "object" && response && "choices" in response) {
-      return (response.choices[0]?.message.content || "") as ChatCompletionCreateReturnType<T>;
+      return (response.choices[0]?.message.content || "") as CreateChatCompletionResult<T>;
     }
 
     return (async function* (): ChatCompletionStream {
       for await (const chunk of response) {
         yield chunk.choices[0]?.delta.content || "";
       }
-    })() as ChatCompletionCreateReturnType<T>;
+    })() as CreateChatCompletionResult<T>;
   }
 
-  async handleStream(stream: ChatCompletionStream, onChunk?: (chunk: string) => Promise<void> | void): Promise<string> {
+  async handleStream(stream: ChatCompletionStream, onChunk?: OnChatCompletionStreamChunk): Promise<string> {
     let text = "";
 
     for await (const chunk of stream) {

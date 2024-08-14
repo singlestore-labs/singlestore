@@ -1,15 +1,27 @@
 import type { AI } from "@singlestore/ai";
-import type { WorkspaceDatabase, WorkspaceTable } from "@singlestore/client";
+import type { Database, Table } from "@singlestore/client";
 
-import { Chat, type ChatsTable, type ChatConfig } from "./chat";
+import { Chat, type ChatsTable, type CreateChatConfig } from "./chat";
 
 export type * from "./types";
 
-export class RAG<T extends WorkspaceDatabase, U extends AI> {
+export interface RAGConfig<T extends Database, U extends AI> {
+  database: T;
+  ai: U;
+}
+
+export type SelectChatsArgs<T extends Database, U extends AI> = [
+  tableName: string,
+  ...Parameters<Table<ChatsTable<T, U>>["select"]>,
+];
+
+export type DeleteChatsArgs = Parameters<typeof Chat.delete> extends [any, ...infer Rest] ? Rest : never;
+
+export class RAG<T extends Database = any, U extends AI<any, any> = AI> {
   private _database;
   private _ai;
 
-  constructor(config: { database: T; ai: U }) {
+  constructor(config: RAGConfig<T, U>) {
     this._database = config.database;
     this._ai = config.ai;
   }
@@ -18,12 +30,12 @@ export class RAG<T extends WorkspaceDatabase, U extends AI> {
     return this._ai.chatCompletions.getModels();
   }
 
-  createChat<T extends Partial<ChatConfig>>(config?: T) {
+  createChat<K extends CreateChatConfig<T, U>>(config?: K) {
     return Chat.create(this._database, this._ai, config);
   }
 
-  async selectChats(...[tableName, ...args]: [tableName: string, ...Parameters<WorkspaceTable<ChatsTable>["select"]>]) {
-    const rows = await this._database.table<ChatsTable>(tableName).select(...args);
+  async selectChats(...[tableName, ...args]: SelectChatsArgs<T, U>) {
+    const rows = await this._database.table<ChatsTable<T, U>>(tableName).select(...args);
     return rows.map(
       (row) =>
         new Chat(
@@ -41,7 +53,7 @@ export class RAG<T extends WorkspaceDatabase, U extends AI> {
     );
   }
 
-  deleteChats(...args: Parameters<typeof Chat.delete> extends [any, ...infer Rest] ? Rest : never) {
+  deleteChats(...args: DeleteChatsArgs) {
     return Chat.delete(this._database, ...args);
   }
 }

@@ -31,6 +31,7 @@ module.exports = {
   rules: {
     "@typescript-eslint/no-explicit-any": "off",
     "@typescript-eslint/ban-types": "off",
+    "turbo/no-undeclared-env-vars": "off",
     "no-console": "warn",
     "prettier/prettier": "warn",
     "import/order": [

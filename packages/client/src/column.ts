@@ -1,9 +1,9 @@
-import type { WorkspaceConnection } from "./connection";
+import type { Connection } from "./connection";
 import type { ResultSetHeader } from "mysql2/promise";
 
-export type WorkspaceColumnType = any;
+export type ColumnType = any;
 
-export interface WorkspaceColumnSchema {
+export interface ColumnSchema {
   name: string;
   type: string;
   nullable?: boolean;
@@ -13,7 +13,7 @@ export interface WorkspaceColumnSchema {
   clauses?: string[];
 }
 
-export interface WorkspaceColumnInfo<T extends string> {
+export interface ColumnInfo<T extends string> {
   name: T;
   type: string;
   null: string;
@@ -22,11 +22,13 @@ export interface WorkspaceColumnInfo<T extends string> {
   extra: string;
 }
 
-export class WorkspaceColumn {
+export type ModifyColumnSchema = Partial<Omit<ColumnSchema, "name">>;
+
+export class Column {
   private _path: string;
 
   constructor(
-    private _connection: WorkspaceConnection,
+    private _connection: Connection,
     public databaseName: string,
     public tableName: string,
     public name: string,
@@ -34,7 +36,7 @@ export class WorkspaceColumn {
     this._path = [databaseName, tableName].join(".");
   }
 
-  static normalizeInfo<T extends string>(info: any): WorkspaceColumnInfo<T> {
+  static normalizeInfo<T extends string>(info: any): ColumnInfo<T> {
     return {
       name: info.Field,
       type: info.Type,
@@ -45,7 +47,7 @@ export class WorkspaceColumn {
     };
   }
 
-  static schemaToClauses(schema: WorkspaceColumnSchema) {
+  static schemaToClauses(schema: ColumnSchema) {
     const clauses: string[] = [`\`${schema.name}\``];
     if (schema.type) clauses.push(schema.type);
     if (schema.nullable !== undefined && !schema.nullable) clauses.push("NOT NULL");
@@ -55,15 +57,15 @@ export class WorkspaceColumn {
     return [...clauses, ...(schema.clauses || [])].filter(Boolean).join(" ");
   }
 
-  static async add(connection: WorkspaceConnection, databaseName: string, tableName: string, schema: WorkspaceColumnSchema) {
-    const clauses = WorkspaceColumn.schemaToClauses(schema);
+  static async add(connection: Connection, databaseName: string, tableName: string, schema: ColumnSchema) {
+    const clauses = Column.schemaToClauses(schema);
     await connection.client.execute<ResultSetHeader>(`\
       ALTER TABLE ${databaseName}.${tableName} ADD COLUMN ${clauses}
     `);
-    return new WorkspaceColumn(connection, databaseName, tableName, schema.name);
+    return new Column(connection, databaseName, tableName, schema.name);
   }
 
-  static drop(connection: WorkspaceConnection, databaseName: string, tableName: string, name: string) {
+  static drop(connection: Connection, databaseName: string, tableName: string, name: string) {
     return connection.client.execute<ResultSetHeader>(`\
       ALTER TABLE ${databaseName}.${tableName} DROP COLUMN ${name}
     `);
@@ -73,15 +75,15 @@ export class WorkspaceColumn {
     const [rows] = await this._connection.client.query<any[]>(
       `SHOW COLUMNS IN ${this.tableName} IN ${this.databaseName} LIKE '${this.name}'`,
     );
-    return WorkspaceColumn.normalizeInfo<string>(rows[0]);
+    return Column.normalizeInfo<string>(rows[0]);
   }
 
   drop() {
-    return WorkspaceColumn.drop(this._connection, this.databaseName, this.tableName, this.name);
+    return Column.drop(this._connection, this.databaseName, this.tableName, this.name);
   }
 
-  modify(schema: Partial<Omit<WorkspaceColumnSchema, "name">>) {
-    const clauses = WorkspaceColumn.schemaToClauses({ type: "", ...schema, name: this.name });
+  modify(schema: ModifyColumnSchema) {
+    const clauses = Column.schemaToClauses({ type: "", ...schema, name: this.name });
     return this._connection.client.execute<ResultSetHeader>(`\
       ALTER TABLE ${this._path} MODIFY COLUMN ${clauses}
     `);

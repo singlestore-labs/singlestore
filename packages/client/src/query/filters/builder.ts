@@ -19,7 +19,7 @@ type QueryFilterLogicalConditions<T extends QuerySchema> = {
   or?: QueryFilters<T>[];
 };
 
-export type QueryFilters<T extends QuerySchema = QuerySchema> = {
+export type QueryFilters<T extends QuerySchema> = {
   [K in keyof T]?: QueryFilterValue<T[K]>;
 } & QueryFilterLogicalConditions<T>;
 
@@ -57,7 +57,7 @@ export class QueryFiltersBuilder<T extends QuerySchema> {
     }
   }
 
-  private _buildWhereClause(filters?: QueryFilters): string {
+  private _buildWhereClause(filters?: QueryFilters<T>): string {
     if (!filters) return "";
 
     const conditions: string[] = [];
@@ -80,7 +80,7 @@ export class QueryFiltersBuilder<T extends QuerySchema> {
     return conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
   }
 
-  private _extractValues(filters?: QueryFilters): T[keyof T][] {
+  private _extractValues(filters?: QueryFilters<T>): T[keyof T][] {
     if (!filters) return [];
 
     const values: any[] = [];
