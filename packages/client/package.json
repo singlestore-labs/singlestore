@@ -1,6 +1,6 @@
 {
   "name": "@singlestore/client",
-  "version": "0.0.20",
+  "version": "0.0.21",
   "license": "Apache-2.0",
   "sideEffects": false,
   "main": "./dist/index.js",
@@ -24,13 +24,13 @@
     "lint": "eslint . "
   },
   "dependencies": {
-    "@singlestore/ai": "*"
+    "@singlestore/ai": "*",
+    "mysql2": "^3.10.2"
   },
   "devDependencies": {
     "@repo/eslint-config": "*",
     "@repo/typescript-config": "*",
     "@types/node": "^22.2.0",
-    "mysql2": "^3.10.2",
     "tsup": "^8.1.0",
     "typescript": "^5.5.4"
   },

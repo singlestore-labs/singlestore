@@ -235,14 +235,14 @@ export class Table<T extends TableType = any, U extends AI = AI> {
     ]
   ) {
     const _systemRole =
-      systemRole ||
+      systemRole ??
       `\
       You are a helpful assistant.\
       Answer the user's question based on the context provided.\
       If the context provided doesn't answer the question asked don't answer the user's question.\
       `;
 
-    const _template = template || `The user asked: <question>\nThe most similar context: <context>`;
+    const _template = template ?? `The user asked: <question>\nThe most similar context: <context>`;
     const context = await this.vectorSearch<Q, _S>({ prompt, vectorColumn }, ...args);
     const _prompt = _template.replace("<question>", prompt).replace("<context>", JSON.stringify(context));
 

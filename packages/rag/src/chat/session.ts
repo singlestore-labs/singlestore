@@ -143,9 +143,7 @@ export class ChatSession<T extends Database, U extends AI> {
       this._ai.chatCompletions.create(prompt, options),
     ]);
 
-    const handleResponseContent = async (content: string) => {
-      await this.createMessage("assistant", content);
-    };
+    const handleResponseContent = (content: string) => this.createMessage("assistant", content);
 
     if (typeof response === "string") {
       await handleResponseContent(response);
