@@ -3,6 +3,6 @@
   "compilerOptions": {
     "outDir": "dist"
   },
-  "include": ["src", "dev.ts"],
+  "include": ["src", "../rag/dev.ts"],
   "exclude": ["node_modules", "dist"]
 }

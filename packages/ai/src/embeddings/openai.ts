@@ -1,4 +1,4 @@
-import type { Embedding, Embeddings, CreateEmbeddingsInput, CreateEmbeddingsOptions } from ".";
+import type { Embedding, Embeddings, CreateEmbeddingsOptions } from ".";
 import type { OpenAI } from "openai";
 
 export type OpenAIEmbeddingModel = "text-embedding-3-small" | "text-embedding-3-large" | "text-embedding-ada-002";
@@ -14,7 +14,7 @@ export class OpenAIEmbeddings implements Embeddings {
   }
 
   async create<T extends Partial<OpenAIChatEmbeddingsCreateOptions>>(
-    input: CreateEmbeddingsInput,
+    input: string | string[],
     options?: T,
   ): Promise<Embedding[]> {
     const _input = Array.isArray(input) ? input : [input];

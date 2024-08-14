@@ -1,18 +1,17 @@
-import type { Connection } from "./connection";
 import type { QueryFilters } from "./query/filters/builder";
-import type { QuerySchema } from "./query/schema";
 import type { ExtractQueryColumns, ExtractQueryOptions } from "./query/types";
-import type { AI } from "@singlestore/ai";
+import type { AI, AIBase } from "@singlestore/ai";
 import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
 import { Column, type ColumnSchema, type ColumnType } from "./column";
+import { Connection } from "./connection";
 import { QueryBuilder, type QueryBuilderArgs } from "./query/builder";
 
 export interface TableType {
   columns: Record<string, ColumnType>;
 }
 
-export interface TableSchema<T extends TableType> {
+export interface TableSchema<T extends TableType = TableType> {
   name: string;
   columns: { [K in keyof T["columns"]]: Omit<ColumnSchema, "name"> };
   primaryKeys?: string[];
@@ -20,30 +19,19 @@ export interface TableSchema<T extends TableType> {
   clauses?: string[];
 }
 
-export interface TableInfo<T extends string> {
+export interface TableInfo<T extends string = string> {
   name: T;
 }
 
-export interface TableInfoExtended<T extends string> extends TableInfo<T> {
+export interface TableInfoExtended<T extends string = string> extends TableInfo<T> {
   tableType: string;
   distributed: boolean;
   storageType: string;
 }
 
-export type ExtractTableColumnName<T extends TableType> = Extract<keyof T["columns"], string>;
+type ColumnName<T extends TableType> = Extract<keyof T["columns"], string>;
 
-export type TableColumnName<T extends TableType> = ExtractTableColumnName<T> | (string & {});
-
-export type InsertTableValues<T extends TableType> = Partial<T["columns"]> | Partial<T["columns"]>[];
-
-export type SelectTableArgs<T extends TableType> = QueryBuilderArgs<T["columns"]>;
-
-export type UpdateTableValues<T extends TableType> = Partial<T["columns"]>;
-export type UpdateTableFilters<T extends TableType> = QueryFilters<T["columns"]>;
-
-export type DeleteTableFilters<T extends TableType> = QueryFilters<T["columns"]>;
-
-export class Table<T extends TableType = any, U extends AI = AI> {
+export class Table<T extends TableType = TableType, U extends AIBase = AI> {
   private _path: string;
   vScoreKey = "v_score" as const;
 
@@ -64,9 +52,8 @@ export class Table<T extends TableType = any, U extends AI = AI> {
     return this._ai;
   }
 
-  static normalizeInfo<T extends string, U extends boolean>(info: any, extended?: U) {
+  static normalizeInfo<T extends string = string, U extends boolean = boolean>(info: any, extended?: U) {
     type Result<T extends string, U extends boolean> = U extends true ? TableInfoExtended<T> : TableInfo<T>;
-
     const name = info[Object.keys(info).find((key) => key.startsWith("Tables_in_")) as string];
     if (!extended) return { name } as Result<T, U>;
 
@@ -84,12 +71,14 @@ export class Table<T extends TableType = any, U extends AI = AI> {
         return Column.schemaToClauses({ ...schema, name });
       }),
     ];
+
     if (schema.primaryKeys?.length) clauses.push(`PRIMARY KEY (${schema.primaryKeys.join(", ")})`);
     if (schema.fulltextKeys?.length) clauses.push(`FULLTEXT KEY (${schema.fulltextKeys.join(", ")})`);
+
     return [...clauses, ...(schema.clauses || [])].filter(Boolean).join(", ");
   }
 
-  static async create<T extends TableType = any, U extends AI = AI>(
+  static async create<T extends TableType = TableType, U extends AIBase = AI>(
     connection: Connection,
     databaseName: string,
     schema: TableSchema<T>,
@@ -99,6 +88,7 @@ export class Table<T extends TableType = any, U extends AI = AI> {
     await connection.client.execute<ResultSetHeader>(`\
       CREATE TABLE IF NOT EXISTS ${databaseName}.${schema.name} (${clauses})
     `);
+
     return new Table<T, U>(connection, databaseName, schema.name, ai);
   }
 
@@ -120,20 +110,20 @@ export class Table<T extends TableType = any, U extends AI = AI> {
     return Table.drop(this._connection, this.databaseName, this.name);
   }
 
-  column(name: TableColumnName<T>) {
+  column(name: ColumnName<T> | (string & {})) {
     return new Column(this._connection, this.databaseName, this.name, name as string);
   }
 
   async showColumnsInfo() {
     const [rows] = await this._connection.client.query<any[]>(`SHOW COLUMNS IN ${this.name} IN ${this.databaseName}`);
-    return rows.map((row) => Column.normalizeInfo<ExtractTableColumnName<T>>(row));
+    return rows.map((row) => Column.normalizeInfo<ColumnName<T>>(row));
   }
 
   addColumn(schema: ColumnSchema) {
     return Column.add(this._connection, this.databaseName, this.name, schema);
   }
 
-  dropColumn(name: TableColumnName<T>) {
+  dropColumn(name: ColumnName<T> | (string & {})) {
     return Column.drop(this._connection, this.databaseName, this.name, name);
   }
 
@@ -154,7 +144,7 @@ export class Table<T extends TableType = any, U extends AI = AI> {
     return result;
   }
 
-  insert(values: InsertTableValues<T>) {
+  insert(values: Partial<T["columns"]> | Partial<T["columns"]>[]) {
     const _values = Array.isArray(values) ? values : [values];
     const keys = Object.keys(_values[0]!);
     const placeholders = `(${keys.map(() => "?").join(", ")})`;
@@ -167,47 +157,46 @@ export class Table<T extends TableType = any, U extends AI = AI> {
     );
   }
 
-  async select<U extends SelectTableArgs<T>>(...args: U) {
+  async select<U extends QueryBuilderArgs<T["columns"]>>(...args: U) {
     type Options = ExtractQueryOptions<U>;
     type SelectedColumns = ExtractQueryColumns<T["columns"], Options>;
     const { columns, clause, values } = new QueryBuilder(...args);
     const query = `SELECT ${columns} FROM ${this._path} ${clause}`;
-    const result = await this._connection.client.execute<(SelectedColumns & RowDataPacket)[]>(query, values);
-    return result[0];
+    const [rows] = await this._connection.client.execute<(SelectedColumns & RowDataPacket)[]>(query, values);
+    return rows;
   }
 
-  update(values: UpdateTableValues<T>, filters: UpdateTableFilters<T>) {
+  update(values: Partial<T["columns"]>, filters: QueryFilters<T["columns"]>) {
     const { clause, values: _values } = new QueryBuilder(filters);
+
     const columnAssignments = Object.keys(values)
       .map((key) => `${key} = ?`)
       .join(", ");
+
     const query = `UPDATE ${this._path} SET ${columnAssignments} ${clause}`;
     return this._connection.client.execute<ResultSetHeader>(query, [...Object.values(values), ..._values]);
   }
 
-  delete(filters?: DeleteTableFilters<T>) {
+  delete(filters?: QueryFilters<T["columns"]>) {
     if (!filters) return this.truncate();
-
     const { clause, values } = new QueryBuilder(filters);
     const query = `DELETE FROM ${this._path} ${clause}`;
     return this._connection.client.execute<ResultSetHeader>(query, values);
   }
 
-  async vectorSearch<U extends QueryBuilderArgs<_S>, _S extends QuerySchema = T["columns"] & { v_score: number }>(
-    ...[search, ...args]: [search: { prompt: string; vectorColumn: ExtractTableColumnName<T> }, ...U]
+  async vectorSearch<A extends [search: { prompt: string; vectorColumn: ColumnName<T> }, ...QueryBuilderArgs<T["columns"]>]>(
+    ...args: A
   ) {
-    type Options = ExtractQueryOptions<U>;
-    type SelectedColumns = ExtractQueryColumns<_S, Options> & { v_score: number };
-    const { columns, clauses, values } = new QueryBuilder<_S>(...args);
+    const [search, ...queryBuilderArgs] = args;
+    type _QueryBuilderArgs = A extends [any, ...infer _A] ? (_A extends QueryBuilderArgs<T["columns"]> ? _A : never) : never;
+    type Options = ExtractQueryOptions<_QueryBuilderArgs>;
+    type SelectedColumns = ExtractQueryColumns<T["columns"], Options> & { v_score: number };
+    const { columns, clauses, values } = new QueryBuilder<T["columns"]>(...queryBuilderArgs);
     const promptEmbedding = (await this.ai.embeddings.create(search.prompt))[0] || [];
     let orderByClause = `ORDER BY ${this.vScoreKey} DESC`;
 
     if (clauses.orderBy) {
-      if (clauses.orderBy.includes(this.vScoreKey)) {
-        orderByClause = clauses.orderBy;
-      } else {
-        orderByClause += clauses.orderBy.replace(/^ORDER BY /, ", ");
-      }
+      orderByClause += clauses.orderBy.replace(/^ORDER BY /, ", ");
     }
 
     const query = `\
@@ -217,23 +206,15 @@ export class Table<T extends TableType = any, U extends AI = AI> {
       ${[clauses.where, clauses.groupBy, orderByClause, clauses.limit].join(" ")}
     `;
 
-    const result = await this._connection.client.execute<[any, (SelectedColumns & RowDataPacket)[]]>(query, values);
-    return result[0][1];
+    const [rows] = await this._connection.client.execute<[any, (SelectedColumns & RowDataPacket)[]]>(query, values);
+    return rows[1];
   }
 
-  async createChatCompletion<
-    Q extends QueryBuilderArgs<_S>,
-    _S extends QuerySchema = T["columns"] & { v_score: number },
-    _O extends Exclude<Parameters<U["chatCompletions"]["create"]>[1], undefined> = Exclude<
-      Parameters<U["chatCompletions"]["create"]>[1],
-      undefined
-    >,
-  >(
-    ...[{ prompt, vectorColumn, template, systemRole, ...createChatCompletionOptions }, ...args]: [
-      search: { prompt: string; vectorColumn: ExtractTableColumnName<T>; template?: string } & _O,
-      ...Q,
-    ]
+  async createChatCompletion<K extends Exclude<Parameters<U["chatCompletions"]["create"]>[1], undefined>>(
+    ...args: [search: { prompt: string; vectorColumn: ColumnName<T>; template?: string } & K, ...QueryBuilderArgs<T["columns"]>]
   ) {
+    const [{ prompt, vectorColumn, template, systemRole, ...createChatCompletionOptions }, ...vectorSearchArgs] = args;
+
     const _systemRole =
       systemRole ??
       `\
@@ -243,9 +224,8 @@ export class Table<T extends TableType = any, U extends AI = AI> {
       `;
 
     const _template = template ?? `The user asked: <question>\nThe most similar context: <context>`;
-    const context = await this.vectorSearch<Q, _S>({ prompt, vectorColumn }, ...args);
+    const context = await this.vectorSearch({ prompt, vectorColumn }, ...vectorSearchArgs);
     const _prompt = _template.replace("<question>", prompt).replace("<context>", JSON.stringify(context));
-
     return this.ai.chatCompletions.create(_prompt, { ...createChatCompletionOptions, systemRole: _systemRole });
   }
 }

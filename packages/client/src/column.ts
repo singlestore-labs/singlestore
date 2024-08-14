@@ -13,7 +13,7 @@ export interface ColumnSchema {
   clauses?: string[];
 }
 
-export interface ColumnInfo<T extends string> {
+export interface ColumnInfo<T extends string = string> {
   name: T;
   type: string;
   null: string;
@@ -21,8 +21,6 @@ export interface ColumnInfo<T extends string> {
   default: any;
   extra: string;
 }
-
-export type ModifyColumnSchema = Partial<Omit<ColumnSchema, "name">>;
 
 export class Column {
   private _path: string;
@@ -36,7 +34,7 @@ export class Column {
     this._path = [databaseName, tableName].join(".");
   }
 
-  static normalizeInfo<T extends string>(info: any): ColumnInfo<T> {
+  static normalizeInfo<T extends string = string>(info: any): ColumnInfo<T> {
     return {
       name: info.Field,
       type: info.Type,
@@ -62,6 +60,7 @@ export class Column {
     await connection.client.execute<ResultSetHeader>(`\
       ALTER TABLE ${databaseName}.${tableName} ADD COLUMN ${clauses}
     `);
+
     return new Column(connection, databaseName, tableName, schema.name);
   }
 
@@ -75,6 +74,7 @@ export class Column {
     const [rows] = await this._connection.client.query<any[]>(
       `SHOW COLUMNS IN ${this.tableName} IN ${this.databaseName} LIKE '${this.name}'`,
     );
+
     return Column.normalizeInfo<string>(rows[0]);
   }
 
@@ -82,8 +82,9 @@ export class Column {
     return Column.drop(this._connection, this.databaseName, this.tableName, this.name);
   }
 
-  modify(schema: ModifyColumnSchema) {
+  modify(schema: Partial<Omit<ColumnSchema, "name">>) {
     const clauses = Column.schemaToClauses({ type: "", ...schema, name: this.name });
+
     return this._connection.client.execute<ResultSetHeader>(`\
       ALTER TABLE ${this._path} MODIFY COLUMN ${clauses}
     `);

@@ -8,7 +8,7 @@ import type {
 } from ".";
 import type { OpenAI } from "openai";
 
-export type OpenAIChatCompletionModel =
+export type OpenAIstring =
   | "gpt-4o"
   | "gpt-4o-2024-05-13"
   | "gpt-4o-2024-08-06"
@@ -26,13 +26,13 @@ export type OpenAIChatCompletionModel =
   | "gpt-3.5-turbo-1106"
   | "gpt-3.5-turbo-instruct";
 
-export type CreateOpenAIChatCompletionOptions = CreateChatCompletionOptions<OpenAIChatCompletionModel> &
+export type CreateOpenAIChatCompletionOptions = CreateChatCompletionOptions<OpenAIstring> &
   Omit<Parameters<OpenAI["chat"]["completions"]["create"]>[0], keyof CreateChatCompletionOptions>;
 
 export class OpenAIChatCompletions implements ChatCompletions {
   constructor(private _openai: OpenAI) {}
 
-  getModels(): OpenAIChatCompletionModel[] {
+  getModels(): OpenAIstring[] {
     return [
       "gpt-4o",
       "gpt-4o-2024-05-13",

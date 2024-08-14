@@ -1,23 +1,16 @@
-import type { AI } from "@singlestore/ai";
+import type { AI, AIBase } from "@singlestore/ai";
 import type { Database, Table } from "@singlestore/client";
 
-import { Chat, type ChatsTable, type CreateChatConfig } from "./chat";
+import { Chat, type CreateChatConfig, type ChatsTable } from "./chat";
 
 export type * from "./types";
 
-export interface RAGConfig<T extends Database, U extends AI> {
+export interface RAGConfig<T extends Database<any>, U extends AIBase> {
   database: T;
   ai: U;
 }
 
-export type SelectChatsArgs<T extends Database, U extends AI> = [
-  tableName: string,
-  ...Parameters<Table<ChatsTable<T, U>>["select"]>,
-];
-
-export type DeleteChatsArgs = Parameters<typeof Chat.delete> extends [any, ...infer Rest] ? Rest : never;
-
-export class RAG<T extends Database = any, U extends AI<any, any> = AI> {
+export class RAG<T extends Database<any> = Database, U extends AIBase = AI> {
   private _database;
   private _ai;
 
@@ -34,8 +27,9 @@ export class RAG<T extends Database = any, U extends AI<any, any> = AI> {
     return Chat.create(this._database, this._ai, config);
   }
 
-  async selectChats(...[tableName, ...args]: SelectChatsArgs<T, U>) {
+  async selectChats(...[tableName, ...args]: [tableName: string, ...Parameters<Table<ChatsTable<T, U>>["select"]>]) {
     const rows = await this._database.table<ChatsTable<T, U>>(tableName).select(...args);
+
     return rows.map(
       (row) =>
         new Chat(
@@ -53,7 +47,7 @@ export class RAG<T extends Database = any, U extends AI<any, any> = AI> {
     );
   }
 
-  deleteChats(...args: DeleteChatsArgs) {
+  deleteChats(...args: Parameters<typeof Chat.delete> extends [any, ...infer Rest] ? Rest : never) {
     return Chat.delete(this._database, ...args);
   }
 }

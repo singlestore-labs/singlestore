@@ -1,27 +1,19 @@
-import type { AI } from "@singlestore/ai";
+import type { AI, AIBase } from "@singlestore/ai";
 import type { Database, Table } from "@singlestore/client";
 
 import { ChatMessage } from "./message";
 import { ChatSession, type ChatSessionsTable } from "./session";
 
-export interface ChatConfig<T extends Database, U extends AI>
+export interface ChatConfig<T extends Database<any> = Database, U extends AIBase = AI>
   extends Pick<Chat<T, U>, "name" | "systemRole" | "store" | "tableName" | "sessionsTableName" | "messagesTableName"> {}
 
-export interface ChatsTable<T extends Database, U extends AI> {
+export interface ChatsTable<T extends Database<any> = Database, U extends AIBase = AI> {
   columns: Pick<Chat<T, U>, "id" | "createdAt"> & ChatConfig<T, U>;
 }
 
-export type CreateChatConfig<T extends Database, U extends AI> = Partial<ChatConfig<T, U>>;
+export type CreateChatConfig<T extends Database<any> = Database, U extends AIBase = AI> = Partial<ChatConfig<T, U>>;
 
-export type DeleteChatFilters<T extends Database, U extends AI> = Parameters<Table<ChatsTable<T, U>>["delete"]>[0];
-
-export type UpdateChatValues<T extends Database, U extends AI> = Parameters<Table<ChatsTable<T, U>>["update"]>[0];
-
-export type SelectSessionsArgs<T extends Database, U extends AI> = Parameters<Table<ChatSessionsTable<T, U>>["select"]>;
-
-export type DeleteSessionsFilter = Parameters<typeof ChatSession.delete>[3];
-
-export class Chat<T extends Database, U extends AI> {
+export class Chat<T extends Database<any> = Database, U extends AIBase = AI> {
   constructor(
     private _database: T,
     private _ai: U,
@@ -35,7 +27,10 @@ export class Chat<T extends Database, U extends AI> {
     public messagesTableName: ChatSession<T, U>["messagesTableName"],
   ) {}
 
-  private static _createTable<T extends Database, U extends AI>(database: Database, name: Chat<T, U>["tableName"]) {
+  private static _createTable<T extends Database<any> = Database, U extends AIBase = AI>(
+    database: T,
+    name: Chat<T, U>["tableName"],
+  ) {
     return database.createTable<ChatsTable<T, U>>({
       name,
       columns: {
@@ -51,7 +46,11 @@ export class Chat<T extends Database, U extends AI> {
     });
   }
 
-  static async create<T extends Database, U extends AI>(database: T, ai: U, config?: CreateChatConfig<T, U>) {
+  static async create<T extends Database<any> = Database, U extends AIBase = AI>(
+    database: T,
+    ai: U,
+    config?: CreateChatConfig<T, U>,
+  ) {
     const createdAt: Chat<T, U>["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 23);
 
     const _config: ChatConfig<T, U> = {
@@ -89,12 +88,12 @@ export class Chat<T extends Database, U extends AI> {
     return new Chat(database, ai, id, createdAt, name, systemRole, store, tableName, sessionsTableName, messagesTableName);
   }
 
-  static async delete<T extends Database, U extends AI>(
-    database: Database,
+  static async delete<T extends Database<any> = Database, U extends AIBase = AI>(
+    database: T,
     tableName: Chat<T, U>["tableName"],
     sessionsTable: Chat<T, U>["sessionsTableName"],
     messagesTableName: Chat<T, U>["messagesTableName"],
-    filters?: DeleteChatFilters<T, U>,
+    filters?: Parameters<Table<ChatsTable<T, U>>["delete"]>[0],
   ) {
     const table = database.table<ChatsTable<T, U>>(tableName);
     const deletedRowIds = await table.select(filters, { columns: ["id"] });
@@ -105,7 +104,7 @@ export class Chat<T extends Database, U extends AI> {
     ]);
   }
 
-  async update(values: UpdateChatValues<T, U>) {
+  async update(values: Parameters<Table<ChatsTable<T, U>>["update"]>[0]) {
     const result = await this._database.table<ChatsTable<T, U>>(this.tableName).update(values, { id: this.id });
 
     for (const [key, value] of Object.entries(values)) {
@@ -132,8 +131,9 @@ export class Chat<T extends Database, U extends AI> {
     });
   }
 
-  async selectSessions(...args: SelectSessionsArgs<T, U>) {
+  async selectSessions(...args: Parameters<Table<ChatSessionsTable<T, U>>["select"]>) {
     const rows = await this._database.table<ChatSessionsTable<T, U>>(this.sessionsTableName).select(...args);
+
     return rows.map(
       (row) =>
         new ChatSession(
@@ -151,7 +151,7 @@ export class Chat<T extends Database, U extends AI> {
     );
   }
 
-  deleteSessions(filters: DeleteSessionsFilter = { chatId: this.id }) {
+  deleteSessions(filters: Parameters<typeof ChatSession.delete>[3] = { chatId: this.id }) {
     return ChatSession.delete(this._database, this.sessionsTableName, this.messagesTableName, filters);
   }
 }

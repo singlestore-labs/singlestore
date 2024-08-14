@@ -14,6 +14,8 @@ export type AIConfig<T extends Embeddings, U extends ChatCompletions> = {
   openAIApiKey?: string;
 };
 
+export type AIBase = AI<Embeddings, ChatCompletions>;
+
 export class AI<T extends Embeddings = OpenAIEmbeddings, U extends ChatCompletions = OpenAIChatCompletions> {
   public embeddings;
   public chatCompletions;
