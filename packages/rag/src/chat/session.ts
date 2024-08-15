@@ -1,19 +1,19 @@
-import type { AI, AIBase, ChatCompletionStream, CreateChatCompletionResult } from "@singlestore/ai";
-import type { Database, Table } from "@singlestore/client";
+import type { AI, ChatCompletionStream, CreateChatCompletionResult } from "@singlestore/ai";
+import type { Database, DatabaseType, Table } from "@singlestore/client";
 
 import { ChatMessage, type ChatMessagesTable } from "./message";
 
-export interface ChatSessionConfig<T extends Database<any> = Database, U extends AIBase = AI>
-  extends Pick<ChatSession<T, U>, "chatId" | "name" | "systemRole" | "store" | "tableName" | "messagesTableName"> {}
+export interface ChatSessionConfig
+  extends Pick<ChatSession, "chatId" | "name" | "systemRole" | "store" | "tableName" | "messagesTableName"> {}
 
-export interface ChatSessionsTable<T extends Database<any> = Database, U extends AIBase = AI> {
-  columns: Pick<ChatSession<T, U>, "id" | "createdAt" | "chatId" | "name">;
+export interface ChatSessionsTable {
+  columns: Pick<ChatSession, "id" | "createdAt" | "chatId" | "name">;
 }
 
-export class ChatSession<T extends Database<any> = Database, U extends AIBase = AI> {
+export class ChatSession<T extends DatabaseType = DatabaseType, U extends AI | undefined = undefined, K extends AI = AI> {
   constructor(
-    private _database: T,
-    private _ai: U,
+    public _database: Database<T, U>,
+    public _ai: K,
     public id: number | undefined,
     public createdAt: string | undefined,
     public chatId: number | undefined,
@@ -24,11 +24,12 @@ export class ChatSession<T extends Database<any> = Database, U extends AIBase = 
     public messagesTableName: ChatMessage<T>["tableName"],
   ) {}
 
-  static createTable<T extends Database<any> = Database, U extends AIBase = AI>(
-    database: T,
-    name: ChatSession<T, U>["tableName"],
-  ) {
-    return database.createTable<ChatSessionsTable<T, U>>({
+  static createTable<
+    T extends DatabaseType = DatabaseType,
+    U extends AI | undefined = undefined,
+    K extends ChatSession["tableName"] = string,
+  >(database: Database<T, U>, name: K) {
+    return database.createTable<ChatSessionsTable>({
       name,
       columns: {
         id: { type: "bigint", autoIncrement: true, primaryKey: true },
@@ -39,14 +40,15 @@ export class ChatSession<T extends Database<any> = Database, U extends AIBase = 
     });
   }
 
-  static async create<T extends Database<any> = Database, U extends AIBase = AI>(
-    database: T,
-    ai: U,
-    config?: Partial<ChatSessionConfig<T, U>>,
-  ) {
-    const createdAt: ChatSession<T, U>["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 23);
+  static async create<
+    T extends DatabaseType = DatabaseType,
+    U extends AI | undefined = undefined,
+    K extends AI = AI,
+    C extends Partial<ChatSessionConfig> | undefined = undefined,
+  >(database: Database<T, U>, ai: K, config?: C) {
+    const createdAt: ChatSession["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 23);
 
-    const _config: ChatSessionConfig<T, U> = {
+    const _config: ChatSessionConfig = {
       chatId: config?.chatId ?? undefined,
       name: config?.name ?? createdAt,
       systemRole: config?.systemRole ?? "You are a helpfull assistant",
@@ -56,23 +58,23 @@ export class ChatSession<T extends Database<any> = Database, U extends AIBase = 
     };
 
     const { chatId, name, systemRole, store, tableName, messagesTableName } = _config;
-    let id: ChatSession<T, U>["id"];
+    let id: ChatSession["id"];
 
     if (store) {
-      const [rows] = await database.table<ChatSessionsTable<T, U>>(tableName).insert({ createdAt, name, chatId });
+      const [rows] = await database.table<ChatSessionsTable>(tableName).insert({ createdAt, name, chatId });
       id = rows?.[0].insertId;
     }
 
     return new ChatSession(database, ai, id, createdAt, chatId, name, systemRole, store, tableName, messagesTableName);
   }
 
-  static async delete<T extends Database<any> = Database, U extends AIBase = AI>(
-    database: Database,
-    tableName: ChatSession<T, U>["tableName"],
-    messagesTableName: ChatSession<T, U>["messagesTableName"],
-    filters?: Parameters<Table<ChatSessionsTable<T, U>>["delete"]>[0],
+  static async delete(
+    database: Database<any, any>,
+    tableName: ChatSession["tableName"],
+    messagesTableName: ChatSession["messagesTableName"],
+    filters?: Parameters<Table<ChatSessionsTable>["delete"]>[0],
   ) {
-    const table = database.table<ChatSessionsTable<T, U>>(tableName);
+    const table = database.table<ChatSessionsTable>(tableName);
     const deletedRowIds = await table.select(filters, { columns: ["id"] });
 
     return Promise.all([
@@ -81,8 +83,8 @@ export class ChatSession<T extends Database<any> = Database, U extends AIBase = 
     ]);
   }
 
-  async update(values: Parameters<Table<ChatSessionsTable<T, U>>["update"]>[0]) {
-    const result = await this._database.table<ChatSessionsTable<T, U>>(this.tableName).update(values, { id: this.id });
+  async update(values: Parameters<Table<ChatSessionsTable>["update"]>[0]) {
+    const result = await this._database.table<ChatSessionsTable>(this.tableName).update(values, { id: this.id });
 
     for (const [key, value] of Object.entries(values)) {
       if (key in this) {
@@ -97,7 +99,7 @@ export class ChatSession<T extends Database<any> = Database, U extends AIBase = 
     return ChatSession.delete(this._database, this.tableName, this.messagesTableName, { id: this.id });
   }
 
-  createMessage(role: ChatMessage<T>["role"], content: ChatMessage<T>["content"]) {
+  createMessage<T extends ChatMessage["role"], U extends ChatMessage["content"]>(role: T, content: U) {
     return ChatMessage.create(this._database, {
       sessionId: this.id,
       role,
@@ -107,8 +109,8 @@ export class ChatSession<T extends Database<any> = Database, U extends AIBase = 
     });
   }
 
-  async selectMessages(...args: Parameters<Table<ChatMessagesTable<T>>["select"]>) {
-    const rows = await this._database.table<ChatMessagesTable<T>>(this.messagesTableName).select(...args);
+  async selectMessages<T extends Parameters<Table<ChatMessagesTable>["select"]>>(...args: T) {
+    const rows = await this._database.table<ChatMessagesTable>(this.messagesTableName).select(...args);
 
     return rows.map((row) => {
       return new ChatMessage(
@@ -128,7 +130,7 @@ export class ChatSession<T extends Database<any> = Database, U extends AIBase = 
     return ChatMessage.delete(this._database, this.messagesTableName, filters);
   }
 
-  async createChatCompletion<T extends Exclude<Parameters<U["chatCompletions"]["create"]>[1], undefined>>(
+  async createChatCompletion<T extends Exclude<Parameters<K["chatCompletions"]["create"]>[1], undefined>>(
     prompt: string,
     options?: T,
   ): Promise<CreateChatCompletionResult<T>> {

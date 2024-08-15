@@ -1,6 +1,6 @@
 import type { QueryFilters } from "./query/filters/builder";
 import type { ExtractQueryColumns, ExtractQueryOptions } from "./query/types";
-import type { AI, AIBase } from "@singlestore/ai";
+import type { AI } from "@singlestore/ai";
 import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
 import { Column, type ColumnSchema, type ColumnType } from "./column";
@@ -29,11 +29,16 @@ export interface TableInfoExtended<T extends string = string> extends TableInfo<
   storageType: string;
 }
 
-type ColumnName<T extends TableType> = Extract<keyof T["columns"], string>;
+type ColumnName<T extends TableType = TableType> = Extract<keyof T["columns"], string>;
+type VectorScoreKey = "v_score";
 
-export class Table<T extends TableType = TableType, U extends AIBase = AI> {
+type ExtractAICreateChatCompletionsOptions<U extends AI | undefined> = U extends AI
+  ? Parameters<U["chatCompletions"]["create"]>[1]
+  : never;
+
+export class Table<T extends TableType = TableType, U extends AI | undefined = undefined> {
   private _path: string;
-  vScoreKey = "v_score" as const;
+  vScoreKey: VectorScoreKey = "v_score";
 
   constructor(
     private _connection: Connection,
@@ -78,7 +83,7 @@ export class Table<T extends TableType = TableType, U extends AIBase = AI> {
     return [...clauses, ...(schema.clauses || [])].filter(Boolean).join(", ");
   }
 
-  static async create<T extends TableType = TableType, U extends AIBase = AI>(
+  static async create<T extends TableType = TableType, U extends AI | undefined = undefined>(
     connection: Connection,
     databaseName: string,
     schema: TableSchema<T>,
@@ -190,7 +195,7 @@ export class Table<T extends TableType = TableType, U extends AIBase = AI> {
     const [search, ...queryBuilderArgs] = args;
     type _QueryBuilderArgs = A extends [any, ...infer _A] ? (_A extends QueryBuilderArgs<T["columns"]> ? _A : never) : never;
     type Options = ExtractQueryOptions<_QueryBuilderArgs>;
-    type SelectedColumns = ExtractQueryColumns<T["columns"], Options> & { v_score: number };
+    type SelectedColumns = ExtractQueryColumns<T["columns"], Options> & { [K in VectorScoreKey]: number };
     const { columns, clauses, values } = new QueryBuilder<T["columns"]>(...queryBuilderArgs);
     const promptEmbedding = (await this.ai.embeddings.create(search.prompt))[0] || [];
     let orderByClause = `ORDER BY ${this.vScoreKey} DESC`;
@@ -210,7 +215,7 @@ export class Table<T extends TableType = TableType, U extends AIBase = AI> {
     return rows[1];
   }
 
-  async createChatCompletion<K extends Exclude<Parameters<U["chatCompletions"]["create"]>[1], undefined>>(
+  async createChatCompletion<K extends ExtractAICreateChatCompletionsOptions<U>>(
     ...args: [search: { prompt: string; vectorColumn: ColumnName<T>; template?: string } & K, ...QueryBuilderArgs<T["columns"]>]
   ) {
     const [{ prompt, vectorColumn, template, systemRole, ...createChatCompletionOptions }, ...vectorSearchArgs] = args;

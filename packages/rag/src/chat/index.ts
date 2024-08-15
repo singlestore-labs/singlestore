@@ -1,22 +1,22 @@
-import type { AI, AIBase } from "@singlestore/ai";
-import type { Database, Table } from "@singlestore/client";
+import type { AI } from "@singlestore/ai";
+import type { Database, DatabaseType, Table } from "@singlestore/client";
 
 import { ChatMessage } from "./message";
 import { ChatSession, type ChatSessionsTable } from "./session";
 
-export interface ChatConfig<T extends Database<any> = Database, U extends AIBase = AI>
-  extends Pick<Chat<T, U>, "name" | "systemRole" | "store" | "tableName" | "sessionsTableName" | "messagesTableName"> {}
+export interface ChatConfig
+  extends Pick<Chat, "name" | "systemRole" | "store" | "tableName" | "sessionsTableName" | "messagesTableName"> {}
 
-export interface ChatsTable<T extends Database<any> = Database, U extends AIBase = AI> {
-  columns: Pick<Chat<T, U>, "id" | "createdAt"> & ChatConfig<T, U>;
+export interface ChatsTable {
+  columns: Pick<Chat, "id" | "createdAt"> & ChatConfig;
 }
 
-export type CreateChatConfig<T extends Database<any> = Database, U extends AIBase = AI> = Partial<ChatConfig<T, U>>;
+export type CreateChatConfig = Partial<ChatConfig>;
 
-export class Chat<T extends Database<any> = Database, U extends AIBase = AI> {
+export class Chat<T extends DatabaseType = DatabaseType, U extends AI | undefined = undefined, K extends AI = AI> {
   constructor(
-    private _database: T,
-    private _ai: U,
+    private _database: Database<T, U>,
+    private _ai: K,
     public id: number | undefined,
     public createdAt: string | undefined,
     public name: string,
@@ -27,11 +27,12 @@ export class Chat<T extends Database<any> = Database, U extends AIBase = AI> {
     public messagesTableName: ChatSession<T, U>["messagesTableName"],
   ) {}
 
-  private static _createTable<T extends Database<any> = Database, U extends AIBase = AI>(
-    database: T,
-    name: Chat<T, U>["tableName"],
-  ) {
-    return database.createTable<ChatsTable<T, U>>({
+  private static _createTable<
+    T extends DatabaseType = DatabaseType,
+    U extends AI | undefined = undefined,
+    K extends Chat["tableName"] = string,
+  >(database: Database<T, U>, name: K) {
+    return database.createTable<ChatsTable>({
       name,
       columns: {
         id: { type: "bigint", autoIncrement: true, primaryKey: true },
@@ -46,14 +47,15 @@ export class Chat<T extends Database<any> = Database, U extends AIBase = AI> {
     });
   }
 
-  static async create<T extends Database<any> = Database, U extends AIBase = AI>(
-    database: T,
-    ai: U,
-    config?: CreateChatConfig<T, U>,
-  ) {
-    const createdAt: Chat<T, U>["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 23);
+  static async create<
+    T extends DatabaseType = DatabaseType,
+    U extends AI | undefined = undefined,
+    K extends AI = AI,
+    C extends CreateChatConfig | undefined = undefined,
+  >(database: Database<T, U>, ai: K, config?: C) {
+    const createdAt: Chat["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 23);
 
-    const _config: ChatConfig<T, U> = {
+    const _config: ChatConfig = {
       name: config?.name ?? createdAt,
       systemRole: config?.systemRole ?? "You are a helpfull assistant",
       store: config?.store ?? true,
@@ -63,7 +65,7 @@ export class Chat<T extends Database<any> = Database, U extends AIBase = AI> {
     };
 
     const { name, systemRole, store, tableName, sessionsTableName, messagesTableName } = _config;
-    let id: Chat<T, U>["id"];
+    let id: Chat["id"];
 
     if (store) {
       const [chatsTable] = await Promise.all([
@@ -88,14 +90,14 @@ export class Chat<T extends Database<any> = Database, U extends AIBase = AI> {
     return new Chat(database, ai, id, createdAt, name, systemRole, store, tableName, sessionsTableName, messagesTableName);
   }
 
-  static async delete<T extends Database<any> = Database, U extends AIBase = AI>(
-    database: T,
-    tableName: Chat<T, U>["tableName"],
-    sessionsTable: Chat<T, U>["sessionsTableName"],
-    messagesTableName: Chat<T, U>["messagesTableName"],
-    filters?: Parameters<Table<ChatsTable<T, U>>["delete"]>[0],
+  static async delete(
+    database: Database<any, any>,
+    tableName: Chat["tableName"],
+    sessionsTable: Chat["sessionsTableName"],
+    messagesTableName: Chat["messagesTableName"],
+    filters?: Parameters<Table<ChatsTable>["delete"]>[0],
   ) {
-    const table = database.table<ChatsTable<T, U>>(tableName);
+    const table = database.table<ChatsTable>(tableName);
     const deletedRowIds = await table.select(filters, { columns: ["id"] });
 
     return Promise.all([
@@ -104,8 +106,8 @@ export class Chat<T extends Database<any> = Database, U extends AIBase = AI> {
     ]);
   }
 
-  async update(values: Parameters<Table<ChatsTable<T, U>>["update"]>[0]) {
-    const result = await this._database.table<ChatsTable<T, U>>(this.tableName).update(values, { id: this.id });
+  async update(values: Parameters<Table<ChatsTable>["update"]>[0]) {
+    const result = await this._database.table<ChatsTable>(this.tableName).update(values, { id: this.id });
 
     for (const [key, value] of Object.entries(values)) {
       if (key in this) {
@@ -120,7 +122,7 @@ export class Chat<T extends Database<any> = Database, U extends AIBase = AI> {
     return Chat.delete(this._database, this.tableName, this.sessionsTableName, this.messagesTableName, { id: this.id });
   }
 
-  createSession(name?: ChatSession<T, U>["name"]) {
+  createSession<T extends ChatSession["name"] | undefined = undefined>(name?: T) {
     return ChatSession.create(this._database, this._ai, {
       chatId: this.id,
       name,
@@ -131,8 +133,8 @@ export class Chat<T extends Database<any> = Database, U extends AIBase = AI> {
     });
   }
 
-  async selectSessions(...args: Parameters<Table<ChatSessionsTable<T, U>>["select"]>) {
-    const rows = await this._database.table<ChatSessionsTable<T, U>>(this.sessionsTableName).select(...args);
+  async selectSessions<T extends Parameters<Table<ChatSessionsTable>["select"]>>(...args: T) {
+    const rows = await this._database.table<ChatSessionsTable>(this.sessionsTableName).select(...args);
 
     return rows.map(
       (row) =>

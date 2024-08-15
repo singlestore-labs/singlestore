@@ -1,16 +1,15 @@
-import type { ChatCompletionMessage } from "@singlestore/ai";
-import type { Database, Table } from "@singlestore/client";
+import type { AI, ChatCompletionMessage } from "@singlestore/ai";
+import type { Database, DatabaseType, Table } from "@singlestore/client";
 
-export interface ChatMessageConfig<T extends Database<any> = Database>
-  extends Pick<ChatMessage<T>, "sessionId" | "role" | "content" | "store" | "tableName"> {}
+export interface ChatMessageConfig extends Pick<ChatMessage, "sessionId" | "role" | "content" | "store" | "tableName"> {}
 
-export interface ChatMessagesTable<T extends Database<any> = Database> {
-  columns: Pick<ChatMessage<T>, "id" | "createdAt" | "sessionId" | "role" | "content">;
+export interface ChatMessagesTable {
+  columns: Pick<ChatMessage, "id" | "createdAt" | "sessionId" | "role" | "content">;
 }
 
-export class ChatMessage<T extends Database<any> = Database> {
+export class ChatMessage<T extends DatabaseType = DatabaseType, U extends AI | undefined = undefined> {
   constructor(
-    private _database: T,
+    private _database: Database<T, U>,
     public id: number | undefined,
     public createdAt: string | undefined,
     public sessionId: number | undefined,
@@ -20,8 +19,12 @@ export class ChatMessage<T extends Database<any> = Database> {
     public tableName: string,
   ) {}
 
-  static createTable<T extends Database<any> = Database>(database: Database, name: ChatMessage<T>["tableName"]) {
-    return database.createTable<ChatMessagesTable<T>>({
+  static createTable<
+    T extends DatabaseType = DatabaseType,
+    U extends AI | undefined = undefined,
+    C extends ChatMessage["tableName"] = string,
+  >(database: Database<T, U>, name: C) {
+    return database.createTable<ChatMessagesTable>({
       name,
       columns: {
         id: { type: "bigint", autoIncrement: true, primaryKey: true },
@@ -33,29 +36,33 @@ export class ChatMessage<T extends Database<any> = Database> {
     });
   }
 
-  static async create<T extends Database<any> = Database>(database: T, config: ChatMessageConfig<T>) {
+  static async create<
+    T extends DatabaseType = DatabaseType,
+    U extends AI | undefined = undefined,
+    K extends ChatMessageConfig = ChatMessageConfig,
+  >(database: Database<T, U>, config: K) {
     const { sessionId, role, content, store, tableName } = config;
-    const createdAt: ChatMessage<T>["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 23);
-    let id: ChatMessage<T>["id"];
+    const createdAt: ChatMessage["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 23);
+    let id: ChatMessage["id"];
 
     if (store) {
-      const [rows] = await database.table<ChatMessagesTable<T>>(tableName).insert({ createdAt, sessionId, role, content });
+      const [rows] = await database.table<ChatMessagesTable>(tableName).insert({ createdAt, sessionId, role, content });
       id = rows?.[0].insertId;
     }
 
     return new ChatMessage(database, id, createdAt, sessionId, role, content, store, tableName);
   }
 
-  static delete<T extends Database<any> = Database>(
-    database: T,
-    tableName: ChatMessage<T>["tableName"],
-    filters?: Parameters<Table<ChatMessagesTable<T>>["delete"]>[0],
+  static delete(
+    database: Database<any, any>,
+    tableName: ChatMessage["tableName"],
+    filters?: Parameters<Table<ChatMessagesTable>["delete"]>[0],
   ) {
-    return database.table<ChatMessagesTable<T>>(tableName).delete(filters);
+    return database.table<ChatMessagesTable>(tableName).delete(filters);
   }
 
-  async update(values: Parameters<Table<ChatMessagesTable<T>>["update"]>[0]) {
-    const result = await this._database.table<ChatMessagesTable<T>>(this.tableName).update(values, { id: this.id });
+  async update(values: Parameters<Table<ChatMessagesTable>["update"]>[0]) {
+    const result = await this._database.table<ChatMessagesTable>(this.tableName).update(values, { id: this.id });
 
     for (const [key, value] of Object.entries(values)) {
       if (key in this) {

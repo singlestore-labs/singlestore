@@ -1,20 +1,20 @@
-import type { AI, AIBase } from "@singlestore/ai";
-import type { Database, Table } from "@singlestore/client";
+import type { AI } from "@singlestore/ai";
+import type { Database, DatabaseType, Table } from "@singlestore/client";
 
 import { Chat, type CreateChatConfig, type ChatsTable } from "./chat";
 
 export type * from "./types";
 
-export interface RAGConfig<T extends Database<any>, U extends AIBase> {
-  database: T;
-  ai: U;
+export interface RAGConfig<T extends DatabaseType = DatabaseType, U extends AI | undefined = undefined, K extends AI = AI> {
+  database: Database<T, U>;
+  ai: K;
 }
 
-export class RAG<T extends Database<any> = Database, U extends AIBase = AI> {
-  private _database;
-  private _ai;
+export class RAG<T extends DatabaseType = DatabaseType, U extends AI | undefined = undefined, K extends AI = AI> {
+  public _database;
+  public _ai;
 
-  constructor(config: RAGConfig<T, U>) {
+  constructor(config: RAGConfig<T, U, K>) {
     this._database = config.database;
     this._ai = config.ai;
   }
@@ -23,12 +23,12 @@ export class RAG<T extends Database<any> = Database, U extends AIBase = AI> {
     return this._ai.chatCompletions.getModels();
   }
 
-  createChat<K extends CreateChatConfig<T, U>>(config?: K) {
+  createChat<T extends CreateChatConfig>(config?: T) {
     return Chat.create(this._database, this._ai, config);
   }
 
-  async selectChats(...[tableName, ...args]: [tableName: string, ...Parameters<Table<ChatsTable<T, U>>["select"]>]) {
-    const rows = await this._database.table<ChatsTable<T, U>>(tableName).select(...args);
+  async selectChats<T extends [tableName: string, ...Parameters<Table<ChatsTable>["select"]>]>(...[tableName, ...args]: T) {
+    const rows = await this._database.table<ChatsTable>(tableName).select(...args);
 
     return rows.map(
       (row) =>

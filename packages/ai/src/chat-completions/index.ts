@@ -4,18 +4,34 @@ export type ChatCompletionChunk = string;
 export type ChatCompletionStream = AsyncGenerator<ChatCompletionChunk>;
 export type ChatCompletionMessage = ChatCompletionMessageParam;
 
-export interface CreateChatCompletionOptions<T = any> {
-  model: T | (string & {});
-  systemRole: string;
-  stream: boolean;
-  history: ChatCompletionMessage[];
+export interface CreateChatCompletionOptions {
+  model?: string;
+  systemRole?: string;
+  stream?: boolean;
+  history?: ChatCompletionMessage[];
 }
-export type CreateChatCompletionResult<T = any> = T extends { stream: true } ? ChatCompletionStream : string;
+
+export type CreateChatCompletionResult<T extends CreateChatCompletionOptions = CreateChatCompletionOptions> = T extends {
+  stream: true;
+}
+  ? ChatCompletionStream
+  : string;
 
 export type OnChatCompletionStreamChunk = (chunk: ChatCompletionChunk) => Promise<void> | void;
 
-export interface ChatCompletions {
-  getModels(): string[];
-  handleStream(stream: ChatCompletionStream, onChunk?: OnChatCompletionStreamChunk): Promise<string>;
-  create<T extends Partial<CreateChatCompletionOptions>>(prompt: string, options?: T): Promise<CreateChatCompletionResult<T>>;
+export abstract class ChatCompletions {
+  abstract getModels(): Promise<string[]> | string[];
+
+  async handleStream(stream: ChatCompletionStream, onChunk?: OnChatCompletionStreamChunk): Promise<string> {
+    let text = "";
+
+    for await (const chunk of stream) {
+      text += chunk;
+      await onChunk?.(chunk);
+    }
+
+    return text;
+  }
+
+  abstract create(prompt: string, options?: CreateChatCompletionOptions): Promise<CreateChatCompletionResult>;
 }

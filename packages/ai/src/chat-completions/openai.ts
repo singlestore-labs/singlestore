@@ -1,38 +1,23 @@
-import type {
-  ChatCompletions,
-  ChatCompletionStream,
-  ChatCompletionMessage,
-  CreateChatCompletionOptions,
-  CreateChatCompletionResult,
-  OnChatCompletionStreamChunk,
-} from ".";
+import type { ChatCompletionStream, ChatCompletionMessage, CreateChatCompletionOptions, CreateChatCompletionResult } from ".";
 import type { OpenAI } from "openai";
+import type { ChatCompletionCreateParamsBase } from "openai/resources/chat/completions.mjs";
 
-export type OpenAIstring =
-  | "gpt-4o"
-  | "gpt-4o-2024-05-13"
-  | "gpt-4o-2024-08-06"
-  | "gpt-4o-mini"
-  | "gpt-4o-mini-2024-07-18"
-  | "gpt-4-turbo"
-  | "gpt-4-turbo-2024-04-09"
-  | "gpt-4-turbo-preview"
-  | "gpt-4-0125-preview"
-  | "gpt-4-1106-preview"
-  | "gpt-4"
-  | "gpt-4-0613"
-  | "gpt-3.5-turbo-0125"
-  | "gpt-3.5-turbo"
-  | "gpt-3.5-turbo-1106"
-  | "gpt-3.5-turbo-instruct";
+import { ChatCompletions } from ".";
 
-export type CreateOpenAIChatCompletionOptions = CreateChatCompletionOptions<OpenAIstring> &
-  Omit<Parameters<OpenAI["chat"]["completions"]["create"]>[0], keyof CreateChatCompletionOptions>;
+type _OpenAICreateChatCompletionOptions = Omit<Partial<ChatCompletionCreateParamsBase>, keyof CreateChatCompletionOptions>;
 
-export class OpenAIChatCompletions implements ChatCompletions {
-  constructor(private _openai: OpenAI) {}
+export type OpenAIChatCompletionModel = ChatCompletionCreateParamsBase["model"];
 
-  getModels(): OpenAIstring[] {
+export interface OpenAICreateChatCompletionOptions extends CreateChatCompletionOptions, _OpenAICreateChatCompletionOptions {
+  model?: OpenAIChatCompletionModel;
+}
+
+export class OpenAIChatCompletions extends ChatCompletions {
+  constructor(private _openai: OpenAI) {
+    super();
+  }
+
+  getModels(): OpenAIChatCompletionModel[] {
     return [
       "gpt-4o",
       "gpt-4o-2024-05-13",
@@ -53,7 +38,7 @@ export class OpenAIChatCompletions implements ChatCompletions {
     ];
   }
 
-  async create<T extends Partial<CreateOpenAIChatCompletionOptions>>(
+  async create<T extends OpenAICreateChatCompletionOptions>(
     prompt: string,
     options?: T,
   ): Promise<CreateChatCompletionResult<T>> {
@@ -81,16 +66,5 @@ export class OpenAIChatCompletions implements ChatCompletions {
         yield chunk.choices[0]?.delta.content || "";
       }
     })() as CreateChatCompletionResult<T>;
-  }
-
-  async handleStream(stream: ChatCompletionStream, onChunk?: OnChatCompletionStreamChunk): Promise<string> {
-    let text = "";
-
-    for await (const chunk of stream) {
-      text += chunk;
-      await onChunk?.(chunk);
-    }
-
-    return text;
   }
 }

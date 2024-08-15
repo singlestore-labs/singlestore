@@ -1,4 +1,4 @@
-import type { AI, AIBase } from "@singlestore/ai";
+import type { AI } from "@singlestore/ai";
 
 import { Connection, type ConnectionConfig } from "./connection";
 import { Database, type DatabaseSchema, type DatabaseType } from "./database";
@@ -12,7 +12,7 @@ export interface WorkspaceSchema<T extends WorkspaceType = WorkspaceType> {
   databases: { [K in keyof T["databases"]]: Omit<DatabaseSchema<T["databases"][K]>, "name"> };
 }
 
-export interface ConnectWorkspaceConfig<T extends WorkspaceType = WorkspaceType, U extends AIBase = AI>
+export interface ConnectWorkspaceConfig<T extends WorkspaceType = WorkspaceType, U extends AI | undefined = undefined>
   extends ConnectionConfig {
   name?: WorkspaceSchema<T>["name"];
   ai?: U;
@@ -20,14 +20,14 @@ export interface ConnectWorkspaceConfig<T extends WorkspaceType = WorkspaceType,
 
 type DatabaseName<T extends WorkspaceType = WorkspaceType> = Extract<keyof T["databases"], string>;
 
-export class Workspace<T extends WorkspaceType = WorkspaceType, U extends AIBase = AI> {
+export class Workspace<T extends WorkspaceType = WorkspaceType, U extends AI | undefined = undefined> {
   constructor(
     public connection: Connection,
     public name?: string,
     private _ai?: U,
   ) {}
 
-  static connect<T extends WorkspaceType = WorkspaceType, U extends AIBase = AI>({
+  static connect<T extends WorkspaceType = WorkspaceType, U extends AI | undefined = undefined>({
     ai,
     name,
     ...config

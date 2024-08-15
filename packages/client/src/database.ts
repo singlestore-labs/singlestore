@@ -1,4 +1,4 @@
-import type { AI, AIBase } from "@singlestore/ai";
+import type { AI } from "@singlestore/ai";
 import type { ResultSetHeader } from "mysql2/promise";
 
 import { Connection } from "./connection";
@@ -38,9 +38,9 @@ export interface DatabaseInfoExtended<T extends string = string> extends Databas
 
 export type DatabaseTablesToRecords<T extends DatabaseType["tables"]> = { [K in keyof T]: T[K]["columns"][] };
 
-type TableName<T extends DatabaseType> = Extract<keyof T["tables"], string>;
+type TableName<T extends DatabaseType = DatabaseType> = Extract<keyof T["tables"], string>;
 
-export class Database<T extends DatabaseType = DatabaseType, U extends AIBase = AI> {
+export class Database<T extends DatabaseType = DatabaseType, U extends AI | undefined = undefined> {
   constructor(
     private _connection: Connection,
     public name: string,
@@ -74,7 +74,7 @@ export class Database<T extends DatabaseType = DatabaseType, U extends AIBase = 
     } as Result<T, U>;
   }
 
-  static async create<T extends DatabaseType = DatabaseType, U extends AIBase = AI>(
+  static async create<T extends DatabaseType = DatabaseType, U extends AI | undefined = undefined>(
     connection: Connection,
     schema: DatabaseSchema<T>,
     workspaceName?: string,
