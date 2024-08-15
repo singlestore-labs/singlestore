@@ -1,3 +1,4 @@
+import type { ChatCompletionTool } from "./tool";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 
 export type ChatCompletionChunk = string;
@@ -9,6 +10,7 @@ export interface CreateChatCompletionOptions {
   systemRole?: string;
   stream?: boolean;
   messages?: ChatCompletionMessage[];
+  tools?: ChatCompletionTool[];
 }
 
 export type CreateChatCompletionResult<T extends CreateChatCompletionOptions = CreateChatCompletionOptions> = T extends {
@@ -20,6 +22,12 @@ export type CreateChatCompletionResult<T extends CreateChatCompletionOptions = C
 export type OnChatCompletionStreamChunk = (chunk: ChatCompletionChunk) => Promise<void> | void;
 
 export abstract class ChatCompletions {
+  protected _tools: ChatCompletionTool[] = [];
+
+  addTools(tools: ChatCompletionTool[]) {
+    this._tools = [...this._tools, ...tools];
+  }
+
   abstract getModels(): Promise<string[]> | string[];
 
   async handleStream(stream: ChatCompletionStream, onChunk?: OnChatCompletionStreamChunk): Promise<string> {

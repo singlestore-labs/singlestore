@@ -24,7 +24,9 @@
     "lint": "eslint . "
   },
   "dependencies": {
-    "openai": "^4.55.7"
+    "openai": "^4.55.7",
+    "zod": "^3.23.8",
+    "zod-to-json-schema": "^3.23.2"
   },
   "devDependencies": {
     "@repo/eslint-config": "*",
