@@ -1,6 +1,6 @@
 {
   "name": "@singlestore/ai",
-  "version": "0.0.16",
+  "version": "0.0.17",
   "license": "Apache-2.0",
   "sideEffects": false,
   "main": "./dist/index.js",
@@ -24,7 +24,7 @@
     "lint": "eslint . "
   },
   "dependencies": {
-    "openai": "^4.53.2"
+    "openai": "^4.55.7"
   },
   "devDependencies": {
     "@repo/eslint-config": "*",

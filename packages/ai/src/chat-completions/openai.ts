@@ -1,6 +1,6 @@
-import type { ChatCompletionStream, ChatCompletionMessage, CreateChatCompletionOptions, CreateChatCompletionResult } from ".";
+import type { ChatCompletionStream, CreateChatCompletionOptions, CreateChatCompletionResult } from ".";
 import type { OpenAI } from "openai";
-import type { ChatCompletionCreateParamsBase } from "openai/resources/chat/completions.mjs";
+import type { ChatCompletionCreateParamsBase, ChatCompletionMessageParam } from "openai/resources/chat/completions.mjs";
 
 import { ChatCompletions } from ".";
 
@@ -42,11 +42,11 @@ export class OpenAIChatCompletions extends ChatCompletions {
     prompt: string,
     options?: T,
   ): Promise<CreateChatCompletionResult<T>> {
-    const { systemRole = "You are a helpful assistant", history = [], ..._options } = options ?? ({} as T);
+    const { systemRole = "You are a helpful assistant", messages = [], ..._options } = options ?? ({} as T);
 
-    const messages: ChatCompletionMessage[] = _options?.messages || [
+    const _messages: ChatCompletionMessageParam[] = [
       { role: "system", content: systemRole },
-      ...(history || []),
+      ...((messages || []) as ChatCompletionMessageParam[]),
       { role: "user", content: prompt },
     ];
 
@@ -54,7 +54,7 @@ export class OpenAIChatCompletions extends ChatCompletions {
       model: "gpt-4o-mini",
       temperature: 0,
       ..._options,
-      messages,
+      messages: _messages,
     });
 
     if (typeof response === "object" && response && "choices" in response) {

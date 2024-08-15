@@ -162,6 +162,7 @@ export class Table<T extends TableType = TableType, U extends AI | undefined = u
     );
   }
 
+  // TODO: Add joins support
   async select<U extends QueryBuilderArgs<T["columns"]>>(...args: U) {
     type Options = ExtractQueryOptions<U>;
     type SelectedColumns = ExtractQueryColumns<T["columns"], Options>;

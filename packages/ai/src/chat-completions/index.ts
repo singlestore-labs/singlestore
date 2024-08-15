@@ -2,13 +2,13 @@ import type { ChatCompletionMessageParam } from "openai/resources/chat/completio
 
 export type ChatCompletionChunk = string;
 export type ChatCompletionStream = AsyncGenerator<ChatCompletionChunk>;
-export type ChatCompletionMessage = ChatCompletionMessageParam;
+export type ChatCompletionMessage = { role: ChatCompletionMessageParam["role"]; content: string };
 
 export interface CreateChatCompletionOptions {
   model?: string;
   systemRole?: string;
   stream?: boolean;
-  history?: ChatCompletionMessage[];
+  messages?: ChatCompletionMessage[];
 }
 
 export type CreateChatCompletionResult<T extends CreateChatCompletionOptions = CreateChatCompletionOptions> = T extends {

@@ -1,4 +1,4 @@
-import type { AI, ChatCompletionStream, CreateChatCompletionResult } from "@singlestore/ai";
+import type { AI, ChatCompletionMessage, ChatCompletionStream, CreateChatCompletionResult } from "@singlestore/ai";
 import type { Database, DatabaseType, Table } from "@singlestore/client";
 
 import { ChatMessage, type ChatMessagesTable } from "./message";
@@ -130,13 +130,20 @@ export class ChatSession<T extends DatabaseType = DatabaseType, U extends AI | u
     return ChatMessage.delete(this._database, this.messagesTableName, filters);
   }
 
-  async createChatCompletion<T extends Exclude<Parameters<K["chatCompletions"]["create"]>[1], undefined>>(
-    prompt: string,
-    options?: T,
-  ): Promise<CreateChatCompletionResult<T>> {
+  async createChatCompletion<
+    T extends Exclude<Parameters<K["chatCompletions"]["create"]>[1], undefined> & { loadHistory?: boolean },
+  >(prompt: string, options?: T): Promise<CreateChatCompletionResult<T>> {
+    const { loadHistory = this.store, messages = [], ...createOptions } = options ?? ({} as T);
+    let historyMessages: ChatCompletionMessage[] = [];
+
+    if (loadHistory) {
+      const messages = await this.selectMessages();
+      historyMessages = messages.map((message) => ({ role: message.role, content: message.content }));
+    }
+
     const [, response] = await Promise.all([
       this.createMessage("user", prompt),
-      this._ai.chatCompletions.create(prompt, options),
+      this._ai.chatCompletions.create(prompt, { ...createOptions, messages: [...historyMessages, ...messages] }),
     ]);
 
     const handleResponseContent = (content: string) => this.createMessage("assistant", content);
