@@ -18,7 +18,9 @@ export interface AIConfig {
 
 export class AI<T extends AIConfig = AIConfig> {
   embeddings: T["embeddings"] extends Embeddings ? T["embeddings"] : OpenAIEmbeddings;
-  chatCompletions: T["chatCompletions"] extends ChatCompletions ? T["chatCompletions"] : OpenAIChatCompletions;
+  chatCompletions: T["chatCompletions"] extends ChatCompletions<T["chatCompletionTools"]>
+    ? T["chatCompletions"]
+    : OpenAIChatCompletions<T["chatCompletionTools"]>;
 
   constructor(config: T) {
     const openai = new OpenAI({ apiKey: config.openAIApiKey });
@@ -27,7 +29,7 @@ export class AI<T extends AIConfig = AIConfig> {
     this.chatCompletions = (config.chatCompletions ?? new OpenAIChatCompletions(openai)) as this["chatCompletions"];
 
     if (config.chatCompletionTools?.length) {
-      this.chatCompletions.addTools(config.chatCompletionTools);
+      this.chatCompletions.setTools = config.chatCompletionTools;
     }
   }
 }

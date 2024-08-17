@@ -1,19 +1,36 @@
-import type z from "zod";
+import { z } from "zod";
 
-export interface ChatCompletionToolCallResult {}
+export type ChatCompletionToolSchema = z.AnyZodObject | undefined;
 
-export type ChatCompletionToolCall<T extends z.AnyZodObject = z.AnyZodObject> = (
-  values: z.infer<T>,
-) => Promise<ChatCompletionToolCallResult>;
+export type ChatCompletionToolCallResult<T extends string, U extends ChatCompletionToolSchema, V> = U extends z.AnyZodObject
+  ? { name: T; params: z.infer<U>; value: V }
+  : { name: T; value: V };
+
+export type ChatCompletionToolCall<T extends string, U extends ChatCompletionToolSchema, V> = (
+  params: U extends z.AnyZodObject ? z.infer<U> : undefined,
+) => Promise<ChatCompletionToolCallResult<T, U, V>>;
+
+type ChatCompletionToolConfig<T extends string, U extends ChatCompletionToolSchema, V> = {
+  name: T;
+  description: string;
+  schema?: U;
+  call: ChatCompletionToolCall<T, U, V>;
+};
 
 export class ChatCompletionTool<
-  T extends z.AnyZodObject = z.AnyZodObject,
-  U extends ChatCompletionToolCall<T> = ChatCompletionToolCall<T>,
+  T extends string = string,
+  U extends ChatCompletionToolSchema = ChatCompletionToolSchema,
+  V = any,
 > {
-  constructor(
-    public name: string,
-    public description: string,
-    public schema: T,
-    public call: U,
-  ) {}
+  name: T;
+  description: string;
+  schema?: U;
+  call: ChatCompletionToolCall<T, U, V>;
+
+  constructor(config: ChatCompletionToolConfig<T, U, V>) {
+    this.name = config.name;
+    this.description = config.description;
+    this.schema = config.schema;
+    this.call = config.call;
+  }
 }

@@ -1,6 +1,7 @@
 import zodToJsonSchema from "zod-to-json-schema";
 
 import type { ChatCompletionStream, CreateChatCompletionOptions, CreateChatCompletionResult } from ".";
+import type { ChatCompletionTool } from "./tool";
 import type { OpenAI } from "openai";
 import type { FunctionToolCallDelta } from "openai/resources/beta/threads/runs/steps.mjs";
 import type {
@@ -8,7 +9,6 @@ import type {
   ChatCompletionMessageParam,
   ChatCompletionMessageToolCall,
 } from "openai/resources/chat/completions.mjs";
-import type { ChatCompletionTool } from "openai/src/resources/index.js";
 
 import { ChatCompletions } from ".";
 
@@ -20,7 +20,9 @@ export interface OpenAICreateChatCompletionOptions extends CreateChatCompletionO
   model?: OpenAIChatCompletionModel;
 }
 
-export class OpenAIChatCompletions extends ChatCompletions {
+export class OpenAIChatCompletions<
+  T extends ChatCompletionTool[] | undefined = ChatCompletionTool[] | undefined,
+> extends ChatCompletions<T> {
   constructor(private _openai: OpenAI) {
     super();
   }
@@ -58,21 +60,41 @@ export class OpenAIChatCompletions extends ChatCompletions {
       { role: "user", content: prompt },
     ];
 
-    const _tools: ChatCompletionTool[] = [...this._tools, ...tools].map(({ name, description, schema }) => ({
-      type: "function",
-      function: { name, description, parameters: zodToJsonSchema(schema) },
-    }));
+    const _tools = [...(this.tools ?? []), ...tools];
 
     const response = await this._openai.chat.completions.create({
       model: "gpt-4o-mini",
       temperature: 0,
       ..._options,
       messages: _messages,
-      tools: _tools,
+      tools: _tools.map(({ name, description, schema }) => ({
+        type: "function",
+        function: { name, description, parameters: schema ? zodToJsonSchema(schema) : undefined },
+      })),
     });
 
-    const handleToolCalls = async (toolCalls: ChatCompletionMessageToolCall[] | FunctionToolCallDelta[]) => {
-      toolCalls.forEach((tool) => console.log(tool));
+    const handleToolCalls = (toolCalls: ChatCompletionMessageToolCall[] | FunctionToolCallDelta[]) => {
+      return Promise.all(
+        toolCalls.map((toolCall) => {
+          if (!toolCall.function) return "";
+          let args: Parameters<(typeof _tools)[number]["call"]>[0];
+
+          if (toolCall.function.arguments) {
+            try {
+              args = JSON.parse(toolCall.function.arguments);
+            } catch (error) {
+              throw new Error(`Invalid arguments provided for the "${toolCall.function.name}" tool.`, { cause: error });
+            }
+          }
+
+          const tool = _tools.find(({ name }) => name === toolCall.function?.name);
+          if (!tool) {
+            throw new Error(`The "${toolCall.function.name}" tool is undefined.`);
+          }
+
+          return tool.call(args);
+        }),
+      );
     };
 
     if (typeof response === "object" && response && "choices" in response) {
@@ -82,7 +104,7 @@ export class OpenAIChatCompletions extends ChatCompletions {
         await handleToolCalls(message.tool_calls);
       }
 
-      return (message?.content || "") as CreateChatCompletionResult<T>;
+      return { type: "message", content: message?.content || "" } as CreateChatCompletionResult<T>;
     }
 
     return (async function* (): ChatCompletionStream {
@@ -107,7 +129,7 @@ export class OpenAIChatCompletions extends ChatCompletions {
           });
         }
 
-        yield delta?.content || "";
+        yield { type: "message", content: delta?.content || "" };
       }
 
       await handleToolCalls(Object.values(toolCallRecords));
