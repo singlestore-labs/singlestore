@@ -1,7 +1,7 @@
 import zodToJsonSchema from "zod-to-json-schema";
 
 import type { ChatCompletionStream, CreateChatCompletionOptions, CreateChatCompletionResult } from ".";
-import type { ChatCompletionTool } from "./tool";
+import type { AnyChatCompletionTool } from "./tool";
 import type { OpenAI } from "openai";
 import type { FunctionToolCallDelta } from "openai/resources/beta/threads/runs/steps.mjs";
 import type {
@@ -12,17 +12,15 @@ import type {
 
 import { ChatCompletions } from ".";
 
-type _OpenAICreateChatCompletionOptions = Omit<Partial<ChatCompletionCreateParamsBase>, keyof CreateChatCompletionOptions>;
-
 export type OpenAIChatCompletionModel = ChatCompletionCreateParamsBase["model"];
+
+type _OpenAICreateChatCompletionOptions = Omit<Partial<ChatCompletionCreateParamsBase>, keyof CreateChatCompletionOptions>;
 
 export interface OpenAICreateChatCompletionOptions extends CreateChatCompletionOptions, _OpenAICreateChatCompletionOptions {
   model?: OpenAIChatCompletionModel;
 }
 
-export class OpenAIChatCompletions<
-  T extends ChatCompletionTool[] | undefined = ChatCompletionTool[] | undefined,
-> extends ChatCompletions<T> {
+export class OpenAIChatCompletions<T extends AnyChatCompletionTool[] | undefined> extends ChatCompletions<T> {
   constructor(private _openai: OpenAI) {
     super();
   }
@@ -48,11 +46,11 @@ export class OpenAIChatCompletions<
     ];
   }
 
-  async create<T extends OpenAICreateChatCompletionOptions>(
+  async create<U extends OpenAICreateChatCompletionOptions>(
     prompt: string,
-    options?: T,
-  ): Promise<CreateChatCompletionResult<T>> {
-    const { systemRole = "You are a helpful assistant", messages = [], tools = [], ..._options } = options ?? ({} as T);
+    options?: U,
+  ): Promise<CreateChatCompletionResult<U>> {
+    const { systemRole = "You are a helpful assistant", messages = [], tools, ..._options } = options ?? ({} as U);
 
     const _messages: ChatCompletionMessageParam[] = [
       { role: "system", content: systemRole },
@@ -60,30 +58,34 @@ export class OpenAIChatCompletions<
       { role: "user", content: prompt },
     ];
 
-    const _tools = [...(this.tools ?? []), ...tools];
+    let _tools: AnyChatCompletionTool[] = [];
+    if (this.tools) _tools = [..._tools, ...this.tools];
+    if (tools) _tools = [..._tools, ...tools];
 
     const response = await this._openai.chat.completions.create({
       model: "gpt-4o-mini",
       temperature: 0,
       ..._options,
       messages: _messages,
-      tools: _tools.map(({ name, description, schema }) => ({
-        type: "function",
-        function: { name, description, parameters: schema ? zodToJsonSchema(schema) : undefined },
-      })),
+      tools: _tools.length
+        ? _tools.map(({ name, description, schema }) => ({
+            type: "function",
+            function: { name, description, parameters: schema ? zodToJsonSchema(schema) : undefined },
+          }))
+        : undefined,
     });
 
     const handleToolCalls = (toolCalls: ChatCompletionMessageToolCall[] | FunctionToolCallDelta[]) => {
       return Promise.all(
         toolCalls.map((toolCall) => {
           if (!toolCall.function) return "";
-          let args: Parameters<(typeof _tools)[number]["call"]>[0];
+          let params: Parameters<(typeof _tools)[number]["call"]>[0];
 
           if (toolCall.function.arguments) {
             try {
-              args = JSON.parse(toolCall.function.arguments);
+              params = JSON.parse(toolCall.function.arguments);
             } catch (error) {
-              throw new Error(`Invalid arguments provided for the "${toolCall.function.name}" tool.`, { cause: error });
+              throw new Error(`Invalid parameters provided for the "${toolCall.function.name}" tool.`, { cause: error });
             }
           }
 
@@ -92,7 +94,7 @@ export class OpenAIChatCompletions<
             throw new Error(`The "${toolCall.function.name}" tool is undefined.`);
           }
 
-          return tool.call(args);
+          return tool.call(params);
         }),
       );
     };
@@ -104,7 +106,7 @@ export class OpenAIChatCompletions<
         await handleToolCalls(message.tool_calls);
       }
 
-      return { type: "message", content: message?.content || "" } as CreateChatCompletionResult<T>;
+      return { content: message?.content || "" } as CreateChatCompletionResult<U>;
     }
 
     return (async function* (): ChatCompletionStream {
@@ -129,10 +131,10 @@ export class OpenAIChatCompletions<
           });
         }
 
-        yield { type: "message", content: delta?.content || "" };
+        yield { content: delta?.content || "" };
       }
 
       await handleToolCalls(Object.values(toolCallRecords));
-    })() as CreateChatCompletionResult<T>;
+    })() as CreateChatCompletionResult<U>;
   }
 }

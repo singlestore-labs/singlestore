@@ -1,5 +1,5 @@
-import type { AI, ChatCompletionMessage } from "@singlestore/ai";
-import type { Database, DatabaseType, Table } from "@singlestore/client";
+import type { ChatCompletionMessage } from "@singlestore/ai";
+import type { AnyDatabase, Table } from "@singlestore/client";
 
 export interface ChatMessageConfig extends Pick<ChatMessage, "sessionId" | "role" | "content" | "store" | "tableName"> {}
 
@@ -7,9 +7,9 @@ export interface ChatMessagesTable {
   columns: Pick<ChatMessage, "id" | "createdAt" | "sessionId" | "role" | "content">;
 }
 
-export class ChatMessage<T extends DatabaseType = DatabaseType, U extends AI | undefined = undefined> {
+export class ChatMessage<T extends AnyDatabase = AnyDatabase> {
   constructor(
-    private _database: Database<T, U>,
+    private _database: T,
     public id: number | undefined,
     public createdAt: string | undefined,
     public sessionId: number | undefined,
@@ -19,11 +19,7 @@ export class ChatMessage<T extends DatabaseType = DatabaseType, U extends AI | u
     public tableName: string,
   ) {}
 
-  static createTable<
-    T extends DatabaseType = DatabaseType,
-    U extends AI | undefined = undefined,
-    C extends ChatMessage["tableName"] = string,
-  >(database: Database<T, U>, name: C) {
+  static createTable<T extends AnyDatabase, U extends ChatMessage["tableName"]>(database: T, name: U) {
     return database.createTable<ChatMessagesTable>({
       name,
       columns: {
@@ -36,11 +32,10 @@ export class ChatMessage<T extends DatabaseType = DatabaseType, U extends AI | u
     });
   }
 
-  static async create<
-    T extends DatabaseType = DatabaseType,
-    U extends AI | undefined = undefined,
-    K extends ChatMessageConfig = ChatMessageConfig,
-  >(database: Database<T, U>, config: K) {
+  static async create<T extends AnyDatabase = AnyDatabase, U extends ChatMessageConfig = ChatMessageConfig>(
+    database: T,
+    config: U,
+  ) {
     const { sessionId, role, content, store, tableName } = config;
     const createdAt: ChatMessage["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 23);
     let id: ChatMessage["id"];
@@ -54,7 +49,7 @@ export class ChatMessage<T extends DatabaseType = DatabaseType, U extends AI | u
   }
 
   static delete(
-    database: Database<any, any>,
+    database: AnyDatabase,
     tableName: ChatMessage["tableName"],
     filters?: Parameters<Table<ChatMessagesTable>["delete"]>[0],
   ) {

@@ -1,5 +1,5 @@
-import type { AI, ChatCompletionMessage, ChatCompletionStream, CreateChatCompletionResult } from "@singlestore/ai";
-import type { Database, DatabaseType, Table } from "@singlestore/client";
+import type { AnyAI, ChatCompletionMessage, ChatCompletionStream, CreateChatCompletionResult } from "@singlestore/ai";
+import type { AnyDatabase, Table } from "@singlestore/client";
 
 import { ChatMessage, type ChatMessagesTable } from "./message";
 
@@ -10,10 +10,10 @@ export interface ChatSessionsTable {
   columns: Pick<ChatSession, "id" | "createdAt" | "chatId" | "name">;
 }
 
-export class ChatSession<T extends DatabaseType = DatabaseType, U extends AI | undefined = undefined, K extends AI = AI> {
+export class ChatSession<T extends AnyDatabase = AnyDatabase, U extends AnyAI = AnyAI> {
   constructor(
-    public _database: Database<T, U>,
-    public _ai: K,
+    private _database: T,
+    private _ai: U,
     public id: number | undefined,
     public createdAt: string | undefined,
     public chatId: number | undefined,
@@ -24,11 +24,7 @@ export class ChatSession<T extends DatabaseType = DatabaseType, U extends AI | u
     public messagesTableName: ChatMessage<T>["tableName"],
   ) {}
 
-  static createTable<
-    T extends DatabaseType = DatabaseType,
-    U extends AI | undefined = undefined,
-    K extends ChatSession["tableName"] = string,
-  >(database: Database<T, U>, name: K) {
+  static createTable<T extends AnyDatabase, U extends ChatSession["tableName"]>(database: T, name: U) {
     return database.createTable<ChatSessionsTable>({
       name,
       columns: {
@@ -41,11 +37,10 @@ export class ChatSession<T extends DatabaseType = DatabaseType, U extends AI | u
   }
 
   static async create<
-    T extends DatabaseType = DatabaseType,
-    U extends AI | undefined = undefined,
-    K extends AI = AI,
-    C extends Partial<ChatSessionConfig> | undefined = undefined,
-  >(database: Database<T, U>, ai: K, config?: C) {
+    T extends AnyDatabase = AnyDatabase,
+    U extends AnyAI = AnyAI,
+    K extends Partial<ChatSessionConfig> | undefined = undefined,
+  >(database: T, ai: U, config?: K) {
     const createdAt: ChatSession["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 23);
 
     const _config: ChatSessionConfig = {
@@ -69,7 +64,7 @@ export class ChatSession<T extends DatabaseType = DatabaseType, U extends AI | u
   }
 
   static async delete(
-    database: Database<any, any>,
+    database: AnyDatabase,
     tableName: ChatSession["tableName"],
     messagesTableName: ChatSession["messagesTableName"],
     filters?: Parameters<Table<ChatSessionsTable>["delete"]>[0],
@@ -131,7 +126,7 @@ export class ChatSession<T extends DatabaseType = DatabaseType, U extends AI | u
   }
 
   async createChatCompletion<
-    T extends Exclude<Parameters<K["chatCompletions"]["create"]>[1], undefined> & { loadHistory?: boolean },
+    T extends Exclude<Parameters<U["chatCompletions"]["create"]>[1], undefined> & { loadHistory?: boolean },
   >(prompt: string, options?: T): Promise<CreateChatCompletionResult<T>> {
     const { loadHistory = this.store, messages = [], ...createOptions } = options ?? ({} as T);
     let historyMessages: ChatCompletionMessage[] = [];

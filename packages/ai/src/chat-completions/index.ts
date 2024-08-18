@@ -1,10 +1,7 @@
-import type { ChatCompletionTool } from "./tool";
+import type { AnyChatCompletionTool } from "./tool";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 
-export type ChatCompletionType = "message" | "tool";
-
 export interface ChatCompletion {
-  type: ChatCompletionType;
   content: string;
 }
 
@@ -20,29 +17,26 @@ export interface CreateChatCompletionOptions {
   systemRole?: string;
   stream?: boolean;
   messages?: ChatCompletionMessage[];
+  tools?: AnyChatCompletionTool[];
 }
 
-export type CreateChatCompletionResult<T extends CreateChatCompletionOptions = CreateChatCompletionOptions> = T extends {
-  stream: true;
-}
+export type CreateChatCompletionResult<T extends CreateChatCompletionOptions> = T extends { stream: true }
   ? ChatCompletionStream
   : ChatCompletion;
 
-export type OnChatCompletionStreamChunk = (chunk: ChatCompletion) => Promise<void> | void;
+export type OnChatCompletionChunk = (chunk: ChatCompletion) => Promise<void> | void;
 
-export type ChatCompletionTools = ChatCompletionTool[] | undefined;
+export abstract class ChatCompletions<T extends AnyChatCompletionTool[] | undefined> {
+  tools = undefined as T;
 
-export abstract class ChatCompletions<T extends ChatCompletionTools = ChatCompletionTools> {
-  tools = undefined as T extends ChatCompletionTool[] ? T : undefined;
-
-  set setTools(tools: T) {
-    this.tools = tools as this["tools"];
+  initTools(tools: T) {
+    this.tools = tools;
   }
 
   abstract getModels(): Promise<string[]> | string[];
 
-  async handleStream(stream: ChatCompletionStream, onChunk?: OnChatCompletionStreamChunk): Promise<ChatCompletion> {
-    let completion: ChatCompletion = { type: "message", content: "" };
+  async handleStream(stream: ChatCompletionStream, onChunk?: OnChatCompletionChunk): Promise<ChatCompletion> {
+    let completion: ChatCompletion = { content: "" };
 
     for await (const chunk of stream) {
       completion = { ...completion, ...chunk, content: `${completion.content}${chunk.content}` };
@@ -52,5 +46,5 @@ export abstract class ChatCompletions<T extends ChatCompletionTools = ChatComple
     return completion;
   }
 
-  abstract create(prompt: string, options?: CreateChatCompletionOptions): Promise<CreateChatCompletionResult>;
+  abstract create(prompt: string, options?: CreateChatCompletionOptions): Promise<CreateChatCompletionResult<any>>;
 }

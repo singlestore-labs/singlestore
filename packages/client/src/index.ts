@@ -1,24 +1,24 @@
-import { AI } from "@singlestore/ai";
+import { AnyAI } from "@singlestore/ai";
 
 import { Workspace, type ConnectWorkspaceConfig, type WorkspaceType } from "./workspace";
 
 export type * from "./types";
 
-export interface SingleStoreClientConfig {
-  ai?: AI;
+export interface SingleStoreClientConfig<T extends AnyAI | undefined> {
+  ai?: T;
 }
 
-export interface WorkspaceConfig<T extends WorkspaceType = WorkspaceType, U extends AI | undefined = undefined>
+export interface WorkspaceConfig<T extends WorkspaceType, U extends AnyAI | undefined>
   extends Omit<ConnectWorkspaceConfig<T, U>, "ai"> {}
 
-export class SingleStoreClient<T extends SingleStoreClientConfig = SingleStoreClientConfig> {
-  public _ai: T["ai"] extends AI ? T["ai"] : undefined;
+export class SingleStoreClient<T extends AnyAI | undefined = undefined> {
+  private _ai: T;
 
-  constructor(config?: T) {
-    this._ai = config?.ai as this["_ai"];
+  constructor(config?: SingleStoreClientConfig<T>) {
+    this._ai = config?.ai as T;
   }
 
-  workspace<U extends WorkspaceType = WorkspaceType>(config: WorkspaceConfig<U, T["ai"]>) {
-    return Workspace.connect<U, T["ai"]>({ ...config, ai: this._ai });
+  workspace<U extends WorkspaceType = WorkspaceType>(config: WorkspaceConfig<U, T>) {
+    return Workspace.connect<U, T>({ ...config, ai: this._ai });
   }
 }

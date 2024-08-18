@@ -1,5 +1,5 @@
-import type { AI } from "@singlestore/ai";
-import type { Database, DatabaseType, Table } from "@singlestore/client";
+import type { AnyAI } from "@singlestore/ai";
+import type { AnyDatabase, Table } from "@singlestore/client";
 
 import { ChatMessage } from "./message";
 import { ChatSession, type ChatSessionsTable } from "./session";
@@ -13,25 +13,21 @@ export interface ChatsTable {
 
 export type CreateChatConfig = Partial<ChatConfig>;
 
-export class Chat<T extends DatabaseType = DatabaseType, U extends AI | undefined = undefined, K extends AI = AI> {
+export class Chat<T extends AnyDatabase = AnyDatabase, U extends AnyAI = AnyAI> {
   constructor(
-    private _database: Database<T, U>,
-    private _ai: K,
+    private _database: T,
+    private _ai: U,
     public id: number | undefined,
     public createdAt: string | undefined,
     public name: string,
-    public systemRole: ChatSession<T, U>["systemRole"],
-    public store: ChatSession<T, U>["store"],
+    public systemRole: ChatSession<T>["systemRole"],
+    public store: ChatSession<T>["store"],
     public tableName: string,
-    public sessionsTableName: ChatSession<T, U>["tableName"],
-    public messagesTableName: ChatSession<T, U>["messagesTableName"],
+    public sessionsTableName: ChatSession<T>["tableName"],
+    public messagesTableName: ChatSession<T>["messagesTableName"],
   ) {}
 
-  private static _createTable<
-    T extends DatabaseType = DatabaseType,
-    U extends AI | undefined = undefined,
-    K extends Chat["tableName"] = string,
-  >(database: Database<T, U>, name: K) {
+  private static _createTable<T extends AnyDatabase, U extends Chat["tableName"]>(database: T, name: U) {
     return database.createTable<ChatsTable>({
       name,
       columns: {
@@ -48,11 +44,10 @@ export class Chat<T extends DatabaseType = DatabaseType, U extends AI | undefine
   }
 
   static async create<
-    T extends DatabaseType = DatabaseType,
-    U extends AI | undefined = undefined,
-    K extends AI = AI,
-    C extends CreateChatConfig | undefined = undefined,
-  >(database: Database<T, U>, ai: K, config?: C) {
+    T extends AnyDatabase = AnyDatabase,
+    U extends AnyAI = AnyAI,
+    K extends CreateChatConfig | undefined = undefined,
+  >(database: T, ai: U, config?: K) {
     const createdAt: Chat["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 23);
 
     const _config: ChatConfig = {
@@ -91,7 +86,7 @@ export class Chat<T extends DatabaseType = DatabaseType, U extends AI | undefine
   }
 
   static async delete(
-    database: Database<any, any>,
+    database: AnyDatabase,
     tableName: Chat["tableName"],
     sessionsTable: Chat["sessionsTableName"],
     messagesTableName: Chat["messagesTableName"],

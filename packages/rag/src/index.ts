@@ -1,20 +1,20 @@
-import type { AI } from "@singlestore/ai";
-import type { Database, DatabaseType, Table } from "@singlestore/client";
+import type { AnyAI } from "@singlestore/ai";
+import type { AnyDatabase, Table } from "@singlestore/client";
 
 import { Chat, type CreateChatConfig, type ChatsTable } from "./chat";
 
 export type * from "./types";
 
-export interface RAGConfig<T extends DatabaseType = DatabaseType, U extends AI | undefined = undefined, K extends AI = AI> {
-  database: Database<T, U>;
-  ai: K;
+export interface RAGConfig<T extends AnyDatabase, U extends AnyAI> {
+  database: T;
+  ai: U;
 }
 
-export class RAG<T extends DatabaseType = DatabaseType, U extends AI | undefined = undefined, K extends AI = AI> {
-  public _database;
-  public _ai;
+export class RAG<T extends AnyDatabase = AnyDatabase, U extends AnyAI = AnyAI> {
+  private _database: T;
+  private _ai: U;
 
-  constructor(config: RAGConfig<T, U, K>) {
+  constructor(config: RAGConfig<T, U>) {
     this._database = config.database;
     this._ai = config.ai;
   }

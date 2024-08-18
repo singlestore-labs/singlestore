@@ -1,6 +1,6 @@
 import type { QueryFilters } from "./query/filters/builder";
 import type { ExtractQueryColumns, ExtractQueryOptions } from "./query/types";
-import type { AI } from "@singlestore/ai";
+import type { AnyAI } from "@singlestore/ai";
 import type { ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
 import { Column, type ColumnSchema, type ColumnType } from "./column";
@@ -11,7 +11,7 @@ export interface TableType {
   columns: Record<string, ColumnType>;
 }
 
-export interface TableSchema<T extends TableType = TableType> {
+export interface TableSchema<T extends TableType> {
   name: string;
   columns: { [K in keyof T["columns"]]: Omit<ColumnSchema, "name"> };
   primaryKeys?: string[];
@@ -19,24 +19,25 @@ export interface TableSchema<T extends TableType = TableType> {
   clauses?: string[];
 }
 
-export interface TableInfo<T extends string = string> {
+export interface TableInfo<T extends string> {
   name: T;
 }
 
-export interface TableInfoExtended<T extends string = string> extends TableInfo<T> {
+export interface TableInfoExtended<T extends string> extends TableInfo<T> {
   tableType: string;
   distributed: boolean;
   storageType: string;
 }
 
-type ColumnName<T extends TableType = TableType> = Extract<keyof T["columns"], string>;
+export type TableColumnName<T extends TableType> = Extract<keyof T["columns"], string>;
+
 type VectorScoreKey = "v_score";
 
-type ExtractAICreateChatCompletionsOptions<U extends AI | undefined> = U extends AI
+type ExtractAICreateChatCompletionsOptions<U extends AnyAI | undefined> = U extends AnyAI
   ? Parameters<U["chatCompletions"]["create"]>[1]
   : never;
 
-export class Table<T extends TableType = TableType, U extends AI | undefined = undefined> {
+export class Table<T extends TableType = TableType, U extends AnyAI | undefined = undefined> {
   private _path: string;
   vScoreKey: VectorScoreKey = "v_score";
 
@@ -51,13 +52,13 @@ export class Table<T extends TableType = TableType, U extends AI | undefined = u
 
   private get ai() {
     if (!this._ai) {
-      throw new Error("AI instance is undefined. Ensure ai is properly initialized before accessing.");
+      throw new Error("AnyAI instance is undefined. Ensure ai is properly initialized before accessing.");
     }
 
     return this._ai;
   }
 
-  static normalizeInfo<T extends string = string, U extends boolean = boolean>(info: any, extended?: U) {
+  static normalizeInfo<T extends string, U extends boolean>(info: any, extended?: U) {
     type Result<T extends string, U extends boolean> = U extends true ? TableInfoExtended<T> : TableInfo<T>;
     const name = info[Object.keys(info).find((key) => key.startsWith("Tables_in_")) as string];
     if (!extended) return { name } as Result<T, U>;
@@ -83,7 +84,7 @@ export class Table<T extends TableType = TableType, U extends AI | undefined = u
     return [...clauses, ...(schema.clauses || [])].filter(Boolean).join(", ");
   }
 
-  static async create<T extends TableType = TableType, U extends AI | undefined = undefined>(
+  static async create<T extends TableType = TableType, U extends AnyAI | undefined = undefined>(
     connection: Connection,
     databaseName: string,
     schema: TableSchema<T>,
@@ -115,20 +116,20 @@ export class Table<T extends TableType = TableType, U extends AI | undefined = u
     return Table.drop(this._connection, this.databaseName, this.name);
   }
 
-  column(name: ColumnName<T> | (string & {})) {
+  column(name: TableColumnName<T> | (string & {})) {
     return new Column(this._connection, this.databaseName, this.name, name as string);
   }
 
   async showColumnsInfo() {
     const [rows] = await this._connection.client.query<any[]>(`SHOW COLUMNS IN ${this.name} IN ${this.databaseName}`);
-    return rows.map((row) => Column.normalizeInfo<ColumnName<T>>(row));
+    return rows.map((row) => Column.normalizeInfo<TableColumnName<T>>(row));
   }
 
   addColumn(schema: ColumnSchema) {
     return Column.add(this._connection, this.databaseName, this.name, schema);
   }
 
-  dropColumn(name: ColumnName<T> | (string & {})) {
+  dropColumn(name: TableColumnName<T> | (string & {})) {
     return Column.drop(this._connection, this.databaseName, this.name, name);
   }
 
@@ -190,9 +191,9 @@ export class Table<T extends TableType = TableType, U extends AI | undefined = u
     return this._connection.client.execute<ResultSetHeader>(query, values);
   }
 
-  async vectorSearch<A extends [search: { prompt: string; vectorColumn: ColumnName<T> }, ...QueryBuilderArgs<T["columns"]>]>(
-    ...args: A
-  ) {
+  async vectorSearch<
+    A extends [search: { prompt: string; vectorColumn: TableColumnName<T> }, ...QueryBuilderArgs<T["columns"]>],
+  >(...args: A) {
     const [search, ...queryBuilderArgs] = args;
     type _QueryBuilderArgs = A extends [any, ...infer _A] ? (_A extends QueryBuilderArgs<T["columns"]> ? _A : never) : never;
     type Options = ExtractQueryOptions<_QueryBuilderArgs>;
@@ -217,7 +218,10 @@ export class Table<T extends TableType = TableType, U extends AI | undefined = u
   }
 
   async createChatCompletion<K extends ExtractAICreateChatCompletionsOptions<U>>(
-    ...args: [search: { prompt: string; vectorColumn: ColumnName<T>; template?: string } & K, ...QueryBuilderArgs<T["columns"]>]
+    ...args: [
+      search: { prompt: string; vectorColumn: TableColumnName<T>; template?: string } & K,
+      ...QueryBuilderArgs<T["columns"]>,
+    ]
   ) {
     const [{ prompt, vectorColumn, template, systemRole, ...createChatCompletionOptions }, ...vectorSearchArgs] = args;
 
