@@ -4,8 +4,8 @@ import type { ResultSetHeader } from "mysql2/promise";
 import { Connection } from "./connection";
 import { Table, type TableSchema, type TableType } from "./table";
 
-export interface DatabaseType {
-  tables: Record<string, TableType>;
+export interface DatabaseType<T extends Record<string, TableType> = Record<string, TableType>> {
+  tables: T;
 }
 
 export interface DatabaseSchema<T extends DatabaseType> {
@@ -38,7 +38,7 @@ export interface DatabaseInfoExtended<T extends string> extends DatabaseInfo<T> 
 
 export type DatabaseTablesToRecords<T extends DatabaseType["tables"]> = { [K in keyof T]: T[K]["columns"][] };
 
-export type AnyDatabase = Database<any, AnyAI | undefined>;
+export type AnyDatabase = Database<DatabaseType<any>, AnyAI | undefined>;
 
 export type DatabaseTableName<T extends DatabaseType> = Extract<keyof T["tables"], string>;
 
