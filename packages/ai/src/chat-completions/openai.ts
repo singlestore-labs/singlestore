@@ -1,14 +1,16 @@
 import zodToJsonSchema from "zod-to-json-schema";
 
-import type { ChatCompletionStream, CreateChatCompletionOptions, CreateChatCompletionResult } from ".";
+import type { ChatCompletionMessage, ChatCompletionStream, CreateChatCompletionOptions, CreateChatCompletionResult } from ".";
 import type { AnyChatCompletionTool } from "./tool";
 import type { OpenAI } from "openai";
-import type { FunctionToolCallDelta } from "openai/resources/beta/threads/runs/steps.mjs";
 import type {
+  ChatCompletionChunk,
   ChatCompletionCreateParamsBase,
   ChatCompletionMessageParam,
   ChatCompletionMessageToolCall,
+  ChatCompletionToolMessageParam,
 } from "openai/resources/chat/completions.mjs";
+import type { Stream } from "openai/streaming.mjs";
 
 import { ChatCompletions } from ".";
 
@@ -26,6 +28,7 @@ export class OpenAIChatCompletions<T extends AnyChatCompletionTool[] | undefined
   }
 
   getModels(): OpenAIChatCompletionModel[] {
+    // TODO: Replace with dynamic values
     return [
       "gpt-4o",
       "gpt-4o-2024-05-13",
@@ -46,27 +49,27 @@ export class OpenAIChatCompletions<T extends AnyChatCompletionTool[] | undefined
     ];
   }
 
-  async create<U extends OpenAICreateChatCompletionOptions>(
-    prompt: string,
-    options?: U,
-  ): Promise<CreateChatCompletionResult<U>> {
-    const { systemRole = "You are a helpful assistant", messages = [], tools, ..._options } = options ?? ({} as U);
-
-    const _messages: ChatCompletionMessageParam[] = [
-      { role: "system", content: systemRole },
-      ...((messages || []) as ChatCompletionMessageParam[]),
-      { role: "user", content: prompt },
-    ];
+  async create<U extends OpenAICreateChatCompletionOptions>({
+    prompt,
+    systemRole,
+    messages,
+    tools,
+    ...options
+  }: U): Promise<CreateChatCompletionResult<U>> {
+    let _messages: ChatCompletionMessage[] = [];
+    if (systemRole) _messages.push({ role: "system", content: systemRole });
+    if (messages?.length) _messages = [..._messages, ...messages];
+    if (prompt) _messages.push({ role: "user", content: prompt });
 
     let _tools: AnyChatCompletionTool[] = [];
-    if (this.tools) _tools = [..._tools, ...this.tools];
-    if (tools) _tools = [..._tools, ...tools];
+    if (this.tools?.length) _tools = [..._tools, ...this.tools];
+    if (tools?.length) _tools = [..._tools, ...tools];
 
     const response = await this._openai.chat.completions.create({
       model: "gpt-4o-mini",
       temperature: 0,
-      ..._options,
-      messages: _messages,
+      ...options,
+      messages: _messages as ChatCompletionMessageParam[],
       tools: _tools.length
         ? _tools.map(({ name, description, schema }) => ({
             type: "function",
@@ -75,66 +78,125 @@ export class OpenAIChatCompletions<T extends AnyChatCompletionTool[] | undefined
         : undefined,
     });
 
-    const handleToolCalls = (toolCalls: ChatCompletionMessageToolCall[] | FunctionToolCallDelta[]) => {
-      return Promise.all(
-        toolCalls.map((toolCall) => {
-          if (!toolCall.function) return "";
-          let params: Parameters<(typeof _tools)[number]["call"]>[0];
+    const handleToolCalls = (
+      toolCalls: ChatCompletionMessageToolCall[] | ChatCompletionChunk["choices"][number]["delta"]["tool_calls"] = [],
+    ) => {
+      type ToolCall = (typeof _tools)[number]["call"];
 
-          if (toolCall.function.arguments) {
+      return Promise.all(
+        toolCalls.map(async (call) => {
+          const _call = { ...call, id: call.id || "" };
+
+          if (!call.function) {
+            throw new Error(`Invalid tool call: ${JSON.stringify(call)}`);
+          }
+
+          let params: Parameters<ToolCall>[0];
+          if (call.function.arguments) {
             try {
-              params = JSON.parse(toolCall.function.arguments);
+              params = JSON.parse(call.function.arguments);
             } catch (error) {
-              throw new Error(`Invalid parameters provided for the "${toolCall.function.name}" tool.`, { cause: error });
+              throw new Error(`Invalid parameters provided for the "${call.function.name}" tool.`, { cause: error });
             }
           }
 
-          const tool = _tools.find(({ name }) => name === toolCall.function?.name);
+          const tool = _tools.find(({ name }) => name === call.function?.name);
           if (!tool) {
-            throw new Error(`The "${toolCall.function.name}" tool is undefined.`);
+            throw new Error(`The "${call.function.name}" tool is undefined.`);
           }
 
-          return tool.call(params);
+          try {
+            const result = await tool.call(params);
+            return [{ tool, params, value: result.value }, _call] as const;
+          } catch (error) {
+            let _error = error;
+
+            if (typeof error !== "string") {
+              if (error instanceof Error) {
+                _error = `Error: ${error.message}`;
+              } else {
+                try {
+                  _error = JSON.stringify(error, Object.getOwnPropertyNames(error));
+                } catch (error) {
+                  _error = JSON.stringify(error, Object.getOwnPropertyNames(error));
+                }
+              }
+            }
+
+            return [{ tool, params, error: _error }, _call] as const;
+          }
         }),
       );
+    };
+
+    const handleToolCallResults = (
+      results: Awaited<ReturnType<typeof handleToolCalls>>,
+      message?: ChatCompletionMessageParam | ChatCompletionChunk["choices"][number]["delta"],
+    ) => {
+      return this.create({
+        ...options,
+        tools,
+        messages: [
+          ..._messages,
+          message,
+          ...results.map(([result, { id }]) => {
+            return {
+              role: "tool",
+              tool_call_id: id,
+              content: "error" in result ? result.error : result.value,
+            } satisfies ChatCompletionToolMessageParam;
+          }),
+        ] as ChatCompletionMessage[],
+      });
     };
 
     if (typeof response === "object" && response && "choices" in response) {
       const message = response.choices[0]?.message;
 
       if (message && "tool_calls" in message && message.tool_calls?.length) {
-        await handleToolCalls(message.tool_calls);
+        const toolCallResults = await handleToolCalls(message.tool_calls);
+        return (await handleToolCallResults(toolCallResults, message)) as CreateChatCompletionResult<U>;
       }
 
       return { content: message?.content || "" } as CreateChatCompletionResult<U>;
     }
 
-    return (async function* (): ChatCompletionStream {
-      const defaultToolCallRecord = { function: { arguments: "" } } as FunctionToolCallDelta;
-      const toolCallRecords: Record<number, FunctionToolCallDelta> = {};
+    async function* handleStream(stream: Stream<ChatCompletionChunk>): ChatCompletionStream {
+      let delta: ChatCompletionChunk["choices"][number]["delta"] | undefined = undefined;
 
-      for await (const chunk of response) {
-        const delta = chunk.choices[0]?.delta;
+      for await (const chunk of stream) {
+        const _delta = chunk.choices[0]?.delta;
 
-        if (delta && "tool_calls" in delta && delta.tool_calls?.length) {
-          delta.tool_calls.forEach((toolCall) => {
-            const toolCallRecord = toolCallRecords[toolCall.index] ?? defaultToolCallRecord;
-            toolCallRecords[toolCall.index] = {
-              ...toolCallRecord,
+        if (_delta && "tool_calls" in _delta && _delta.tool_calls?.length) {
+          if (!delta) delta = _delta;
+          for (const toolCall of _delta.tool_calls) {
+            if (!delta || !delta.tool_calls) continue;
+            const deltaToolCall = delta.tool_calls[toolCall.index] || { function: { arguments: "" } };
+            delta.tool_calls[toolCall.index] = {
+              ...deltaToolCall,
               ...toolCall,
               function: {
-                ...toolCallRecord.function,
+                ...deltaToolCall.function,
                 ...toolCall.function,
-                arguments: `${toolCallRecord.function?.arguments || ""}${toolCall.function?.arguments || ""}`,
+                arguments: `${deltaToolCall.function?.arguments || ""}${toolCall.function?.arguments || ""}`,
               },
             };
-          });
+          }
+        } else {
+          yield { content: _delta?.content || "" };
         }
-
-        yield { content: delta?.content || "" };
       }
 
-      await handleToolCalls(Object.values(toolCallRecords));
-    })() as CreateChatCompletionResult<U>;
+      if (delta) {
+        const toolCallResults = await handleToolCalls(delta.tool_calls);
+        const toolCallResultsStream = (await handleToolCallResults(toolCallResults, delta)) as ChatCompletionStream;
+
+        for await (const chunk of toolCallResultsStream) {
+          yield chunk;
+        }
+      }
+    }
+
+    return handleStream(response) as CreateChatCompletionResult<U>;
   }
 }

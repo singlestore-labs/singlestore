@@ -126,9 +126,8 @@ export class ChatSession<T extends AnyDatabase = AnyDatabase, U extends AnyAI = 
   }
 
   async createChatCompletion<
-    T extends Exclude<Parameters<U["chatCompletions"]["create"]>[1], undefined> & { loadHistory?: boolean },
-  >(prompt: string, options?: T): Promise<CreateChatCompletionResult<T>> {
-    const { loadHistory = this.store, messages = [], ...createOptions } = options ?? ({} as T);
+    T extends Exclude<Parameters<U["chatCompletions"]["create"]>[0], undefined> & { loadHistory?: boolean },
+  >({ prompt = "", loadHistory = this.store, messages, ...options }: T): Promise<CreateChatCompletionResult<T>> {
     let historyMessages: ChatCompletionMessage[] = [];
 
     if (loadHistory) {
@@ -138,7 +137,7 @@ export class ChatSession<T extends AnyDatabase = AnyDatabase, U extends AnyAI = 
 
     const [, response] = await Promise.all([
       this.createMessage("user", prompt),
-      this._ai.chatCompletions.create(prompt, { ...createOptions, messages: [...historyMessages, ...messages] }),
+      this._ai.chatCompletions.create({ ...options, prompt, messages: [...historyMessages, ...(messages || [])] }),
     ]);
 
     const handleResponseContent = (content: string) => this.createMessage("assistant", content);

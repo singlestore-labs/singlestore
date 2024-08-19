@@ -7,12 +7,15 @@ export interface ChatCompletion {
 
 export type ChatCompletionStream = AsyncGenerator<ChatCompletion>;
 
+export type OnChatCompletionChunk = (chunk: ChatCompletion) => Promise<void> | void;
+
 export interface ChatCompletionMessage {
-  role: ChatCompletionMessageParam["role"];
-  content: string;
+  role: Extract<ChatCompletionMessageParam["role"], "system" | "assistant" | "user">;
+  content: string | null;
 }
 
 export interface CreateChatCompletionOptions {
+  prompt?: string;
   model?: string;
   systemRole?: string;
   stream?: boolean;
@@ -23,8 +26,6 @@ export interface CreateChatCompletionOptions {
 export type CreateChatCompletionResult<T extends CreateChatCompletionOptions> = T extends { stream: true }
   ? ChatCompletionStream
   : ChatCompletion;
-
-export type OnChatCompletionChunk = (chunk: ChatCompletion) => Promise<void> | void;
 
 export abstract class ChatCompletions<T extends AnyChatCompletionTool[] | undefined> {
   tools = undefined as T;
@@ -46,5 +47,5 @@ export abstract class ChatCompletions<T extends AnyChatCompletionTool[] | undefi
     return completion;
   }
 
-  abstract create(prompt: string, options?: CreateChatCompletionOptions): Promise<CreateChatCompletionResult<any>>;
+  abstract create(options: CreateChatCompletionOptions): Promise<CreateChatCompletionResult<any>>;
 }

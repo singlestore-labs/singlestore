@@ -15,7 +15,11 @@ interface ChatCompletionToolConfig<
   call: K;
 }
 
-export type AnyChatCompletionTool = ChatCompletionTool<string, z.AnyZodObject | undefined, any>;
+export type AnyChatCompletionTool = ChatCompletionTool<
+  string,
+  z.AnyZodObject | undefined,
+  ChatCompletionToolCall<string, any | undefined, any> // TODO: Fix the z.AnyZodObject | undefined type
+>;
 
 export class ChatCompletionTool<
   T extends string,

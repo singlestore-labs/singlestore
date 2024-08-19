@@ -121,7 +121,7 @@ async function main() {
     const usersTable = db.table("users");
 
     console.log("15. Create a chat completion.\nPrompt: 'What is 4+4?");
-    console.log(await ai.chatCompletions.create("What is 4+4?"));
+    console.log(await ai.chatCompletions.create({ prompt: "What is 4+4?" }));
 
     console.log("16. Column methods");
 
