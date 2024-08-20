@@ -1,4 +1,4 @@
-import type { AnyAI } from "@singlestore/ai";
+import type { AnyAI, AnyChatCompletionTool } from "@singlestore/ai";
 import type { AnyDatabase, Table } from "@singlestore/client";
 
 import { Chat, type CreateChatConfig, type ChatsTable } from "./chat";
@@ -23,18 +23,22 @@ export class RAG<T extends AnyDatabase = AnyDatabase, U extends AnyAI = AnyAI> {
     return this._ai.chatCompletions.getModels();
   }
 
-  createChat<T extends CreateChatConfig>(config?: T) {
+  createChat<K extends CreateChatConfig>(config?: K) {
     return Chat.create(this._database, this._ai, config);
   }
 
-  async selectChats<T extends [tableName: string, ...Parameters<Table<ChatsTable>["select"]>]>(...[tableName, ...args]: T) {
-    const rows = await this._database.table<ChatsTable>(tableName).select(...args);
+  async selectChats<
+    K extends { tableName?: string; tools?: AnyChatCompletionTool[] },
+    V extends Parameters<Table<ChatsTable>["select"]>,
+  >(...[config, ...args]: [K?, ...V]) {
+    const rows = await this._database.table<ChatsTable>(config?.tableName || "chats").select(...args);
 
     return rows.map(
       (row) =>
         new Chat(
           this._database,
           this._ai,
+          config?.tools || [],
           row.id,
           row.createdAt,
           row.name,

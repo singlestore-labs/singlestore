@@ -32,10 +32,7 @@ export class ChatMessage<T extends AnyDatabase = AnyDatabase> {
     });
   }
 
-  static async create<T extends AnyDatabase = AnyDatabase, U extends ChatMessageConfig = ChatMessageConfig>(
-    database: T,
-    config: U,
-  ) {
+  static async create<T extends AnyDatabase, U extends ChatMessageConfig>(database: T, config: U) {
     const { sessionId, role, content, store, tableName } = config;
     const createdAt: ChatMessage["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 23);
     let id: ChatMessage["id"];

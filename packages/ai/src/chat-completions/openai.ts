@@ -1,6 +1,6 @@
 import zodToJsonSchema from "zod-to-json-schema";
 
-import type { ChatCompletionMessage, ChatCompletionStream, CreateChatCompletionOptions, CreateChatCompletionResult } from ".";
+import type { ChatCompletionMessage, ChatCompletionStream, CreateChatCompletionParams, CreateChatCompletionResult } from ".";
 import type { AnyChatCompletionTool } from "./tool";
 import type { OpenAI } from "openai";
 import type {
@@ -16,9 +16,9 @@ import { ChatCompletions } from ".";
 
 export type OpenAIChatCompletionModel = ChatCompletionCreateParamsBase["model"];
 
-type _OpenAICreateChatCompletionOptions = Omit<Partial<ChatCompletionCreateParamsBase>, keyof CreateChatCompletionOptions>;
+type _OpenAICreateChatCompletionParams = Omit<Partial<ChatCompletionCreateParamsBase>, keyof CreateChatCompletionParams>;
 
-export interface OpenAICreateChatCompletionOptions extends CreateChatCompletionOptions, _OpenAICreateChatCompletionOptions {
+export interface OpenAICreateChatCompletionParams extends CreateChatCompletionParams, _OpenAICreateChatCompletionParams {
   model?: OpenAIChatCompletionModel;
 }
 
@@ -49,13 +49,13 @@ export class OpenAIChatCompletions<T extends AnyChatCompletionTool[] | undefined
     ];
   }
 
-  async create<U extends OpenAICreateChatCompletionOptions>({
+  async create<U extends OpenAICreateChatCompletionParams>({
     prompt,
     systemRole,
     messages,
     tools,
-    ...options
-  }: U): Promise<CreateChatCompletionResult<U>> {
+    ...params
+  }: U): Promise<CreateChatCompletionResult<U["stream"]>> {
     let _messages: ChatCompletionMessage[] = [];
     if (systemRole) _messages.push({ role: "system", content: systemRole });
     if (messages?.length) _messages = [..._messages, ...messages];
@@ -68,7 +68,7 @@ export class OpenAIChatCompletions<T extends AnyChatCompletionTool[] | undefined
     const response = await this._openai.chat.completions.create({
       model: "gpt-4o-mini",
       temperature: 0,
-      ...options,
+      ...params,
       messages: _messages as ChatCompletionMessageParam[],
       tools: _tools.length
         ? _tools.map(({ name, description, schema }) => ({
@@ -134,7 +134,7 @@ export class OpenAIChatCompletions<T extends AnyChatCompletionTool[] | undefined
       message?: ChatCompletionMessageParam | ChatCompletionChunk["choices"][number]["delta"],
     ) => {
       return this.create({
-        ...options,
+        ...params,
         tools,
         messages: [
           ..._messages,
@@ -155,10 +155,10 @@ export class OpenAIChatCompletions<T extends AnyChatCompletionTool[] | undefined
 
       if (message && "tool_calls" in message && message.tool_calls?.length) {
         const toolCallResults = await handleToolCalls(message.tool_calls);
-        return (await handleToolCallResults(toolCallResults, message)) as CreateChatCompletionResult<U>;
+        return (await handleToolCallResults(toolCallResults, message)) as CreateChatCompletionResult<U["stream"]>;
       }
 
-      return { content: message?.content || "" } as CreateChatCompletionResult<U>;
+      return { content: message?.content || "" } as CreateChatCompletionResult<U["stream"]>;
     }
 
     async function* handleStream(stream: Stream<ChatCompletionChunk>): ChatCompletionStream {
@@ -197,6 +197,6 @@ export class OpenAIChatCompletions<T extends AnyChatCompletionTool[] | undefined
       }
     }
 
-    return handleStream(response) as CreateChatCompletionResult<U>;
+    return handleStream(response) as CreateChatCompletionResult<U["stream"]>;
   }
 }

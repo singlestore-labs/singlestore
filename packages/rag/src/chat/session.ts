@@ -1,10 +1,18 @@
-import type { AnyAI, ChatCompletionMessage, ChatCompletionStream, CreateChatCompletionResult } from "@singlestore/ai";
+import type {
+  AnyAI,
+  AnyChatCompletionTool,
+  ChatCompletionMessage,
+  ChatCompletionStream,
+  CreateChatCompletionResult,
+} from "@singlestore/ai";
 import type { AnyDatabase, Table } from "@singlestore/client";
 
 import { ChatMessage, type ChatMessagesTable } from "./message";
 
 export interface ChatSessionConfig
-  extends Pick<ChatSession, "chatId" | "name" | "systemRole" | "store" | "tableName" | "messagesTableName"> {}
+  extends Pick<ChatSession, "chatId" | "name" | "systemRole" | "store" | "tableName" | "messagesTableName"> {
+  tools: AnyChatCompletionTool[];
+}
 
 export interface ChatSessionsTable {
   columns: Pick<ChatSession, "id" | "createdAt" | "chatId" | "name">;
@@ -14,6 +22,7 @@ export class ChatSession<T extends AnyDatabase = AnyDatabase, U extends AnyAI = 
   constructor(
     private _database: T,
     private _ai: U,
+    private _tools: AnyChatCompletionTool[] = [],
     public id: number | undefined,
     public createdAt: string | undefined,
     public chatId: number | undefined,
@@ -36,11 +45,11 @@ export class ChatSession<T extends AnyDatabase = AnyDatabase, U extends AnyAI = 
     });
   }
 
-  static async create<
-    T extends AnyDatabase = AnyDatabase,
-    U extends AnyAI = AnyAI,
-    K extends Partial<ChatSessionConfig> | undefined = undefined,
-  >(database: T, ai: U, config?: K) {
+  static async create<T extends AnyDatabase, U extends AnyAI, K extends Partial<ChatSessionConfig>>(
+    database: T,
+    ai: U,
+    config?: K,
+  ) {
     const createdAt: ChatSession["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 23);
 
     const _config: ChatSessionConfig = {
@@ -50,9 +59,10 @@ export class ChatSession<T extends AnyDatabase = AnyDatabase, U extends AnyAI = 
       store: config?.store ?? true,
       tableName: config?.tableName ?? "chat_sessions",
       messagesTableName: config?.messagesTableName ?? "chat_messages",
+      tools: config?.tools || [],
     };
 
-    const { chatId, name, systemRole, store, tableName, messagesTableName } = _config;
+    const { chatId, name, systemRole, store, tableName, messagesTableName, tools } = _config;
     let id: ChatSession["id"];
 
     if (store) {
@@ -60,7 +70,7 @@ export class ChatSession<T extends AnyDatabase = AnyDatabase, U extends AnyAI = 
       id = rows?.[0].insertId;
     }
 
-    return new ChatSession(database, ai, id, createdAt, chatId, name, systemRole, store, tableName, messagesTableName);
+    return new ChatSession(database, ai, tools, id, createdAt, chatId, name, systemRole, store, tableName, messagesTableName);
   }
 
   static async delete(
@@ -94,7 +104,7 @@ export class ChatSession<T extends AnyDatabase = AnyDatabase, U extends AnyAI = 
     return ChatSession.delete(this._database, this.tableName, this.messagesTableName, { id: this.id });
   }
 
-  createMessage<T extends ChatMessage["role"], U extends ChatMessage["content"]>(role: T, content: U) {
+  createMessage<K extends ChatMessage["role"], C extends ChatMessage["content"]>(role: K, content: C) {
     return ChatMessage.create(this._database, {
       sessionId: this.id,
       role,
@@ -104,7 +114,7 @@ export class ChatSession<T extends AnyDatabase = AnyDatabase, U extends AnyAI = 
     });
   }
 
-  async selectMessages<T extends Parameters<Table<ChatMessagesTable>["select"]>>(...args: T) {
+  async selectMessages<K extends Parameters<Table<ChatMessagesTable>["select"]>>(...args: K) {
     const rows = await this._database.table<ChatMessagesTable>(this.messagesTableName).select(...args);
 
     return rows.map((row) => {
@@ -126,8 +136,14 @@ export class ChatSession<T extends AnyDatabase = AnyDatabase, U extends AnyAI = 
   }
 
   async createChatCompletion<
-    T extends Exclude<Parameters<U["chatCompletions"]["create"]>[0], undefined> & { loadHistory?: boolean },
-  >({ prompt = "", loadHistory = this.store, messages, ...options }: T): Promise<CreateChatCompletionResult<T>> {
+    K extends Exclude<Parameters<U["chatCompletions"]["create"]>[0], undefined> & { loadHistory?: boolean },
+  >({
+    prompt = "",
+    loadHistory = this.store,
+    messages = [],
+    tools = [],
+    ...params
+  }: K): Promise<CreateChatCompletionResult<K["stream"]>> {
     let historyMessages: ChatCompletionMessage[] = [];
 
     if (loadHistory) {
@@ -137,25 +153,30 @@ export class ChatSession<T extends AnyDatabase = AnyDatabase, U extends AnyAI = 
 
     const [, response] = await Promise.all([
       this.createMessage("user", prompt),
-      this._ai.chatCompletions.create({ ...options, prompt, messages: [...historyMessages, ...(messages || [])] }),
+      this._ai.chatCompletions.create({
+        ...params,
+        prompt,
+        messages: [...historyMessages, ...messages],
+        tools: [...this._tools, ...tools],
+      }),
     ]);
 
     const handleResponseContent = (content: string) => this.createMessage("assistant", content);
 
     if (typeof response === "string") {
       await handleResponseContent(response);
-      return response as CreateChatCompletionResult<T>;
+      return response as CreateChatCompletionResult<K["stream"]>;
     }
 
     return (async function* (): ChatCompletionStream {
       let content = "";
 
       for await (const chunk of response as ChatCompletionStream) {
-        content += chunk;
+        content += chunk.content;
         yield chunk;
       }
 
       await handleResponseContent(content);
-    })() as CreateChatCompletionResult<T>;
+    })() as CreateChatCompletionResult<K["stream"]>;
   }
 }

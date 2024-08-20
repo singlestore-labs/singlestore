@@ -1,14 +1,16 @@
-import type { AnyAI } from "@singlestore/ai";
+import type { AnyAI, AnyChatCompletionTool } from "@singlestore/ai";
 import type { AnyDatabase, Table } from "@singlestore/client";
 
 import { ChatMessage } from "./message";
 import { ChatSession, type ChatSessionsTable } from "./session";
 
 export interface ChatConfig
-  extends Pick<Chat, "name" | "systemRole" | "store" | "tableName" | "sessionsTableName" | "messagesTableName"> {}
+  extends Pick<Chat, "name" | "systemRole" | "store" | "tableName" | "sessionsTableName" | "messagesTableName"> {
+  tools: AnyChatCompletionTool[];
+}
 
 export interface ChatsTable {
-  columns: Pick<Chat, "id" | "createdAt"> & ChatConfig;
+  columns: Pick<Chat, "id" | "createdAt"> & Omit<ChatConfig, "tools">;
 }
 
 export type CreateChatConfig = Partial<ChatConfig>;
@@ -17,6 +19,7 @@ export class Chat<T extends AnyDatabase = AnyDatabase, U extends AnyAI = AnyAI> 
   constructor(
     private _database: T,
     private _ai: U,
+    private _tools: ChatSession<T>["_tools"] = [],
     public id: number | undefined,
     public createdAt: string | undefined,
     public name: string,
@@ -43,11 +46,7 @@ export class Chat<T extends AnyDatabase = AnyDatabase, U extends AnyAI = AnyAI> 
     });
   }
 
-  static async create<
-    T extends AnyDatabase = AnyDatabase,
-    U extends AnyAI = AnyAI,
-    K extends CreateChatConfig | undefined = undefined,
-  >(database: T, ai: U, config?: K) {
+  static async create<T extends AnyDatabase, U extends AnyAI, K extends CreateChatConfig>(database: T, ai: U, config?: K) {
     const createdAt: Chat["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 23);
 
     const _config: ChatConfig = {
@@ -57,9 +56,10 @@ export class Chat<T extends AnyDatabase = AnyDatabase, U extends AnyAI = AnyAI> 
       tableName: config?.tableName ?? "chats",
       sessionsTableName: config?.sessionsTableName ?? "chat_sessions",
       messagesTableName: config?.messagesTableName ?? "chat_messages",
+      tools: config?.tools || [],
     };
 
-    const { name, systemRole, store, tableName, sessionsTableName, messagesTableName } = _config;
+    const { name, systemRole, store, tableName, sessionsTableName, messagesTableName, tools } = _config;
     let id: Chat["id"];
 
     if (store) {
@@ -82,7 +82,19 @@ export class Chat<T extends AnyDatabase = AnyDatabase, U extends AnyAI = AnyAI> 
       id = rows?.[0].insertId;
     }
 
-    return new Chat(database, ai, id, createdAt, name, systemRole, store, tableName, sessionsTableName, messagesTableName);
+    return new Chat(
+      database,
+      ai,
+      tools,
+      id,
+      createdAt,
+      name,
+      systemRole,
+      store,
+      tableName,
+      sessionsTableName,
+      messagesTableName,
+    );
   }
 
   static async delete(
@@ -117,7 +129,7 @@ export class Chat<T extends AnyDatabase = AnyDatabase, U extends AnyAI = AnyAI> 
     return Chat.delete(this._database, this.tableName, this.sessionsTableName, this.messagesTableName, { id: this.id });
   }
 
-  createSession<T extends ChatSession["name"] | undefined = undefined>(name?: T) {
+  createSession<K extends ChatSession["name"]>(name?: K) {
     return ChatSession.create(this._database, this._ai, {
       chatId: this.id,
       name,
@@ -125,10 +137,11 @@ export class Chat<T extends AnyDatabase = AnyDatabase, U extends AnyAI = AnyAI> 
       store: this.store,
       tableName: this.sessionsTableName,
       messagesTableName: this.messagesTableName,
+      tools: this._tools,
     });
   }
 
-  async selectSessions<T extends Parameters<Table<ChatSessionsTable>["select"]>>(...args: T) {
+  async selectSessions<K extends Parameters<Table<ChatSessionsTable>["select"]>>(...args: K) {
     const rows = await this._database.table<ChatSessionsTable>(this.sessionsTableName).select(...args);
 
     return rows.map(
@@ -136,6 +149,7 @@ export class Chat<T extends AnyDatabase = AnyDatabase, U extends AnyAI = AnyAI> 
         new ChatSession(
           this._database,
           this._ai,
+          this._tools,
           row.id,
           row.createdAt,
           row.chatId,

@@ -35,23 +35,23 @@ export class Workspace<T extends WorkspaceType = WorkspaceType, U extends AnyAI 
     return new Workspace<T, U>(connection, name, ai);
   }
 
-  database<N, K extends WorkspaceDatabaseName<T> | (string & {}) = WorkspaceDatabaseName<T> | (string & {})>(name: K) {
-    type _DatabaseType = N extends DatabaseType ? N : T["databases"][K] extends DatabaseType ? T["databases"][K] : DatabaseType;
+  database<K, V extends WorkspaceDatabaseName<T> | (string & {}) = WorkspaceDatabaseName<T> | (string & {})>(name: V) {
+    type _DatabaseType = K extends DatabaseType ? K : T["databases"][V] extends DatabaseType ? T["databases"][V] : DatabaseType;
     return new Database<_DatabaseType, U>(this.connection, name, this.name, this._ai);
   }
 
-  createDatabase<T extends DatabaseType = DatabaseType>(schema: DatabaseSchema<T>) {
-    return Database.create<T, U>(this.connection, schema, this.name, this._ai);
+  createDatabase<K extends DatabaseType = DatabaseType>(schema: DatabaseSchema<K>) {
+    return Database.create<K, U>(this.connection, schema, this.name, this._ai);
   }
 
   dropDatabase(name: WorkspaceDatabaseName<T> | (string & {})) {
     return Database.drop(this.connection, name);
   }
 
-  async showDatabasesInfo<U extends boolean>(extended?: U) {
+  async showDatabasesInfo<K extends boolean>(extended?: K) {
     const clauses = ["SHOW DATABASES"];
     if (extended) clauses.push("EXTENDED");
     const [rows] = await this.connection.client.query<any[]>(clauses.join(" "));
-    return rows.map((row) => Database.normalizeInfo<WorkspaceDatabaseName<T>, U>(row, extended));
+    return rows.map((row) => Database.normalizeInfo<WorkspaceDatabaseName<T>, K>(row, extended));
   }
 }

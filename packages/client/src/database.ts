@@ -102,12 +102,12 @@ export class Database<T extends DatabaseType = DatabaseType, U extends AnyAI | u
     return connection.client.execute<ResultSetHeader>(`DROP DATABASE IF EXISTS ${name}`);
   }
 
-  async showInfo<T extends boolean>(extended?: T) {
+  async showInfo<K extends boolean>(extended?: K) {
     const clauses = ["SHOW DATABASES"];
     if (extended) clauses.push("EXTENDED");
     clauses.push(`LIKE '${this.name}'`);
     const [rows] = await this._connection.client.query<any[]>(clauses.join(" "));
-    return Database.normalizeInfo<string, T>(rows[0], extended);
+    return Database.normalizeInfo<string, K>(rows[0], extended);
   }
 
   async describe() {
@@ -125,29 +125,29 @@ export class Database<T extends DatabaseType = DatabaseType, U extends AnyAI | u
     return Database.drop(this._connection, this.name);
   }
 
-  table<N, K extends DatabaseTableName<T> | (string & {}) = DatabaseTableName<T> | (string & {})>(name: K) {
-    type _TableType = N extends TableType ? N : T["tables"][K] extends TableType ? T["tables"][K] : TableType;
+  table<K, V extends DatabaseTableName<T> | (string & {}) = DatabaseTableName<T> | (string & {})>(name: V) {
+    type _TableType = K extends TableType ? K : T["tables"][V] extends TableType ? T["tables"][V] : TableType;
     return new Table<_TableType, U>(this._connection, this.name, name, this._ai);
   }
 
-  async showTablesInfo<U extends boolean>(extended?: U) {
+  async showTablesInfo<K extends boolean>(extended?: K) {
     const clauses = [`SHOW TABLES IN ${this.name}`];
     if (extended) clauses.push("EXTENDED");
     const [rows] = await this._connection.client.query<any[]>(clauses.join(" "));
-    return rows.map((row) => Table.normalizeInfo<DatabaseTableName<T>, U>(row, extended));
+    return rows.map((row) => Table.normalizeInfo<DatabaseTableName<T>, K>(row, extended));
   }
 
-  createTable<T extends TableType = TableType>(schema: TableSchema<T>) {
-    return Table.create<T, U>(this._connection, this.name, schema, this._ai);
+  createTable<K extends TableType = TableType>(schema: TableSchema<K>) {
+    return Table.create<K, U>(this._connection, this.name, schema, this._ai);
   }
 
   dropTable(name: DatabaseTableName<T> | (string & {})) {
     return Table.drop(this._connection, this.name, name);
   }
 
-  async query<T extends any[]>(statement: string) {
+  async query<K extends any[]>(statement: string) {
     const statements = [`USE ${this.name}`, statement].join(";\n");
-    const [rows] = await this._connection.client.execute<T>(statements);
-    return rows.slice(1) as T;
+    const [rows] = await this._connection.client.execute<K>(statements);
+    return rows.slice(1) as K;
   }
 }

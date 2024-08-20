@@ -14,7 +14,7 @@ export interface ChatCompletionMessage {
   content: string | null;
 }
 
-export interface CreateChatCompletionOptions {
+export interface CreateChatCompletionParams {
   prompt?: string;
   model?: string;
   systemRole?: string;
@@ -23,9 +23,7 @@ export interface CreateChatCompletionOptions {
   tools?: AnyChatCompletionTool[];
 }
 
-export type CreateChatCompletionResult<T extends CreateChatCompletionOptions> = T extends { stream: true }
-  ? ChatCompletionStream
-  : ChatCompletion;
+export type CreateChatCompletionResult<T extends boolean | undefined> = T extends true ? ChatCompletionStream : ChatCompletion;
 
 export abstract class ChatCompletions<T extends AnyChatCompletionTool[] | undefined> {
   tools = undefined as T;
@@ -47,5 +45,5 @@ export abstract class ChatCompletions<T extends AnyChatCompletionTool[] | undefi
     return completion;
   }
 
-  abstract create(options: CreateChatCompletionOptions): Promise<CreateChatCompletionResult<any>>;
+  abstract create(params: CreateChatCompletionParams): Promise<CreateChatCompletionResult<any>>;
 }
