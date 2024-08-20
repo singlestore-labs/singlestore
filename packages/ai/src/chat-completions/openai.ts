@@ -166,11 +166,11 @@ export class OpenAIChatCompletions<T extends AnyChatCompletionTool[] | undefined
 
       for await (const chunk of stream) {
         const _delta = chunk.choices[0]?.delta;
+        if (!delta) delta = { ..._delta, content: _delta?.content || "", tool_calls: [] };
 
         if (_delta && "tool_calls" in _delta && _delta.tool_calls?.length) {
-          if (!delta) delta = _delta;
           for (const toolCall of _delta.tool_calls) {
-            if (!delta || !delta.tool_calls) continue;
+            if (!delta || !delta.tool_calls) break;
             const deltaToolCall = delta.tool_calls[toolCall.index] || { function: { arguments: "" } };
             delta.tool_calls[toolCall.index] = {
               ...deltaToolCall,
@@ -187,13 +187,10 @@ export class OpenAIChatCompletions<T extends AnyChatCompletionTool[] | undefined
         }
       }
 
-      if (delta) {
+      if (delta?.tool_calls?.length) {
         const toolCallResults = await handleToolCalls(delta.tool_calls);
         const toolCallResultsStream = (await handleToolCallResults(toolCallResults, delta)) as ChatCompletionStream;
-
-        for await (const chunk of toolCallResultsStream) {
-          yield chunk;
-        }
+        for await (const chunk of toolCallResultsStream) yield chunk;
       }
     }
 

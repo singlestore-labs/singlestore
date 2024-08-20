@@ -3,6 +3,7 @@ import type { AnyDatabase, Table } from "@singlestore/client";
 
 import { ChatMessage } from "./message";
 import { ChatSession, type ChatSessionsTable } from "./session";
+import { createChatTools } from "./tools";
 
 export interface ChatConfig
   extends Pick<Chat, "name" | "systemRole" | "store" | "tableName" | "sessionsTableName" | "messagesTableName"> {
@@ -28,7 +29,9 @@ export class Chat<T extends AnyDatabase = AnyDatabase, U extends AnyAI = AnyAI> 
     public tableName: string,
     public sessionsTableName: ChatSession<T>["tableName"],
     public messagesTableName: ChatSession<T>["messagesTableName"],
-  ) {}
+  ) {
+    this._tools = [...this._tools, ...Object.values(createChatTools(this._database))];
+  }
 
   private static _createTable<T extends AnyDatabase, U extends Chat["tableName"]>(database: T, name: U) {
     return database.createTable<ChatsTable>({

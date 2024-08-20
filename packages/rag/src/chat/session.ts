@@ -163,8 +163,8 @@ export class ChatSession<T extends AnyDatabase = AnyDatabase, U extends AnyAI = 
 
     const handleResponseContent = (content: string) => this.createMessage("assistant", content);
 
-    if (typeof response === "string") {
-      await handleResponseContent(response);
+    if ("content" in response && typeof response.content === "string") {
+      await handleResponseContent(response.content);
       return response as CreateChatCompletionResult<K["stream"]>;
     }
 
