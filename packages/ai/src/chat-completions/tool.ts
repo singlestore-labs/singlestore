@@ -21,6 +21,17 @@ export type AnyChatCompletionTool = ChatCompletionTool<
   ChatCompletionToolCall<string, any | undefined, any> // TODO: Fix the z.AnyZodObject | undefined type
 >;
 
+export type MergeChatCompletionTools<
+  T extends AnyChatCompletionTool[] | undefined,
+  U extends AnyChatCompletionTool[] | undefined,
+> = T extends AnyChatCompletionTool[]
+  ? U extends AnyChatCompletionTool[]
+    ? [...T, ...U]
+    : T
+  : U extends AnyChatCompletionTool[]
+    ? U
+    : undefined;
+
 export class ChatCompletionTool<
   T extends string,
   U extends z.AnyZodObject | undefined,

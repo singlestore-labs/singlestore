@@ -1,7 +1,7 @@
 import zodToJsonSchema from "zod-to-json-schema";
 
 import type { ChatCompletionMessage, ChatCompletionStream, CreateChatCompletionParams, CreateChatCompletionResult } from ".";
-import type { AnyChatCompletionTool } from "./tool";
+import type { AnyChatCompletionTool, MergeChatCompletionTools } from "./tool";
 import type { OpenAI } from "openai";
 import type {
   ChatCompletionChunk,
@@ -16,9 +16,12 @@ import { ChatCompletions } from ".";
 
 export type OpenAIChatCompletionModel = ChatCompletionCreateParamsBase["model"];
 
-type _OpenAICreateChatCompletionParams = Omit<Partial<ChatCompletionCreateParamsBase>, keyof CreateChatCompletionParams>;
+interface _OpenAICreateChatCompletionParams
+  extends Omit<Partial<ChatCompletionCreateParamsBase>, keyof CreateChatCompletionParams<any, any>> {}
 
-export interface OpenAICreateChatCompletionParams extends CreateChatCompletionParams, _OpenAICreateChatCompletionParams {
+export interface OpenAICreateChatCompletionParams<T extends boolean | undefined, U extends AnyChatCompletionTool[] | undefined>
+  extends CreateChatCompletionParams<T, U>,
+    _OpenAICreateChatCompletionParams {
   model?: OpenAIChatCompletionModel;
 }
 
@@ -49,13 +52,15 @@ export class OpenAIChatCompletions<T extends AnyChatCompletionTool[] | undefined
     ];
   }
 
-  async create<U extends OpenAICreateChatCompletionParams>({
+  async create<U extends boolean | undefined = false, K extends AnyChatCompletionTool[] | undefined = undefined>({
     prompt,
     systemRole,
     messages,
     tools,
+    toolCallHandlers,
+    toolCallResultHandlers,
     ...params
-  }: U): Promise<CreateChatCompletionResult<U["stream"]>> {
+  }: OpenAICreateChatCompletionParams<U, MergeChatCompletionTools<T, K>>): Promise<CreateChatCompletionResult<U>> {
     let _messages: ChatCompletionMessage[] = [];
     if (systemRole) _messages.push({ role: "system", content: systemRole });
     if (messages?.length) _messages = [..._messages, ...messages];
@@ -106,7 +111,9 @@ export class OpenAIChatCompletions<T extends AnyChatCompletionTool[] | undefined
           }
 
           try {
+            await toolCallHandlers?.[tool.name]?.(tool, params);
             const result = await tool.call(params);
+            await toolCallResultHandlers?.[tool.name]?.(tool, result, params);
             return [{ tool, params, value: result.value }, _call] as const;
           } catch (error) {
             let _error = error;
@@ -155,10 +162,10 @@ export class OpenAIChatCompletions<T extends AnyChatCompletionTool[] | undefined
 
       if (message && "tool_calls" in message && message.tool_calls?.length) {
         const toolCallResults = await handleToolCalls(message.tool_calls);
-        return (await handleToolCallResults(toolCallResults, message)) as CreateChatCompletionResult<U["stream"]>;
+        return (await handleToolCallResults(toolCallResults, message)) as CreateChatCompletionResult<U>;
       }
 
-      return { content: message?.content || "" } as CreateChatCompletionResult<U["stream"]>;
+      return { content: message?.content || "" } as CreateChatCompletionResult<U>;
     }
 
     async function* handleStream(stream: Stream<ChatCompletionChunk>): ChatCompletionStream {
@@ -194,6 +201,6 @@ export class OpenAIChatCompletions<T extends AnyChatCompletionTool[] | undefined
       }
     }
 
-    return handleStream(response) as CreateChatCompletionResult<U["stream"]>;
+    return handleStream(response) as CreateChatCompletionResult<U>;
   }
 }

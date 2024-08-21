@@ -1,3 +1,5 @@
+import z from "zod";
+
 import type { AnyChatCompletionTool } from "./tool";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 
@@ -14,13 +16,32 @@ export interface ChatCompletionMessage {
   content: string | null;
 }
 
-export interface CreateChatCompletionParams {
+export interface CreateChatCompletionParams<T extends boolean | undefined, U extends AnyChatCompletionTool[] | undefined> {
   prompt?: string;
   model?: string;
   systemRole?: string;
-  stream?: boolean;
+  stream?: T;
   messages?: ChatCompletionMessage[];
-  tools?: AnyChatCompletionTool[];
+  tools?: U;
+
+  toolCallHandlers?: U extends AnyChatCompletionTool[]
+    ? {
+        [K in U[number] as K["name"]]?: (
+          tool: K,
+          params: K["schema"] extends z.AnyZodObject ? z.infer<K["schema"]> : undefined,
+        ) => Promise<void>;
+      }
+    : undefined;
+
+  toolCallResultHandlers?: U extends AnyChatCompletionTool[]
+    ? {
+        [K in U[number] as K["name"]]?: (
+          tool: K,
+          result: Awaited<ReturnType<K["call"]>>,
+          params: K["schema"] extends z.AnyZodObject ? z.infer<K["schema"]> : undefined,
+        ) => Promise<void>;
+      }
+    : undefined;
 }
 
 export type CreateChatCompletionResult<T extends boolean | undefined> = T extends true ? ChatCompletionStream : ChatCompletion;
@@ -45,5 +66,5 @@ export abstract class ChatCompletions<T extends AnyChatCompletionTool[] | undefi
     return completion;
   }
 
-  abstract create(params: CreateChatCompletionParams): Promise<CreateChatCompletionResult<any>>;
+  abstract create(params: CreateChatCompletionParams<any, any>): Promise<CreateChatCompletionResult<any>>;
 }

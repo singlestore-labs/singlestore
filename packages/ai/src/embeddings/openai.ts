@@ -20,7 +20,7 @@ export class OpenAIEmbeddings extends Embeddings {
     return ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"];
   }
 
-  async create<T extends OpenAICreateEmbeddingsParams>(input: string | string[], params?: T): Promise<Embedding[]> {
+  async create(input: string | string[], params?: OpenAICreateEmbeddingsParams): Promise<Embedding[]> {
     const _input = Array.isArray(input) ? input : [input];
     const response = await this._openai.embeddings.create({ model: "text-embedding-3-small", ...params, input: _input });
     return response.data.map((data) => data.embedding);

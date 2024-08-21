@@ -187,15 +187,22 @@ export class Table<T extends TableType = TableType, U extends AnyAI | undefined 
     return this._connection.client.execute<ResultSetHeader>(query, values);
   }
 
-  async vectorSearch<K extends { prompt: string; vectorColumn: TableColumnName<T> }, V extends QueryBuilderArgs<T["columns"]>>(
-    ...args: [params: K, ...V]
-  ) {
-    const [params, ...queryBuilderArgs] = args;
-    type _QueryBuilderArgs = K extends [any, ...infer _K] ? (_K extends QueryBuilderArgs<T["columns"]> ? _K : never) : never;
+  async vectorSearch<
+    K extends {
+      prompt: string;
+      vectorColumn: TableColumnName<T>;
+      embeddingParams?: U extends AnyAI ? Parameters<U["embeddings"]["create"]>[1] : never;
+    },
+    V extends QueryBuilderArgs<T["columns"]>,
+  >(...args: [params: K, ...V]) {
+    const [{ prompt, vectorColumn }, ...queryBuilderArgs] = args;
+
+    type _QueryBuilderArgs = V extends QueryBuilderArgs<T["columns"]> ? V : never;
     type Options = ExtractQueryOptions<_QueryBuilderArgs>;
     type SelectedColumns = ExtractQueryColumns<T["columns"], Options> & { [K in VectorScoreKey]: number };
+
     const { columns, clauses, values } = new QueryBuilder<T["columns"]>(...queryBuilderArgs);
-    const promptEmbedding = (await this.ai.embeddings.create(params.prompt))[0] || [];
+    const promptEmbedding = (await this.ai.embeddings.create(prompt))[0] || [];
     let orderByClause = `ORDER BY ${this.vScoreKey} DESC`;
 
     if (clauses.orderBy) {
@@ -204,7 +211,7 @@ export class Table<T extends TableType = TableType, U extends AnyAI | undefined 
 
     const query = `\
       SET @promptEmbedding = '${JSON.stringify(promptEmbedding)}' :> vector(${promptEmbedding.length}) :> blob;
-      SELECT ${[columns, `${params.vectorColumn} <*> @promptEmbedding AS ${this.vScoreKey}`].join(", ")}
+      SELECT ${[columns, `${vectorColumn} <*> @promptEmbedding AS ${this.vScoreKey}`].join(", ")}
       FROM ${this._path}
       ${[clauses.where, clauses.groupBy, orderByClause, clauses.limit].join(" ")}
     `;
@@ -214,13 +221,14 @@ export class Table<T extends TableType = TableType, U extends AnyAI | undefined 
   }
 
   async createChatCompletion<
-    K extends Parameters<Exclude<U, undefined>["chatCompletions"]["create"]>[0] & {
-      vectorColumn: TableColumnName<T>;
-      template?: string;
-    },
+    K extends Parameters<this["vectorSearch"]>[0] &
+      (U extends AnyAI ? Parameters<U["chatCompletions"]["create"]>[0] : never) & { template?: string },
     V extends QueryBuilderArgs<T["columns"]>,
   >(...args: [params: K, ...V]) {
-    const [{ prompt = "", vectorColumn, template, systemRole, ...createChatCompletionParams }, ...vectorSearchArgs] = args;
+    const [
+      { prompt, vectorColumn, template, systemRole, embeddingParams, ...createChatCompletionParams },
+      ...vectorSearchArgs
+    ] = args;
 
     const _systemRole =
       systemRole ??
@@ -231,7 +239,7 @@ export class Table<T extends TableType = TableType, U extends AnyAI | undefined 
       `;
 
     const _template = template ?? `The user asked: <question>\nThe most similar context: <context>`;
-    const context = prompt ? await this.vectorSearch({ prompt, vectorColumn }, ...vectorSearchArgs) : "";
+    const context = prompt ? await this.vectorSearch({ prompt, vectorColumn, embeddingParams }, ...vectorSearchArgs) : "";
     const _prompt = _template.replace("<question>", prompt).replace("<context>", JSON.stringify(context));
     return (await this.ai.chatCompletions.create({
       ...createChatCompletionParams,
