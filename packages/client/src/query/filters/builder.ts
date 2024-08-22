@@ -1,5 +1,20 @@
 import type { QuerySchema } from "../schema";
 
+/**
+ * Type representing the various operators that can be used in query filters.
+ *
+ * @typeParam T - The type of the value being filtered. The default is `any`.
+ *
+ * @property {T} [eq] - Equal to a specific value.
+ * @property {T} [ne] - Not equal to a specific value.
+ * @property {T} [gt] - Greater than a specific value.
+ * @property {T} [gte] - Greater than or equal to a specific value.
+ * @property {T} [lt] - Less than a specific value.
+ * @property {T} [lte] - Less than or equal to a specific value.
+ * @property {T[]} [in] - Within an array of specific values.
+ * @property {T[]} [nin] - Not within an array of specific values.
+ * @property {string} [like] - Matches a specific pattern (only applicable to string types).
+ */
 type QueryFilterOperators<T = any> = {
   eq?: T;
   ne?: T;
@@ -12,17 +27,46 @@ type QueryFilterOperators<T = any> = {
   like?: T extends string ? string : never;
 };
 
+/**
+ * Type representing a single filter value, which can be either a direct value or a set of operators.
+ *
+ * @typeParam T - The type of the value being filtered.
+ */
 type QueryFilterValue<T> = T | QueryFilterOperators<T>;
 
+/**
+ * Type representing logical conditions for combining multiple query filters.
+ *
+ * @typeParam T - The schema type being filtered.
+ *
+ * @property {QueryFilters<T>[]} [and] - Logical AND condition combining multiple filters.
+ * @property {QueryFilters<T>[]} [or] - Logical OR condition combining multiple filters.
+ */
 type QueryFilterLogicalConditions<T extends QuerySchema> = {
   and?: QueryFilters<T>[];
   or?: QueryFilters<T>[];
 };
 
+/**
+ * Type representing the filters that can be applied to a query.
+ *
+ * @typeParam T - The schema type being filtered.
+ *
+ * This type combines the individual column filters and logical conditions for combining them.
+ */
 export type QueryFilters<T extends QuerySchema> = {
   [K in keyof T]?: QueryFilterValue<T[K]>;
 } & QueryFilterLogicalConditions<T>;
 
+/**
+ * Class responsible for building SQL WHERE clauses from query filters.
+ *
+ * @typeParam T - The schema type being filtered.
+ *
+ * @property {string} clause - The SQL WHERE clause generated from the filters.
+ * @property {T[keyof T][]} values - The array of values corresponding to the placeholders in the WHERE clause.
+ * @property {QueryFilters<T>} [filters] - The query filters used to generate the WHERE clause and values.
+ */
 export class QueryFiltersBuilder<T extends QuerySchema> {
   clause: string = "";
   values: T[keyof T][] = [];
@@ -32,6 +76,15 @@ export class QueryFiltersBuilder<T extends QuerySchema> {
     this.values = this._extractValues(this.filters);
   }
 
+  /**
+   * Builds an SQL condition string for a specific column and operator.
+   *
+   * @param {string} column - The name of the column.
+   * @param {keyof QueryFilterOperators} operator - The operator to apply.
+   * @param {any} value - The value to compare against.
+   *
+   * @returns {string} The SQL condition string.
+   */
   private _buildWhereCondition(column: string, operator: keyof QueryFilterOperators, value: any): string {
     switch (operator) {
       case "eq":
@@ -57,6 +110,13 @@ export class QueryFiltersBuilder<T extends QuerySchema> {
     }
   }
 
+  /**
+   * Builds an SQL WHERE clause from the provided filters.
+   *
+   * @param {QueryFilters<T>} [filters] - The filters to convert into an SQL WHERE clause.
+   *
+   * @returns {string} The generated SQL WHERE clause.
+   */
   private _buildWhereClause(filters?: QueryFilters<T>): string {
     if (!filters) return "";
 
@@ -80,6 +140,13 @@ export class QueryFiltersBuilder<T extends QuerySchema> {
     return conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
   }
 
+  /**
+   * Extracts the values from the filters to be used in the prepared statement corresponding to the WHERE clause.
+   *
+   * @param {QueryFilters<T>} [filters] - The filters to extract values from.
+   *
+   * @returns {T[keyof T][]} An array of values extracted from the filters.
+   */
   private _extractValues(filters?: QueryFilters<T>): T[keyof T][] {
     if (!filters) return [];
 
