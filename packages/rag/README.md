@@ -1,3 +1,3 @@
-# SingleStoreAI
+# SingleStoreRAG
 
-The official SingleStore AI client.
+The official SingleStore RAG client.

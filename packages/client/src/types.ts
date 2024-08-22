@@ -1,4 +1,4 @@
-export type { RowDataPacket, ResultSetHeader } from "mysql2/promise";
+export type { RowDataPacket, ResultSetHeader, FieldPacket } from "mysql2/promise";
 export type * from "./workspace";
 export type * from "./connection";
 export type * from "./database";

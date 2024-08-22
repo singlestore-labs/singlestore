@@ -1,12 +1,42 @@
 import type { ChatCompletionMessage } from "@singlestore/ai";
-import type { AnyDatabase, Table } from "@singlestore/client";
+import type { AnyDatabase, FieldPacket, ResultSetHeader, Table } from "@singlestore/client";
 
+/**
+ * Interface for configuring a `ChatMessage` instance.
+ *
+ * This interface is a subset of the `ChatMessage` class properties, excluding the `id`, `createdAt`, and `_database` fields.
+ *
+ * @property {number} sessionId - The session ID associated with the chat message.
+ * @property {ChatCompletionMessage["role"]} role - The role of the message sender, such as "system", "user", or "assistant".
+ * @property {string} content - The content of the chat message.
+ * @property {boolean} store - Whether to store the message in the database.
+ * @property {string} tableName - The name of the table where the message is stored.
+ */
 export interface ChatMessageConfig extends Pick<ChatMessage, "sessionId" | "role" | "content" | "store" | "tableName"> {}
 
+/**
+ * Interface representing the schema of the chat messages table.
+ *
+ * @property {Pick<ChatMessage, "id" | "createdAt" | "sessionId" | "role" | "content">} columns - The columns of the chat messages table.
+ */
 export interface ChatMessagesTable {
   columns: Pick<ChatMessage, "id" | "createdAt" | "sessionId" | "role" | "content">;
 }
 
+/**
+ * Class representing a chat message, providing methods to manage chat messages in the database.
+ *
+ * @typeParam T - The type of the database, which extends `AnyDatabase`.
+ *
+ * @property {T} _database - The database instance where the chat message is stored.
+ * @property {number | undefined} id - The unique identifier of the chat message.
+ * @property {string | undefined} createdAt - The timestamp when the chat message was created.
+ * @property {number | undefined} sessionId - The session ID associated with the chat message.
+ * @property {ChatCompletionMessage["role"]} role - The role of the message sender.
+ * @property {string} content - The content of the chat message.
+ * @property {boolean} store - Whether the message is stored in the database.
+ * @property {string} tableName - The name of the table where the message is stored.
+ */
 export class ChatMessage<T extends AnyDatabase = AnyDatabase> {
   constructor(
     private _database: T,
@@ -19,7 +49,21 @@ export class ChatMessage<T extends AnyDatabase = AnyDatabase> {
     public tableName: string,
   ) {}
 
-  static createTable<T extends AnyDatabase, U extends ChatMessage["tableName"]>(database: T, name: U) {
+  /**
+   * Creates a table to store chat messages.
+   *
+   * @typeParam T - The type of the database.
+   * @typeParam U - The name of the table to be created.
+   *
+   * @param {T} database - The database instance where the table will be created.
+   * @param {U} name - The name of the table.
+   *
+   * @returns {Promise<Table<ChatMessagesTable>>} A promise that resolves to the created table instance.
+   */
+  static createTable<T extends AnyDatabase, U extends ChatMessage["tableName"]>(
+    database: T,
+    name: U,
+  ): Promise<Table<ChatMessagesTable>> {
     return database.createTable<ChatMessagesTable>({
       name,
       columns: {
@@ -32,7 +76,18 @@ export class ChatMessage<T extends AnyDatabase = AnyDatabase> {
     });
   }
 
-  static async create<T extends AnyDatabase, U extends ChatMessageConfig>(database: T, config: U) {
+  /**
+   * Creates a new chat message instance and optionally stores it in the database.
+   *
+   * @typeParam T - The type of the database.
+   * @typeParam U - The configuration object for the chat message.
+   *
+   * @param {T} database - The database instance where the message may be stored.
+   * @param {U} config - The configuration object for the chat message.
+   *
+   * @returns {Promise<ChatMessage<T>>} A promise that resolves to the created `ChatMessage` instance.
+   */
+  static async create<T extends AnyDatabase, U extends ChatMessageConfig>(database: T, config: U): Promise<ChatMessage<T>> {
     const { sessionId, role, content, store, tableName } = config;
     const createdAt: ChatMessage["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 23);
     let id: ChatMessage["id"];
@@ -45,15 +100,31 @@ export class ChatMessage<T extends AnyDatabase = AnyDatabase> {
     return new ChatMessage(database, id, createdAt, sessionId, role, content, store, tableName);
   }
 
+  /**
+   * Deletes chat messages from the specified table based on the provided filters.
+   *
+   * @param {AnyDatabase} database - The database instance where the messages are stored.
+   * @param {ChatMessage["tableName"]} tableName - The name of the table where the messages are stored.
+   * @param {Parameters<Table<ChatMessagesTable>["delete"]>[0]} [filters] - The filters to apply to the delete operation.
+   *
+   * @returns {Promise<[ResultSetHeader, FieldPacket[]]>} A promise that resolves when the delete operation is complete.
+   */
   static delete(
     database: AnyDatabase,
     tableName: ChatMessage["tableName"],
     filters?: Parameters<Table<ChatMessagesTable>["delete"]>[0],
-  ) {
+  ): Promise<[ResultSetHeader, FieldPacket[]]> {
     return database.table<ChatMessagesTable>(tableName).delete(filters);
   }
 
-  async update(values: Parameters<Table<ChatMessagesTable>["update"]>[0]) {
+  /**
+   * Updates the current chat message instance in the database with the specified values.
+   *
+   * @param {Parameters<Table<ChatMessagesTable>["update"]>[0]} values - The values to update in the chat message.
+   *
+   * @returns {Promise<[ResultSetHeader, FieldPacket[]]>} A promise that resolves when the update operation is complete.
+   */
+  async update(values: Parameters<Table<ChatMessagesTable>["update"]>[0]): Promise<[ResultSetHeader, FieldPacket[]]> {
     const result = await this._database.table<ChatMessagesTable>(this.tableName).update(values, { id: this.id });
 
     for (const [key, value] of Object.entries(values)) {
@@ -65,7 +136,12 @@ export class ChatMessage<T extends AnyDatabase = AnyDatabase> {
     return result;
   }
 
-  delete() {
+  /**
+   * Deletes the current chat message instance from the database.
+   *
+   * @returns {Promise<[ResultSetHeader, FieldPacket[]]>} A promise that resolves when the delete operation is complete.
+   */
+  delete(): Promise<[ResultSetHeader, FieldPacket[]]> {
     return ChatMessage.delete(this._database, this.tableName, { id: this.id });
   }
 }

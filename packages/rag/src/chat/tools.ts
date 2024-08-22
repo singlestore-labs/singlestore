@@ -2,6 +2,15 @@ import { type AnyAI, ChatCompletionTool } from "@singlestore/ai";
 import { type AnyDatabase } from "@singlestore/client";
 import z from "zod";
 
+/**
+ * Creates a `ChatCompletionTool` that generates a detailed description of the database schema.
+ *
+ * @typeParam T - The type of the database.
+ *
+ * @param {T} database - The database instance to describe.
+ *
+ * @returns {ChatCompletionTool} A chat tool that, when called, returns a JSON string describing the database schema.
+ */
 export function describeDatabaseChatTool<T extends AnyDatabase>(database: T) {
   return new ChatCompletionTool({
     name: "database_describe",
@@ -13,6 +22,19 @@ export function describeDatabaseChatTool<T extends AnyDatabase>(database: T) {
   });
 }
 
+/**
+ * Creates a `ChatCompletionTool` that generates and executes a MySQL SELECT query based on a natural language prompt.
+ *
+ * @typeParam T - The type of the database.
+ * @typeParam U - The type of AI functionalities integrated with the tool.
+ *
+ * @param {T} database - The database instance on which the query will be executed.
+ * @param {U} ai - The AI instance used to generate the query.
+ * @param {Object} [options] - Optional configuration for the AI model.
+ * @param {string} [options.model] - The specific AI model to use for generating the query.
+ *
+ * @returns {ChatCompletionTool} A chat tool that, when called, generates and executes a MySQL SELECT query.
+ */
 export function textToSQLChatTool<T extends AnyDatabase, U extends AnyAI>(
   database: T,
   ai: U,
@@ -55,6 +77,15 @@ export function textToSQLChatTool<T extends AnyDatabase, U extends AnyAI>(
   });
 }
 
+/**
+ * Creates a `ChatCompletionTool` that executes a vector-based search across specified tables to find data.
+ *
+ * @typeParam T - The type of the database.
+ *
+ * @param {T} database - The database instance on which the vector search will be performed.
+ *
+ * @returns {ChatCompletionTool} A chat tool that, when called, performs a vector search and returns the result.
+ */
 export function vectorSearchChatTool<T extends AnyDatabase>(database: T) {
   return new ChatCompletionTool({
     name: "vector_search",
