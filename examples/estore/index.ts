@@ -1,23 +1,29 @@
 import { AI } from "@singlestore/ai";
 import { DatabaseTablesToRecords, SingleStoreClient } from "@singlestore/client";
 
+/**
+ * Main function to set up and interact with the SingleStore database
+ * and AI functionalities.
+ */
 async function main() {
   try {
-    console.log("1. Create an AI instance to add AI functionality to our app");
+    console.log("Initializing AI instance...");
     const ai = new AI({ openAIApiKey: process.env.OPENAI_API_KEY });
+    console.log("AI instance created.");
 
-    console.log("2. Create a SingleStoreClient instance to work with SingleStore");
+    console.log("Initializing SingleStore client...");
     const client = new SingleStoreClient({ ai });
+    console.log("SingleStore client initialized.");
 
-    console.log("3. Connect to a workspace");
+    console.log("Connecting to workspace...");
     const workspace = client.workspace({
-      name: "workspace-1",
       host: process.env.DB_HOST,
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
     });
+    console.log("Connected to workspace.");
 
-    console.log("4. Create a database schema for better TypeScript experience");
+    console.log("Setting up database schema for better TypeScript support...");
     interface Database {
       tables: {
         users: {
@@ -38,10 +44,11 @@ async function main() {
       };
     }
 
-    console.log("5. Drop database if exists");
+    console.log("Dropping existing database if it exists...");
     await workspace.dropDatabase("estore_example");
+    console.log("Database dropped.");
 
-    console.log("6. Create a database");
+    console.log("Creating new database...");
     const db = await workspace.createDatabase<Database>({
       name: "estore_example",
       tables: {
@@ -62,8 +69,9 @@ async function main() {
         },
       },
     });
+    console.log("Database created.");
 
-    console.log("7. Generate a dataset");
+    console.log("Generating dataset...");
     const dataset: DatabaseTablesToRecords<Database["tables"]> = {
       users: [
         { id: 1, name: "Alice" },
@@ -78,34 +86,37 @@ async function main() {
         { id: 5, name: "Keyboard", description: "Mechanical keyboard", price: 100, description_v: "" },
       ],
     };
+    console.log("Dataset generated.");
 
-    console.log("8. Create product embeddings");
+    console.log("Creating product embeddings using AI...");
     dataset.products = await Promise.all(
       dataset.products.map(async (product) => ({
         ...product,
         description_v: JSON.stringify((await ai.embeddings.create(product.description))[0]),
       })),
     );
+    console.log("Product embeddings created.");
 
-    console.log("9. Insert the dataset into the db");
+    console.log("Inserting dataset into the database...");
     await Promise.all([db.table("users").insert(dataset.users), db.table("products").insert(dataset.products)]);
+    console.log("Dataset inserted.");
 
-    console.log('10. Select a user named "Alice"');
+    console.log('Selecting user with name "Alice"...');
     console.log(await db.table("users").select({ name: "Alice" }));
 
-    console.log("11. Select products priced under 300");
+    console.log("Selecting products priced under 300...");
     console.log(
       await db.table("products").select({ price: { lte: 300 } }, { columns: ["id", "name", "description", "price"] }),
     );
 
-    console.log('12. Select products with the name "Smartphone" priced at 800');
+    console.log('Selecting products with name "Smartphone" priced at 800...');
     console.log(
       await db
         .table("products")
         .select({ name: "Smartphone", price: { lte: 800 } }, { columns: ["id", "name", "description", "price"] }),
     );
 
-    console.log('13. Select products with the name "Smartphone" or "Laptop" priced above 500');
+    console.log('Selecting products named "Smartphone" or "Laptop" priced above 500...');
     console.log(
       await db
         .table("products")
@@ -115,48 +126,45 @@ async function main() {
         ),
     );
 
-    console.log("14. Select all users executing custom query");
+    console.log("Executing custom query to select all users...");
     console.log(await db.query<[Database["tables"]["users"]["columns"][]]>("SELECT * FROM users"));
 
     const usersTable = db.table("users");
 
-    console.log("15. Create a chat completion.\nPrompt: 'What is 4+4?");
+    console.log("Creating chat completion...\nPrompt: 'What is 4+4?'");
     console.log(await ai.chatCompletions.create({ prompt: "What is 4+4?" }));
 
-    console.log("16. Column methods");
-
-    console.log('16.1. Add the an "age_new" column to the users table');
+    console.log("Executing column methods...");
+    console.log('Adding a new column "age_new" to the users table...');
     await usersTable.addColumn({ name: "age_new", type: "int" });
 
-    console.log('16.2. Rename the "age_new" column to "age"');
+    console.log('Renaming column "age_new" to "age"...');
     console.log(await usersTable.column("age_new").rename("age"));
 
-    console.log('16.3. Drop the "age" column');
+    console.log('Dropping column "age"...');
     console.log(await usersTable.column("age").drop());
 
-    console.log("17. Table methods");
-
-    console.log("17.1. Insert a new user named John into the users table");
+    console.log("Executing table methods...");
+    console.log("Inserting a new user named John into the users table...");
     console.log(await usersTable.insert({ name: "John" }));
 
-    console.log("17.2. Change the user name John to John Wick");
+    console.log("Updating user's name from John to John Wick...");
     console.log(await usersTable.update({ name: "John Wick" }, { name: "John" }));
 
-    console.log("17.3. Delete the user named John Wick");
+    console.log("Deleting user named John Wick...");
     console.log(await usersTable.delete({ name: "John Wick" }));
 
-    console.log('17.4. Rename the users table to "users_old"');
+    console.log('Renaming users table to "users_old"...');
     console.log(await usersTable.rename("users_old"));
 
-    console.log('17.5. Truncate the "users_old" table');
+    console.log('Truncating "users_old" table...');
     console.log(await usersTable.truncate());
 
-    console.log('17.6. Drop the "users_old" table');
+    console.log('Dropping "users_old" table...');
     console.log(await usersTable.drop());
 
-    console.log("18. Database methods");
-
-    console.log('18.1. Create a "users" table');
+    console.log("Executing database methods...");
+    console.log('Creating "users" table...');
     await db.createTable<Database["tables"]["users"]>({
       name: "users",
       columns: {
@@ -165,13 +173,12 @@ async function main() {
       },
     });
 
-    console.log('18.2. Use the "users" table');
+    console.log('Using the "users" table...');
     db.table("users");
 
-    console.log("19. Table AI methods");
-
+    console.log("Executing table AI methods...");
     const prompt_19_1 = "This product can suppress surrounding noise.";
-    console.log(`19.1. Find noise cancelling headphone name and description using vector search.\nPrompt: ${prompt_19_1}`);
+    console.log(`Finding noise-cancelling headphone name and description using vector search.\nPrompt: ${prompt_19_1}`);
     console.log(
       await db
         .table("products")
@@ -179,9 +186,7 @@ async function main() {
     );
 
     const prompt_19_2 = "What monitor do I have in my store?";
-    console.log(
-      `19.2. Create a chat completion based on vector search results from the products table and a prompt.\nPrompt: ${prompt_19_2}`,
-    );
+    console.log(`Creating chat completion based on vector search results and prompt.\nPrompt: ${prompt_19_2}`);
     console.log(
       await db
         .table("products")
@@ -191,10 +196,10 @@ async function main() {
         ),
     );
 
-    console.log("Done!");
+    console.log("Process completed successfully!");
     process.exit(0);
   } catch (error) {
-    console.error(error);
+    console.error("An error occurred during the execution:", error);
     process.exit(1);
   }
 }

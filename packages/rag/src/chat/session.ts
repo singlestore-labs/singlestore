@@ -70,26 +70,27 @@ export class ChatSession<
       tools: config?.tools || [],
     };
 
-    const { chatId, name, systemRole, store, tableName, messagesTableName, tools } = _config;
     let id: ChatSession["id"];
 
-    if (store) {
-      const [rows] = await database.table<ChatSessionsTable>(tableName).insert({ createdAt, name, chatId });
+    if (_config.store) {
+      const [rows] = await database
+        .table<ChatSessionsTable>(_config.tableName)
+        .insert({ createdAt, name: _config.name, chatId: _config.chatId });
       id = rows?.[0].insertId;
     }
 
     return new ChatSession<T, U, K["tools"]>(
       database,
       ai,
-      tools,
+      _config.tools,
       id,
       createdAt,
-      chatId,
-      name,
-      systemRole,
-      store,
-      tableName,
-      messagesTableName,
+      _config.chatId,
+      _config.name,
+      _config.systemRole,
+      _config.store,
+      _config.tableName,
+      _config.messagesTableName,
     );
   }
 

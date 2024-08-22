@@ -63,24 +63,23 @@ export class Chat<
       tools: config?.tools || [],
     };
 
-    const { name, systemRole, store, tableName, sessionsTableName, messagesTableName, tools } = _config;
     let id: Chat["id"];
 
-    if (store) {
+    if (_config.store) {
       const [chatsTable] = await Promise.all([
-        Chat._createTable(database, tableName),
-        ChatSession.createTable(database, sessionsTableName),
-        ChatMessage.createTable(database, messagesTableName),
+        Chat._createTable(database, _config.tableName),
+        ChatSession.createTable(database, _config.sessionsTableName),
+        ChatMessage.createTable(database, _config.messagesTableName),
       ]);
 
       const [rows] = await chatsTable.insert({
         createdAt,
-        name,
-        systemRole,
-        store,
-        tableName,
-        sessionsTableName,
-        messagesTableName,
+        name: _config.name,
+        systemRole: _config.systemRole,
+        store: _config.store,
+        tableName: _config.tableName,
+        sessionsTableName: _config.sessionsTableName,
+        messagesTableName: _config.messagesTableName,
       });
 
       id = rows?.[0].insertId;
@@ -89,15 +88,15 @@ export class Chat<
     return new Chat<T, U, K["tools"]>(
       database,
       ai,
-      tools,
+      _config.tools,
       id,
       createdAt,
-      name,
-      systemRole,
-      store,
-      tableName,
-      sessionsTableName,
-      messagesTableName,
+      _config.name,
+      _config.systemRole,
+      _config.store,
+      _config.tableName,
+      _config.sessionsTableName,
+      _config.messagesTableName,
     );
   }
 

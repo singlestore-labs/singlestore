@@ -1,80 +1,102 @@
-import { AI, ChatCompletionTool } from "@singlestore/ai";
+import { createInterface } from "readline/promises";
+
+import { AI } from "@singlestore/ai";
 import { SingleStoreClient } from "@singlestore/client";
-import { RAG } from "@singlestore/rag";
-import z from "zod";
+import { describeDatabaseChatTool, RAG, textToSQLChatTool, vectorSearchChatTool } from "@singlestore/rag";
 
+/**
+ * Interface for defining the database schema.
+ */
+interface Database {
+  tables: {
+    users: {
+      columns: {
+        id: number;
+        name: string;
+      };
+    };
+    products: {
+      columns: {
+        id: number;
+        name: string;
+        description: string;
+        price: number;
+        description_v: string;
+      };
+    };
+  };
+}
+
+/**
+ * Main function to initialize AI, database connection, and handle user chat.
+ */
 async function main() {
-  try {
-    const ai = new AI({ openAIApiKey: process.env.OPENAI_API_KEY });
-    const client = new SingleStoreClient({ ai });
+  // Initialize the readline interface for user input.
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
 
+  try {
+    console.log("Initializing AI instance...");
+    const ai = new AI({ openAIApiKey: process.env.OPENAI_API_KEY });
+    console.log("AI instance created.");
+
+    console.log("Initializing SingleStore client...");
+    const client = new SingleStoreClient({ ai });
+    console.log("SingleStore client initialized.");
+
+    console.log("Connecting to workspace...");
     const workspace = client.workspace({
       host: process.env.DB_HOST,
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
     });
+    console.log("Connected to workspace.");
 
-    interface Database {
-      tables: {
-        products: {
-          columns: {
-            id: number;
-            name: string;
-            description: string;
-            price: number;
-            description_v: string;
-          };
-        };
-      };
-    }
-
+    console.log("Accessing the 'estore_example' database...");
     const database = workspace.database<Database>("estore_example");
+    console.log("Database accessed.");
 
-    const vectorSearchTool = new ChatCompletionTool({
-      name: "vector_search",
-      description: "Executes a vector-based search across specified tables to find data.",
-      params: z.object({
-        prompt: z.string(),
-        tableName: z
-          .string()
-          .describe(
-            "Specifies the target table within the database where the vector search should be conducted. The table must contain a column with vector data that corresponds to the search query.",
-          ),
-        vectorColumn: z
-          .string()
-          .describe(
-            "Indicates the specific column in the target table that holds vector representations. This column is used to perform similarity matching based on the input prompt.",
-          ),
-      }),
-      call: async (params) => {
-        const rows = await database
-          .table(params.tableName)
-          .vectorSearch({ prompt: params.prompt, vectorColumn: params.vectorColumn }, { limit: 1 });
-
-        const value = rows[0];
-        if (value) delete value[params.vectorColumn];
-
-        return { name: "vector_search", params, value: JSON.stringify(value) };
-      },
-    });
-
+    console.log("Initializing RAG system...");
     const rag = new RAG({ database, ai });
+    console.log("RAG system initialized.");
 
-    const chat = await rag.createChat({ tools: [vectorSearchTool] });
+    console.log("Creating chat instance with integrated tools...");
+    const chat = await rag.createChat({
+      tools: [
+        describeDatabaseChatTool(database),
+        textToSQLChatTool(database, ai, { model: "gpt-4o-mini" }),
+        vectorSearchChatTool(database),
+      ],
+    });
+    console.log("Chat instance created.");
 
     const session = await chat.createSession();
 
-    const responseStream = await session.createChatCompletion({
-      prompt: "Find product X in the Y table by the Z column",
-      stream: true,
-    });
+    while (true) {
+      const prompt = await rl.question("You: ");
 
-    const responseText = await ai.chatCompletions.handleStream(responseStream, (chunk) => console.log(chunk));
+      if (prompt.trim().toLowerCase() === "bye") {
+        console.log("Assistant: Goodbye!");
+        rl.close();
+        process.exit(0);
+      }
 
-    console.log("Done!");
-    process.exit(0);
+      console.log("Processing your request...");
+      const stream = await session.createChatCompletion({
+        prompt,
+        stream: true,
+        loadHistory: true,
+        loadDatabaseSchema: true,
+      });
+
+      process.stdout.write("Assistant: ");
+      for await (const chatCompletion of stream) {
+        process.stdout.write(chatCompletion.content);
+      }
+      console.log("");
+    }
   } catch (error) {
-    console.error(error);
+    console.error("An error occurred during execution:", error);
+    rl.close();
     process.exit(1);
   }
 }
