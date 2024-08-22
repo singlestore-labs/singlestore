@@ -163,29 +163,41 @@ export class ChatSession<
         "toolCallHandlers" | "toolCallResultHandlers"
       > & {
         loadHistory?: boolean;
+        loadDatabaseSchema?: boolean;
       },
   >({
     prompt = "",
     loadHistory = this.store,
+    loadDatabaseSchema = false,
     messages = [],
     tools = [],
     ...params
   }: TParams): Promise<CreateChatCompletionResult<ExtractStreamParam<TParams>>> {
-    let historyMessages: ChatCompletionMessage[] = [];
+    let _messages: ChatCompletionMessage[] = [];
+    const _tools: AnyChatCompletionTool[] = [...(this._tools || []), ...tools];
 
-    if (loadHistory) {
-      const messages = await this.selectMessages();
-      historyMessages = messages.map((message) => ({ role: message.role, content: message.content }));
+    if (loadDatabaseSchema || loadHistory) {
+      const [databaseSchema, historyMessages] = await Promise.all([
+        loadDatabaseSchema ? this._database.describe() : undefined,
+        loadHistory ? this.selectMessages({ orderBy: { createdAt: "asc" } }) : undefined,
+      ]);
+
+      if (databaseSchema) {
+        _messages.push({ role: "system", content: `The database schema: ${JSON.stringify(databaseSchema)}` });
+      }
+
+      if (historyMessages?.length) {
+        _messages = [..._messages, ...historyMessages.map((message) => ({ role: message.role, content: message.content }))];
+      }
+    }
+
+    if (messages?.length) {
+      _messages = [..._messages, ...messages];
     }
 
     const [, response] = await Promise.all([
       this.createMessage("user", prompt),
-      this._ai.chatCompletions.create({
-        ...params,
-        prompt,
-        messages: [...historyMessages, ...messages],
-        tools: [...(this._tools || []), ...tools],
-      }),
+      this._ai.chatCompletions.create({ ...params, prompt, messages: _messages, tools: _tools }),
     ]);
 
     const handleResponseContent = (content: string) => this.createMessage("assistant", content);
