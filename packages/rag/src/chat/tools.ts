@@ -17,7 +17,7 @@ export function vectorSearchChatTool<T extends AnyDatabase>(database: T) {
   return new ChatCompletionTool({
     name: "vector_search",
     description: "Executes a vector-based search across specified tables to find data.",
-    schema: z.object({
+    params: z.object({
       prompt: z.string(),
       tableName: z
         .string()

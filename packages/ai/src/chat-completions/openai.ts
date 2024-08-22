@@ -76,9 +76,9 @@ export class OpenAIChatCompletions<T extends AnyChatCompletionTool[] | undefined
       ...params,
       messages: _messages as ChatCompletionMessageParam[],
       tools: _tools.length
-        ? _tools.map(({ name, description, schema }) => ({
+        ? _tools.map(({ name, description, params }) => ({
             type: "function",
-            function: { name, description, parameters: schema ? zodToJsonSchema(schema) : undefined },
+            function: { name, description, parameters: params ? zodToJsonSchema(params) : undefined },
           }))
         : undefined,
     });

@@ -11,7 +11,7 @@ interface ChatCompletionToolConfig<
 > {
   name: T;
   description: string;
-  schema?: U;
+  params?: U;
   call: K;
 }
 
@@ -39,13 +39,13 @@ export class ChatCompletionTool<
 > {
   name: T;
   description: string;
-  schema: U;
+  params: U;
   call: K;
 
   constructor(config: ChatCompletionToolConfig<T, U, K>) {
     this.name = config.name;
     this.description = config.description;
-    this.schema = config.schema as U;
+    this.params = config.params as U;
     this.call = config.call;
   }
 }

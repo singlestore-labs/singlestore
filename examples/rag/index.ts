@@ -33,7 +33,7 @@ async function main() {
     const vectorSearchTool = new ChatCompletionTool({
       name: "vector_search",
       description: "Executes a vector-based search across specified tables to find data.",
-      schema: z.object({
+      params: z.object({
         prompt: z.string(),
         tableName: z
           .string()

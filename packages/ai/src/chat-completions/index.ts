@@ -28,7 +28,7 @@ export interface CreateChatCompletionParams<T extends boolean | undefined, U ext
     ? {
         [K in U[number] as K["name"]]?: (
           tool: K,
-          params: K["schema"] extends z.AnyZodObject ? z.infer<K["schema"]> : undefined,
+          params: K["params"] extends z.AnyZodObject ? z.infer<K["params"]> : undefined,
         ) => Promise<void>;
       }
     : undefined;
@@ -38,7 +38,7 @@ export interface CreateChatCompletionParams<T extends boolean | undefined, U ext
         [K in U[number] as K["name"]]?: (
           tool: K,
           result: Awaited<ReturnType<K["call"]>>,
-          params: K["schema"] extends z.AnyZodObject ? z.infer<K["schema"]> : undefined,
+          params: K["params"] extends z.AnyZodObject ? z.infer<K["params"]> : undefined,
         ) => Promise<void>;
       }
     : undefined;
