@@ -14,22 +14,47 @@ import type { Stream } from "openai/streaming.mjs";
 
 import { ChatCompletions } from ".";
 
+/**
+ * Represents the model type used in OpenAI chat completions.
+ */
 export type OpenAIChatCompletionModel = ChatCompletionCreateParamsBase["model"];
 
+/**
+ * Internal interface that extends the base parameters for creating an OpenAI chat completion,
+ * excluding properties already defined in `CreateChatCompletionParams`.
+ */
 interface _OpenAICreateChatCompletionParams
   extends Omit<Partial<ChatCompletionCreateParamsBase>, keyof CreateChatCompletionParams<any, any>> {}
 
+/**
+ * Parameters for creating an OpenAI chat completion.
+ *
+ * @typeParam T - Indicates whether the completion should be streamed (boolean).
+ * @typeParam U - An array of tools that can be used during the chat completion.
+ *
+ * @property {OpenAIChatCompletionModel} [model] - The model to use for generating the completion.
+ */
 export interface OpenAICreateChatCompletionParams<T extends boolean | undefined, U extends AnyChatCompletionTool[] | undefined>
   extends CreateChatCompletionParams<T, U>,
     _OpenAICreateChatCompletionParams {
   model?: OpenAIChatCompletionModel;
 }
 
+/**
+ * Class representing chat completions using OpenAI's API, with support for tools and streaming.
+ *
+ * @typeParam T - An array of tools that can be used during the chat completion.
+ */
 export class OpenAIChatCompletions<T extends AnyChatCompletionTool[] | undefined> extends ChatCompletions<T> {
   constructor(private _openai: OpenAI) {
     super();
   }
 
+  /**
+   * Retrieves the list of models available for OpenAI chat completions.
+   *
+   * @returns An array of model names.
+   */
   getModels(): OpenAIChatCompletionModel[] {
     // TODO: Replace with dynamic values
     return [
@@ -52,6 +77,16 @@ export class OpenAIChatCompletions<T extends AnyChatCompletionTool[] | undefined
     ];
   }
 
+  /**
+   * Creates a chat completion using OpenAI's API, with optional support for streaming and tool integration.
+   *
+   * @typeParam U - Indicates whether the completion should be streamed (boolean).
+   * @typeParam K - An array of tools that can be used during the chat completion.
+   *
+   * @param {OpenAICreateChatCompletionParams<U, MergeChatCompletionTools<T, K>>} params - Parameters for creating the chat completion, including prompt, system role, messages, tools, and handlers.
+   *
+   * @returns A promise that resolves to either a single chat completion or a stream of chat completions, depending on the `stream` parameter.
+   */
   async create<U extends boolean | undefined = false, K extends AnyChatCompletionTool[] | undefined = undefined>({
     prompt,
     systemRole,
@@ -168,6 +203,13 @@ export class OpenAIChatCompletions<T extends AnyChatCompletionTool[] | undefined
       return { content: message?.content || "" } as CreateChatCompletionResult<U>;
     }
 
+    /**
+     * Handles the streaming of chat completion chunks, processing tool calls and yielding content.
+     *
+     * @param {Stream<ChatCompletionChunk>} stream - The stream of chat completion chunks.
+     *
+     * @returns A `ChatCompletionStream` that yields processed chat completion content.
+     */
     async function* handleStream(stream: Stream<ChatCompletionChunk>): ChatCompletionStream {
       let delta: ChatCompletionChunk["choices"][number]["delta"] | undefined = undefined;
 
