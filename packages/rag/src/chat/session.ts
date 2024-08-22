@@ -3,7 +3,9 @@ import type {
   AnyChatCompletionTool,
   ChatCompletionMessage,
   ChatCompletionStream,
+  CreateChatCompletionParams,
   CreateChatCompletionResult,
+  MergeChatCompletionTools,
 } from "@singlestore/ai";
 import type { AnyDatabase, Table } from "@singlestore/client";
 
@@ -18,11 +20,17 @@ export interface ChatSessionsTable {
   columns: Pick<ChatSession, "id" | "createdAt" | "chatId" | "name">;
 }
 
-export class ChatSession<T extends AnyDatabase = AnyDatabase, U extends AnyAI = AnyAI> {
+type ExtractStreamParam<T> = T extends { stream: infer S } ? (S extends boolean | undefined ? S : undefined) : undefined;
+
+export class ChatSession<
+  T extends AnyDatabase = AnyDatabase,
+  U extends AnyAI = AnyAI,
+  K extends AnyChatCompletionTool[] | undefined = undefined,
+> {
   constructor(
     private _database: T,
     private _ai: U,
-    private _tools: AnyChatCompletionTool[] = [],
+    private _tools: K,
     public id: number | undefined,
     public createdAt: string | undefined,
     public chatId: number | undefined,
@@ -55,7 +63,7 @@ export class ChatSession<T extends AnyDatabase = AnyDatabase, U extends AnyAI = 
     const _config: ChatSessionConfig = {
       chatId: config?.chatId ?? undefined,
       name: config?.name ?? createdAt,
-      systemRole: config?.systemRole ?? "You are a helpfull assistant",
+      systemRole: config?.systemRole ?? "",
       store: config?.store ?? true,
       tableName: config?.tableName ?? "chat_sessions",
       messagesTableName: config?.messagesTableName ?? "chat_messages",
@@ -70,7 +78,19 @@ export class ChatSession<T extends AnyDatabase = AnyDatabase, U extends AnyAI = 
       id = rows?.[0].insertId;
     }
 
-    return new ChatSession(database, ai, tools, id, createdAt, chatId, name, systemRole, store, tableName, messagesTableName);
+    return new ChatSession<T, U, K["tools"]>(
+      database,
+      ai,
+      tools,
+      id,
+      createdAt,
+      chatId,
+      name,
+      systemRole,
+      store,
+      tableName,
+      messagesTableName,
+    );
   }
 
   static async delete(
@@ -104,7 +124,7 @@ export class ChatSession<T extends AnyDatabase = AnyDatabase, U extends AnyAI = 
     return ChatSession.delete(this._database, this.tableName, this.messagesTableName, { id: this.id });
   }
 
-  createMessage<K extends ChatMessage["role"], C extends ChatMessage["content"]>(role: K, content: C) {
+  createMessage<V extends ChatMessage["role"], C extends ChatMessage["content"]>(role: V, content: C) {
     return ChatMessage.create(this._database, {
       sessionId: this.id,
       role,
@@ -114,7 +134,7 @@ export class ChatSession<T extends AnyDatabase = AnyDatabase, U extends AnyAI = 
     });
   }
 
-  async selectMessages<K extends Parameters<Table<ChatMessagesTable>["select"]>>(...args: K) {
+  async selectMessages<V extends Parameters<Table<ChatMessagesTable>["select"]>>(...args: V) {
     const rows = await this._database.table<ChatMessagesTable>(this.messagesTableName).select(...args);
 
     return rows.map((row) => {
@@ -136,14 +156,21 @@ export class ChatSession<T extends AnyDatabase = AnyDatabase, U extends AnyAI = 
   }
 
   async createChatCompletion<
-    K extends Exclude<Parameters<U["chatCompletions"]["create"]>[0], undefined> & { loadHistory?: boolean },
+    _TParams extends Parameters<U["chatCompletions"]["create"]>[0],
+    TParams extends Omit<_TParams, "toolCallHandlers" | "toolCallResultHandlers"> &
+      Pick<
+        CreateChatCompletionParams<ExtractStreamParam<TParams>, MergeChatCompletionTools<K, _TParams["tools"]>>,
+        "toolCallHandlers" | "toolCallResultHandlers"
+      > & {
+        loadHistory?: boolean;
+      },
   >({
     prompt = "",
     loadHistory = this.store,
     messages = [],
     tools = [],
     ...params
-  }: K): Promise<CreateChatCompletionResult<K["stream"]>> {
+  }: TParams): Promise<CreateChatCompletionResult<ExtractStreamParam<TParams>>> {
     let historyMessages: ChatCompletionMessage[] = [];
 
     if (loadHistory) {
@@ -157,7 +184,7 @@ export class ChatSession<T extends AnyDatabase = AnyDatabase, U extends AnyAI = 
         ...params,
         prompt,
         messages: [...historyMessages, ...messages],
-        tools: [...this._tools, ...tools],
+        tools: [...(this._tools || []), ...tools],
       }),
     ]);
 
@@ -165,7 +192,7 @@ export class ChatSession<T extends AnyDatabase = AnyDatabase, U extends AnyAI = 
 
     if ("content" in response && typeof response.content === "string") {
       await handleResponseContent(response.content);
-      return response as CreateChatCompletionResult<K["stream"]>;
+      return response as CreateChatCompletionResult<ExtractStreamParam<TParams>>;
     }
 
     return (async function* (): ChatCompletionStream {
@@ -177,6 +204,6 @@ export class ChatSession<T extends AnyDatabase = AnyDatabase, U extends AnyAI = 
       }
 
       await handleResponseContent(content);
-    })() as CreateChatCompletionResult<K["stream"]>;
+    })() as CreateChatCompletionResult<ExtractStreamParam<TParams>>;
   }
 }

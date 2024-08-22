@@ -3,7 +3,6 @@ import type { AnyDatabase, Table } from "@singlestore/client";
 
 import { ChatMessage } from "./message";
 import { ChatSession, type ChatSessionsTable } from "./session";
-import { createChatTools } from "./tools";
 
 export interface ChatConfig
   extends Pick<Chat, "name" | "systemRole" | "store" | "tableName" | "sessionsTableName" | "messagesTableName"> {
@@ -16,11 +15,15 @@ export interface ChatsTable {
 
 export type CreateChatConfig = Partial<ChatConfig>;
 
-export class Chat<T extends AnyDatabase = AnyDatabase, U extends AnyAI = AnyAI> {
+export class Chat<
+  T extends AnyDatabase = AnyDatabase,
+  U extends AnyAI = AnyAI,
+  K extends AnyChatCompletionTool[] | undefined = undefined,
+> {
   constructor(
     private _database: T,
     private _ai: U,
-    private _tools: ChatSession<T>["_tools"] = [],
+    private _tools: K,
     public id: number | undefined,
     public createdAt: string | undefined,
     public name: string,
@@ -29,9 +32,7 @@ export class Chat<T extends AnyDatabase = AnyDatabase, U extends AnyAI = AnyAI> 
     public tableName: string,
     public sessionsTableName: ChatSession<T>["tableName"],
     public messagesTableName: ChatSession<T>["messagesTableName"],
-  ) {
-    this._tools = [...this._tools, ...Object.values(createChatTools(this._database))];
-  }
+  ) {}
 
   private static _createTable<T extends AnyDatabase, U extends Chat["tableName"]>(database: T, name: U) {
     return database.createTable<ChatsTable>({
@@ -54,7 +55,7 @@ export class Chat<T extends AnyDatabase = AnyDatabase, U extends AnyAI = AnyAI> 
 
     const _config: ChatConfig = {
       name: config?.name ?? createdAt,
-      systemRole: config?.systemRole ?? "You are a helpfull assistant",
+      systemRole: config?.systemRole ?? "",
       store: config?.store ?? true,
       tableName: config?.tableName ?? "chats",
       sessionsTableName: config?.sessionsTableName ?? "chat_sessions",
@@ -85,7 +86,7 @@ export class Chat<T extends AnyDatabase = AnyDatabase, U extends AnyAI = AnyAI> 
       id = rows?.[0].insertId;
     }
 
-    return new Chat(
+    return new Chat<T, U, K["tools"]>(
       database,
       ai,
       tools,
@@ -132,7 +133,7 @@ export class Chat<T extends AnyDatabase = AnyDatabase, U extends AnyAI = AnyAI> 
     return Chat.delete(this._database, this.tableName, this.sessionsTableName, this.messagesTableName, { id: this.id });
   }
 
-  createSession<K extends ChatSession["name"]>(name?: K) {
+  createSession<V extends ChatSession["name"]>(name?: V) {
     return ChatSession.create(this._database, this._ai, {
       chatId: this.id,
       name,
@@ -144,7 +145,7 @@ export class Chat<T extends AnyDatabase = AnyDatabase, U extends AnyAI = AnyAI> 
     });
   }
 
-  async selectSessions<K extends Parameters<Table<ChatSessionsTable>["select"]>>(...args: K) {
+  async selectSessions<V extends Parameters<Table<ChatSessionsTable>["select"]>>(...args: V) {
     const rows = await this._database.table<ChatSessionsTable>(this.sessionsTableName).select(...args);
 
     return rows.map(

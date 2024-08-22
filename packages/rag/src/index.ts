@@ -4,6 +4,7 @@ import type { AnyDatabase, Table } from "@singlestore/client";
 import { Chat, type CreateChatConfig, type ChatsTable } from "./chat";
 
 export type * from "./types";
+export * from "./chat/tools";
 
 export interface RAGConfig<T extends AnyDatabase, U extends AnyAI> {
   database: T;
@@ -35,7 +36,7 @@ export class RAG<T extends AnyDatabase = AnyDatabase, U extends AnyAI = AnyAI> {
 
     return rows.map(
       (row) =>
-        new Chat(
+        new Chat<T, U, K["tools"]>(
           this._database,
           this._ai,
           config?.tools || [],
