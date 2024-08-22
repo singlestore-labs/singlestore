@@ -80,7 +80,6 @@ async function main() {
         process.exit(0);
       }
 
-      console.log("Processing your request...");
       const stream = await session.createChatCompletion({
         prompt,
         stream: true,
