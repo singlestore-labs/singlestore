@@ -29,13 +29,15 @@ interface _OpenAICreateChatCompletionParams
 /**
  * Parameters for creating an OpenAI chat completion.
  *
- * @typeParam T - Indicates whether the completion should be streamed (boolean).
- * @typeParam U - An array of tools that can be used during the chat completion.
+ * @typeParam TStream - Indicates whether the completion should be streamed (boolean).
+ * @typeParam TChatCompletionTool - An array of tools that can be used during the chat completion.
  *
  * @property {OpenAIChatCompletionModel} [model] - The model to use for generating the completion.
  */
-export interface OpenAICreateChatCompletionParams<T extends boolean | undefined, U extends AnyChatCompletionTool[] | undefined>
-  extends CreateChatCompletionParams<T, U>,
+export interface OpenAICreateChatCompletionParams<
+  TStream extends boolean | undefined,
+  TChatCompletionTool extends AnyChatCompletionTool[] | undefined,
+> extends CreateChatCompletionParams<TStream, TChatCompletionTool>,
     _OpenAICreateChatCompletionParams {
   model?: OpenAIChatCompletionModel;
 }
@@ -43,9 +45,11 @@ export interface OpenAICreateChatCompletionParams<T extends boolean | undefined,
 /**
  * Class representing chat completions using OpenAI's API, with support for tools and streaming.
  *
- * @typeParam T - An array of tools that can be used during the chat completion.
+ * @typeParam TChatCompletionTool - An array of tools that can be used during the chat completion.
  */
-export class OpenAIChatCompletions<T extends AnyChatCompletionTool[] | undefined> extends ChatCompletions<T> {
+export class OpenAIChatCompletions<
+  TChatCompletionTool extends AnyChatCompletionTool[] | undefined,
+> extends ChatCompletions<TChatCompletionTool> {
   constructor(private _openai: OpenAI) {
     super();
   }
@@ -80,14 +84,17 @@ export class OpenAIChatCompletions<T extends AnyChatCompletionTool[] | undefined
   /**
    * Creates a chat completion using OpenAI's API, with optional support for streaming and tool integration.
    *
-   * @typeParam U - Indicates whether the completion should be streamed (boolean).
-   * @typeParam K - An array of tools that can be used during the chat completion.
+   * @typeParam TStream - Indicates whether the completion should be streamed (boolean).
+   * @typeParam TChatCompletionTool - An array of tools that can be used during the chat completion.
    *
-   * @param {OpenAICreateChatCompletionParams<U, MergeChatCompletionTools<T, K>>} params - Parameters for creating the chat completion, including prompt, system role, messages, tools, and handlers.
+   * @param {OpenAICreateChatCompletionParams<TStream, MergeChatCompletionTools<TChatCompletionTool, TChatCompletionTool>>} params - Parameters for creating the chat completion, including prompt, system role, messages, tools, and handlers.
    *
    * @returns A promise that resolves to either a single chat completion or a stream of chat completions, depending on the `stream` parameter.
    */
-  async create<U extends boolean | undefined = false, K extends AnyChatCompletionTool[] | undefined = undefined>({
+  async create<
+    TStream extends boolean | undefined = false,
+    TChatCompletionTool extends AnyChatCompletionTool[] | undefined = undefined,
+  >({
     prompt,
     systemRole,
     messages,
@@ -95,7 +102,9 @@ export class OpenAIChatCompletions<T extends AnyChatCompletionTool[] | undefined
     toolCallHandlers,
     toolCallResultHandlers,
     ...params
-  }: OpenAICreateChatCompletionParams<U, MergeChatCompletionTools<T, K>>): Promise<CreateChatCompletionResult<U>> {
+  }: OpenAICreateChatCompletionParams<TStream, MergeChatCompletionTools<TChatCompletionTool, TChatCompletionTool>>): Promise<
+    CreateChatCompletionResult<TStream>
+  > {
     let _messages: ChatCompletionMessage[] = [];
     if (systemRole) _messages.push({ role: "system", content: systemRole });
     if (messages?.length) _messages = [..._messages, ...messages];
@@ -197,10 +206,10 @@ export class OpenAIChatCompletions<T extends AnyChatCompletionTool[] | undefined
 
       if (message && "tool_calls" in message && message.tool_calls?.length) {
         const toolCallResults = await handleToolCalls(message.tool_calls);
-        return (await handleToolCallResults(toolCallResults, message)) as CreateChatCompletionResult<U>;
+        return (await handleToolCallResults(toolCallResults, message)) as CreateChatCompletionResult<TStream>;
       }
 
-      return { content: message?.content || "" } as CreateChatCompletionResult<U>;
+      return { content: message?.content || "" } as CreateChatCompletionResult<TStream>;
     }
 
     /**
@@ -243,6 +252,6 @@ export class OpenAIChatCompletions<T extends AnyChatCompletionTool[] | undefined
       }
     }
 
-    return handleStream(response) as CreateChatCompletionResult<U>;
+    return handleStream(response) as CreateChatCompletionResult<TStream>;
   }
 }

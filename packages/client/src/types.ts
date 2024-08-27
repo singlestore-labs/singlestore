@@ -4,7 +4,4 @@ export type * from "./connection";
 export type * from "./database";
 export type * from "./table";
 export type * from "./column";
-export type * from "./query/schema";
 export type * from "./query/builder";
-export type * from "./query/filters/builder";
-export type * from "./query/options/builder";

@@ -1,5 +1,14 @@
 import type { AnyAI, AnyChatCompletionTool } from "@singlestore/ai";
-import type { AnyDatabase, FieldPacket, ResultSetHeader, Table } from "@singlestore/client";
+import type {
+  AnyDatabase,
+  Database,
+  DatabaseType,
+  FieldPacket,
+  InferDatabaseType,
+  QueryBuilderParams,
+  ResultSetHeader,
+  Table,
+} from "@singlestore/client";
 
 import { Chat, type CreateChatConfig, type ChatsTable } from "./chat";
 
@@ -9,31 +18,31 @@ export * from "./chat/tools";
 /**
  * Interface representing the configuration for creating a RAG (Retrieve and Generate) instance.
  *
- * @typeParam T - The type of the database, which extends `AnyDatabase`.
- * @typeParam U - The type of AI functionalities integrated with the RAG instance, which extends `AnyAI`.
+ * @typeParam TDatabase - The type of the database, which extends `AnyDatabase`.
+ * @typeParam TAi - The type of AI functionalities integrated with the RAG instance, which extends `AnyAI`.
  *
- * @property {T} database - The database instance used for storing and retrieving chat data.
- * @property {U} ai - The AI instance used for generating chat completions and other AI-driven tasks.
+ * @property {TDatabase} database - The database instance used for storing and retrieving chat data.
+ * @property {TAi} ai - The AI instance used for generating chat completions and other AI-driven tasks.
  */
-export interface RAGConfig<T extends AnyDatabase, U extends AnyAI> {
-  database: T;
-  ai: U;
+export interface RAGConfig<TDatabase extends AnyDatabase, TAi extends AnyAI> {
+  database: TDatabase;
+  ai: TAi;
 }
 
 /**
  * Class representing a RAG (Retrieve and Generate) system, integrating with a database and AI functionalities to manage and generate chats.
  *
- * @typeParam T - The type of the database, which extends `AnyDatabase`.
- * @typeParam U - The type of AI functionalities integrated with the RAG instance, which extends `AnyAI`.
+ * @typeParam TDatabase - The type of the database, which extends `AnyDatabase`.
+ * @typeParam TAi - The type of AI functionalities integrated with the RAG instance, which extends `AnyAI`.
  *
- * @property {T} _database - The database instance used for storing and retrieving chat data.
- * @property {U} _ai - The AI instance used for generating chat completions and other AI-driven tasks.
+ * @property {TDatabase} _database - The database instance used for storing and retrieving chat data.
+ * @property {TAi} _ai - The AI instance used for generating chat completions and other AI-driven tasks.
  */
-export class RAG<T extends AnyDatabase = AnyDatabase, U extends AnyAI = AnyAI> {
-  private _database: T;
-  private _ai: U;
+export class RAG<TDatabase extends AnyDatabase = AnyDatabase, TAi extends AnyAI = AnyAI> {
+  private _database: TDatabase;
+  private _ai: TAi;
 
-  constructor(config: RAGConfig<T, U>) {
+  constructor(config: RAGConfig<TDatabase, TAi>) {
     this._database = config.database;
     this._ai = config.ai;
   }
@@ -50,36 +59,35 @@ export class RAG<T extends AnyDatabase = AnyDatabase, U extends AnyAI = AnyAI> {
   /**
    * Creates a new chat instance and optionally stores it in the database.
    *
-   * @typeParam K - The configuration object for creating the chat.
+   * @typeParam TConfig - The configuration object for creating the chat.
    *
-   * @param {K} [config] - The configuration object for the chat.
+   * @param {TConfig} [config] - The configuration object for the chat.
    *
-   * @returns {Promise<Chat<T, U, K["tools"]>>} A promise that resolves to the created `Chat` instance.
+   * @returns {Promise<Chat<TDatabase, TAi, TConfig["tools"]>>} A promise that resolves to the created `Chat` instance.
    */
-  createChat<K extends CreateChatConfig>(config?: K): Promise<Chat<T, U, K["tools"]>> {
+  createChat<TConfig extends CreateChatConfig>(config?: TConfig): Promise<Chat<TDatabase, TAi, TConfig["tools"]>> {
     return Chat.create(this._database, this._ai, config);
   }
 
   /**
    * Selects chat instances from the database based on the provided configuration and arguments.
    *
-   * @typeParam K - The configuration object for selecting chats.
-   * @typeParam V - The parameters passed to the `select` method of the `Table` class.
+   * @typeParam TConfig - The configuration object for selecting chats.
+   * @typeParam TSelectArgs - The parameters passed to the `select` method of the `Table` class.
    *
-   * @param {K} [config] - The configuration object for selecting chats.
-   * @param {...V} args - The arguments defining the filters and options for selecting chats.
+   * @param {TConfig} [config] - The configuration object for selecting chats.
+   * @param {...TSelectArgs} selectArgs - The arguments defining the filters and options for selecting chats.
    *
-   * @returns {Promise<Chat<T, U, K["tools"]>[]>} A promise that resolves to an array of `Chat` instances representing the selected chats.
+   * @returns {Promise<Chat<TDatabase, TAi, TConfig["tools"]>[]>} A promise that resolves to an array of `Chat` instances representing the selected chats.
    */
-  async selectChats<
-    K extends { tableName?: string; tools?: AnyChatCompletionTool[] },
-    V extends Parameters<Table<ChatsTable>["select"]>,
-  >(...[config, ...args]: [K?, ...V]): Promise<Chat<T, U, K["tools"]>[]> {
-    const rows = await this._database.table<ChatsTable>(config?.tableName || "chats").select(...args);
-
+  async findChats<TConfig extends { tableName?: string; tools?: AnyChatCompletionTool[] }>(
+    config?: TConfig,
+    findParams?: QueryBuilderParams<ChatsTable, InferDatabaseType<TDatabase>>,
+  ): Promise<Chat<TDatabase, TAi, TConfig["tools"]>[]> {
+    const rows = await this._database.table<ChatsTable>(config?.tableName || "chats").find(findParams);
     return rows.map(
       (row) =>
-        new Chat<T, U, K["tools"]>(
+        new Chat<TDatabase, TAi, TConfig["tools"]>(
           this._database,
           this._ai,
           config?.tools || [],

@@ -49,6 +49,7 @@ export class OpenAIEmbeddings extends Embeddings {
    * @returns {OpenAIEmbeddingModel[]} - An array of model names supported by OpenAI.
    */
   getModels(): OpenAIEmbeddingModel[] {
+    // TODO: Replace with dynamic values
     return ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"];
   }
 
