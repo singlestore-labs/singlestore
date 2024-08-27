@@ -32,15 +32,15 @@ export interface WorkspaceSchema<TWorkspaceType extends WorkspaceType> {
  * Extends `ConnectionConfig` to include optional properties `name` and `ai`.
  *
  * @typeParam TWorkspaceType - The type of the workspace to connect to.
- * @typeParam TAI - The type of AI functionalities integrated with the workspace, which can be undefined.
+ * @typeParam TAi - The type of AI functionalities integrated with the workspace, which can be undefined.
  *
  * @property {string} [name] - The name of the workspace.
- * @property {TAI} [ai] - Optional AI functionalities to associate with the workspace.
+ * @property {TAi} [ai] - Optional AI functionalities to associate with the workspace.
  */
-export interface ConnectWorkspaceConfig<TWorkspaceType extends WorkspaceType, TAI extends AnyAI | undefined>
+export interface ConnectWorkspaceConfig<TWorkspaceType extends WorkspaceType, TAi extends AnyAI | undefined>
   extends ConnectionConfig {
   name?: WorkspaceSchema<TWorkspaceType>["name"];
-  ai?: TAI;
+  ai?: TAi;
 }
 
 /**
@@ -54,36 +54,36 @@ export type WorkspaceDatabaseName<TWorkspaceType extends WorkspaceType> = Extrac
  * Class representing a workspace in SingleStore, providing methods to manage its databases and perform operations.
  *
  * @typeParam TWorkspaceType - The type of the workspace, which extends `WorkspaceType`.
- * @typeParam TAI - The type of AI functionalities integrated with the workspace, which can be undefined.
+ * @typeParam TAi - The type of AI functionalities integrated with the workspace, which can be undefined.
  *
  * @property {Connection} connection - The connection to the workspace.
  * @property {string} [name] - The name of the workspace.
- * @property {TAI} [ai] - Optional AI functionalities associated with the workspace.
+ * @property {TAi} [ai] - Optional AI functionalities associated with the workspace.
  */
-export class Workspace<TWorkspaceType extends WorkspaceType = WorkspaceType, TAI extends AnyAI | undefined = undefined> {
+export class Workspace<TWorkspaceType extends WorkspaceType = WorkspaceType, TAi extends AnyAI | undefined = undefined> {
   constructor(
     public connection: Connection,
     public name?: string,
-    private _ai?: TAI,
+    private _ai?: TAi,
   ) {}
 
   /**
    * Connects to a workspace in SingleStore, establishing a connection and associating AI functionalities if provided.
    *
    * @typeParam TWorkspaceType - The type of the workspace to connect to.
-   * @typeParam TAI - The type of AI functionalities associated with the workspace, which can be undefined.
+   * @typeParam TAi - The type of AI functionalities associated with the workspace, which can be undefined.
    *
-   * @param {ConnectWorkspaceConfig<TWorkspaceType, TAI>} config - The configuration object for connecting to the workspace.
+   * @param {ConnectWorkspaceConfig<TWorkspaceType, TAi>} config - The configuration object for connecting to the workspace.
    *
-   * @returns {Workspace<TWorkspaceType, TAI>} A `Workspace` instance representing the connected workspace.
+   * @returns {Workspace<TWorkspaceType, TAi>} A `Workspace` instance representing the connected workspace.
    */
-  static connect<TWorkspaceType extends WorkspaceType = WorkspaceType, TAI extends AnyAI | undefined = undefined>({
+  static connect<TWorkspaceType extends WorkspaceType = WorkspaceType, TAi extends AnyAI | undefined = undefined>({
     ai,
     name,
     ...config
-  }: ConnectWorkspaceConfig<TWorkspaceType, TAI>): Workspace<TWorkspaceType, TAI> {
+  }: ConnectWorkspaceConfig<TWorkspaceType, TAi>): Workspace<TWorkspaceType, TAi> {
     const connection = new Connection(config);
-    return new Workspace<TWorkspaceType, TAI>(connection, name, ai);
+    return new Workspace<TWorkspaceType, TAi>(connection, name, ai);
   }
 
   /**
@@ -94,7 +94,7 @@ export class Workspace<TWorkspaceType extends WorkspaceType = WorkspaceType, TAI
    *
    * @param {TName} name - The name of the database to retrieve.
    *
-   * @returns {Database<TType extends DatabaseType ? TType : TWorkspaceType["databases"][TName] extends DatabaseType ? TWorkspaceType["databases"][TName] : DatabaseType, TAI>} A `Database` instance representing the specified database.
+   * @returns {Database<TType extends DatabaseType ? TType : TWorkspaceType["databases"][TName] extends DatabaseType ? TWorkspaceType["databases"][TName] : DatabaseType, TAi>} A `Database` instance representing the specified database.
    */
   database<
     TType,
@@ -107,7 +107,7 @@ export class Workspace<TWorkspaceType extends WorkspaceType = WorkspaceType, TAI
       : TWorkspaceType["databases"][TName] extends DatabaseType
         ? TWorkspaceType["databases"][TName]
         : DatabaseType,
-    TAI
+    TAi
   > {
     return new Database<
       TType extends DatabaseType
@@ -115,7 +115,7 @@ export class Workspace<TWorkspaceType extends WorkspaceType = WorkspaceType, TAI
         : TWorkspaceType["databases"][TName] extends DatabaseType
           ? TWorkspaceType["databases"][TName]
           : DatabaseType,
-      TAI
+      TAi
     >(this.connection, name, this.name, this._ai);
   }
 
@@ -126,10 +126,10 @@ export class Workspace<TWorkspaceType extends WorkspaceType = WorkspaceType, TAI
    *
    * @param {DatabaseSchema<TType>} schema - The schema defining the structure of the database.
    *
-   * @returns {Promise<Database<TType, TAI>>} A promise that resolves to the created `Database` instance.
+   * @returns {Promise<Database<TType, TAi>>} A promise that resolves to the created `Database` instance.
    */
-  createDatabase<TType extends DatabaseType = DatabaseType>(schema: DatabaseSchema<TType>): Promise<Database<TType, TAI>> {
-    return Database.create<TType, TAI>(this.connection, schema, this.name, this._ai);
+  createDatabase<TType extends DatabaseType = DatabaseType>(schema: DatabaseSchema<TType>): Promise<Database<TType, TAi>> {
+    return Database.create<TType, TAi>(this.connection, schema, this.name, this._ai);
   }
 
   /**

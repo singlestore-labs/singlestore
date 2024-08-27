@@ -23,7 +23,7 @@ export interface DatabaseType {
  */
 export interface DatabaseSchema<TType extends DatabaseType> {
   name: string;
-  tables?: { [K in keyof TType["tables"]]: Omit<TableSchema<any, TType["tables"][K]>, "name"> };
+  tables?: { [K in keyof TType["tables"]]: Omit<TableSchema<TType["tables"][K]>, "name"> };
 }
 
 /**
@@ -97,23 +97,25 @@ export type AnyDatabase = Database<any, AnyAI | undefined>;
  */
 export type DatabaseTableName<TType extends DatabaseType> = Extract<keyof TType["tables"], string>;
 
+export type InferDatabaseType<T> = T extends Database<infer U, any> ? U : never;
+
 /**
  * Class representing a database and providing methods to manage its tables and query data.
  *
  * @typeParam TDatabaseType - The type of the database, which extends `DatabaseType`.
- * @typeParam TAI - The type of AI functionalities integrated with the database, which can be undefined.
+ * @typeParam TAi - The type of AI functionalities integrated with the database, which can be undefined.
  *
  * @property {Connection} _connection - The connection to the database.
  * @property {string} name - The name of the database.
  * @property {string} [workspaceName] - The name of the workspace the database is associated with.
- * @property {TAI} [ai] - Optional AI functionalities associated with the database.
+ * @property {TAi} [ai] - Optional AI functionalities associated with the database.
  */
-export class Database<TDatabaseType extends DatabaseType = DatabaseType, TAI extends AnyAI | undefined = undefined> {
+export class Database<TDatabaseType extends DatabaseType = DatabaseType, TAi extends AnyAI | undefined = undefined> {
   constructor(
     private _connection: Connection,
     public name: string,
     public workspaceName?: string,
-    private _ai?: TAI,
+    private _ai?: TAi,
   ) {}
 
   /**
@@ -159,21 +161,21 @@ export class Database<TDatabaseType extends DatabaseType = DatabaseType, TAI ext
    * Creates a new database with the specified schema and initializes its tables.
    *
    * @typeParam TType - The type of the database to create.
-   * @typeParam TAI - The type of AI functionalities associated with the database, which can be undefined.
+   * @typeParam TAi - The type of AI functionalities associated with the database, which can be undefined.
    *
    * @param {Connection} connection - The connection to the database.
    * @param {DatabaseSchema<TType>} schema - The schema defining the structure of the database.
    * @param {string} [workspaceName] - The name of the workspace the database is associated with.
-   * @param {TAI} [ai] - Optional AI functionalities to associate with the database.
+   * @param {TAi} [ai] - Optional AI functionalities to associate with the database.
    *
-   * @returns {Promise<Database<TType, TAI>>} A promise that resolves to the created `Database` instance.
+   * @returns {Promise<Database<TType, TAi>>} A promise that resolves to the created `Database` instance.
    */
-  static async create<TType extends DatabaseType = DatabaseType, TAI extends AnyAI | undefined = undefined>(
+  static async create<TType extends DatabaseType = DatabaseType, TAi extends AnyAI | undefined = undefined>(
     connection: Connection,
     schema: DatabaseSchema<TType>,
     workspaceName?: string,
-    ai?: TAI,
-  ): Promise<Database<TType, TAI>> {
+    ai?: TAi,
+  ): Promise<Database<TType, TAi>> {
     const clauses: string[] = [`CREATE DATABASE IF NOT EXISTS ${schema.name}`];
     if (workspaceName) clauses.push(`ON WORKSPACE \`${workspaceName}\``);
     await connection.client.execute<ResultSetHeader>(clauses.join(" "));
@@ -186,7 +188,7 @@ export class Database<TDatabaseType extends DatabaseType = DatabaseType, TAI ext
       );
     }
 
-    return new Database<TType, TAI>(connection, schema.name, workspaceName, ai);
+    return new Database<TType, TAi>(connection, schema.name, workspaceName, ai);
   }
 
   /**
@@ -253,7 +255,7 @@ export class Database<TDatabaseType extends DatabaseType = DatabaseType, TAI ext
    *
    * @param {TName} name - The name of the table to retrieve.
    *
-   * @returns {Table<TDatabaseType, TName, TType extends TableType ? TType : TDatabaseType["tables"][TName] extends TableType ? TDatabaseType["tables"][TName] : TableType, TAI>} A `Table` instance representing the specified table.
+   * @returns {Table<TType extends TableType ? TType : TDatabaseType["tables"][TName] extends TableType ? TDatabaseType["tables"][TName] : TableType, TDatabaseType, TAi>} A `Table` instance representing the specified table.
    */
   table<
     TType,
@@ -261,24 +263,22 @@ export class Database<TDatabaseType extends DatabaseType = DatabaseType, TAI ext
   >(
     name: TName,
   ): Table<
-    TDatabaseType,
-    TName,
     TType extends TableType
       ? TType
       : TDatabaseType["tables"][TName] extends TableType
         ? TDatabaseType["tables"][TName]
         : TableType,
-    TAI
+    TDatabaseType,
+    TAi
   > {
     return new Table<
-      TDatabaseType,
-      TName,
       TType extends TableType
         ? TType
         : TDatabaseType["tables"][TName] extends TableType
           ? TDatabaseType["tables"][TName]
           : TableType,
-      TAI
+      TDatabaseType,
+      TAi
     >(this._connection, this.name, name, this._ai);
   }
 
@@ -301,17 +301,14 @@ export class Database<TDatabaseType extends DatabaseType = DatabaseType, TAI ext
   /**
    * Creates a new table in the database with the specified schema.
    *
-   * @typeParam TName - The name of the table to create.
    * @typeParam TType - The type of the table to create.
    *
    * @param {TableSchema<TType>} schema - The schema defining the structure of the table.
    *
-   * @returns {Promise<Table<TDatabaseType, TName, TType, TAI>>} A promise that resolves to the created `Table` instance.
+   * @returns {Promise<Table<TType, TDatabaseType, TAi>>} A promise that resolves to the created `Table` instance.
    */
-  createTable<TName extends string = string, TType extends TableType = TableType>(
-    schema: TableSchema<TName, TType>,
-  ): Promise<Table<TDatabaseType, TName, TType, TAI>> {
-    return Table.create<TDatabaseType, TName, TType, TAI>(this._connection, this.name, schema, this._ai);
+  createTable<TType extends TableType = TableType>(schema: TableSchema<TType>): Promise<Table<TType, TDatabaseType, TAi>> {
+    return Table.create<TType, TDatabaseType, TAi>(this._connection, this.name, schema, this._ai);
   }
 
   /**

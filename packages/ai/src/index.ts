@@ -12,20 +12,24 @@ export { Embeddings, ChatCompletions, ChatCompletionTool };
 /**
  * Configuration object for initializing the `AI` class.
  *
- * @typeParam T - The type of `Embeddings` to be used, defaulting to `OpenAIEmbeddings`.
- * @typeParam U - An array of tools that can be used during chat completions, or undefined.
- * @typeParam K - The type of `ChatCompletions` to be used, defaulting to `OpenAIChatCompletions`.
+ * @typeParam TEmbeddings - The type of `Embeddings` to be used, defaulting to `OpenAIEmbeddings`.
+ * @typeParam TChatCompletionTool - An array of tools that can be used during chat completions, or undefined.
+ * @typeParam TChatCompletion - The type of `ChatCompletions` to be used, defaulting to `OpenAIChatCompletions`.
  *
  * @property {string} [openAIApiKey] - The API key for authenticating with the OpenAI API.
- * @property {T} [embeddings] - An instance of `Embeddings` used for generating embeddings. Defaults to `OpenAIEmbeddings`.
- * @property {K} [chatCompletions] - An instance of `ChatCompletions` used for generating chat completions. Defaults to `OpenAIChatCompletions`.
- * @property {U} [chatCompletionTools] - An optional array of tools that can be used during chat completions.
+ * @property {TEmbeddings} [embeddings] - An instance of `Embeddings` used for generating embeddings. Defaults to `OpenAIEmbeddings`.
+ * @property {TChatCompletion} [chatCompletions] - An instance of `ChatCompletions` used for generating chat completions. Defaults to `OpenAIChatCompletions`.
+ * @property {TChatCompletionTool} [chatCompletionTools] - An optional array of tools that can be used during chat completions.
  */
-export interface AIConfig<T extends Embeddings, U extends AnyChatCompletionTool[] | undefined, K extends ChatCompletions<U>> {
+export interface AIConfig<
+  TEmbeddings extends Embeddings,
+  TChatCompletionTool extends AnyChatCompletionTool[] | undefined,
+  TChatCompletion extends ChatCompletions<TChatCompletionTool>,
+> {
   openAIApiKey?: string;
-  embeddings?: T;
-  chatCompletions?: K;
-  chatCompletionTools?: U;
+  embeddings?: TEmbeddings;
+  chatCompletions?: TChatCompletion;
+  chatCompletionTools?: TChatCompletionTool;
 }
 
 /**
@@ -37,36 +41,32 @@ export type AnyAI = AI<Embeddings, AnyChatCompletionTool[] | undefined, ChatComp
 /**
  * Main class for handling AI operations, including embeddings and chat completions.
  *
- * @typeParam T - The type of `Embeddings` to be used, defaulting to `OpenAIEmbeddings`.
- * @typeParam U - An array of tools that can be used during chat completions, or undefined.
- * @typeParam K - The type of `ChatCompletions` to be used, defaulting to `OpenAIChatCompletions`.
+ * @typeParam TEmbeddings - The type of `Embeddings` to be used, defaulting to `OpenAIEmbeddings`.
+ * @typeParam TChatCompletionTool - An array of tools that can be used during chat completions, or undefined.
+ * @typeParam TChatCompletions - The type of `ChatCompletions` to be used, defaulting to `OpenAIChatCompletions`.
  *
- * @property {T} embeddings - An instance of `Embeddings` used for generating embeddings.
- * @property {K} chatCompletions - An instance of `ChatCompletions` used for generating chat completions.
+ * @property {TEmbeddings} embeddings - An instance of `Embeddings` used for generating embeddings.
+ * @property {TChatCompletions} chatCompletions - An instance of `ChatCompletions` used for generating chat completions.
  */
 export class AI<
-  T extends Embeddings = OpenAIEmbeddings,
-  U extends AnyChatCompletionTool[] | undefined = undefined,
-  K extends ChatCompletions<any> = OpenAIChatCompletions<U>,
+  TEmbeddings extends Embeddings = OpenAIEmbeddings,
+  TChatCompletionTool extends AnyChatCompletionTool[] | undefined = undefined,
+  TChatCompletions extends ChatCompletions<any> = OpenAIChatCompletions<TChatCompletionTool>,
 > {
-  embeddings: T;
-  chatCompletions: K;
+  embeddings: TEmbeddings;
+  chatCompletions: TChatCompletions;
 
   /**
    * Constructs a new `AI` instance.
    *
-   * @param {AIConfig<T, U, K>} config - The configuration object for initializing the `AI` instance.
+   * @param {AIConfig<TEmbeddings, TChatCompletionTool, TChatCompletions>} config - The configuration object for initializing the `AI` instance.
    */
-  constructor(config: AIConfig<T, U, K>) {
+  constructor(config: AIConfig<TEmbeddings, TChatCompletionTool, TChatCompletions>) {
     const openai = new OpenAI({ apiKey: config.openAIApiKey });
 
-    // Initialize embeddings, defaulting to OpenAIEmbeddings if not provided
-    this.embeddings = (config.embeddings ?? new OpenAIEmbeddings(openai)) as T;
+    this.embeddings = (config.embeddings ?? new OpenAIEmbeddings(openai)) as TEmbeddings;
+    this.chatCompletions = (config.chatCompletions ?? new OpenAIChatCompletions(openai)) as TChatCompletions;
 
-    // Initialize chat completions, defaulting to OpenAIChatCompletions if not provided
-    this.chatCompletions = (config.chatCompletions ?? new OpenAIChatCompletions(openai)) as K;
-
-    // If tools are provided, initialize them within the chat completions instance
     if (config.chatCompletionTools?.length) {
       this.chatCompletions.initTools(config.chatCompletionTools);
     }

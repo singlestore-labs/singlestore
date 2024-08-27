@@ -101,29 +101,19 @@ async function main() {
     await Promise.all([db.table("users").insert(dataset.users), db.table("products").insert(dataset.products)]);
     console.log("Dataset inserted.");
 
-    console.log('Selecting user with name "Alice"...');
-    console.log(await db.table("users").select({ name: "Alice" }));
+    console.log('Finding user with name "Alice"...');
+    console.log(await db.table("users").find({ where: { name: "Alice" } }));
 
-    console.log("Selecting products priced under 300...");
+    console.log("Finding products priced under 300...");
     console.log(
-      await db.table("products").select({ price: { lte: 300 } }, { columns: ["id", "name", "description", "price"] }),
+      await db.table("products").find({ select: ["id", "name", "description", "price"], where: { price: { lte: 300 } } }),
     );
 
-    console.log('Selecting products with name "Smartphone" priced at 800...');
+    console.log('Finding products with name "Smartphone" priced at 800...');
     console.log(
       await db
         .table("products")
-        .select({ name: "Smartphone", price: { lte: 800 } }, { columns: ["id", "name", "description", "price"] }),
-    );
-
-    console.log('Selecting products named "Smartphone" or "Laptop" priced above 500...');
-    console.log(
-      await db
-        .table("products")
-        .select(
-          { and: [{ or: [{ name: "Smartphone" }, { name: "Laptop" }] }, { price: { gt: 500 } }] },
-          { columns: ["id", "name", "description", "price"] },
-        ),
+        .find({ select: ["id", "name", "description", "price"], where: { name: "Smartphone", price: { lte: 800 } } }),
     );
 
     console.log("Executing custom query to select all users...");
@@ -184,7 +174,7 @@ async function main() {
     console.log(
       await db
         .table("products")
-        .vectorSearch({ prompt: prompt_19_1, vectorColumn: "description_v" }, { columns: ["name", "description"], limit: 1 }),
+        .vectorSearch({ prompt: prompt_19_1, vectorColumn: "description_v" }, { select: ["name", "description"], limit: 1 }),
     );
 
     const prompt_19_2 = "What monitor do I have in my store?";
@@ -194,7 +184,7 @@ async function main() {
         .table("products")
         .createChatCompletion(
           { prompt: prompt_19_2, vectorColumn: "description_v" },
-          { columns: ["name", "description", "price"], limit: 1 },
+          { select: ["name", "description", "price"], limit: 1 },
         ),
     );
 

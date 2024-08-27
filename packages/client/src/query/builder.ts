@@ -1,6 +1,7 @@
 import { escape } from "mysql2";
 
 import type { DatabaseType } from "../database";
+import type { TableType } from "../table";
 
 export type SelectClause<TColumn> = (keyof TColumn | (string & {}))[];
 
@@ -40,11 +41,11 @@ export type OrderByClause<TColumn> = {
   [K in keyof TColumn]?: OrderByDirection;
 };
 
-export interface QueryBuilderParams<TDatabaseType extends DatabaseType["tables"], TTableName extends keyof TDatabaseType> {
-  select?: SelectClause<TDatabaseType[TTableName]["columns"]>;
-  where?: WhereClause<TDatabaseType[TTableName]["columns"]>;
-  groupBy?: GroupByClause<TDatabaseType[TTableName]["columns"]>;
-  orderBy?: OrderByClause<TDatabaseType[TTableName]["columns"]>;
+export interface QueryBuilderParams<TTableType extends TableType, TDatabaseType extends DatabaseType = DatabaseType> {
+  select?: SelectClause<TTableType["columns"]>;
+  where?: WhereClause<TTableType["columns"]>;
+  groupBy?: GroupByClause<TTableType["columns"]>;
+  orderBy?: OrderByClause<TTableType["columns"]>;
   limit?: number;
   offset?: number;
 }
@@ -56,10 +57,10 @@ export type ExtractQuerySelectedColumn<TColumn, TParams extends QueryBuilderPara
       : TColumn
     : TColumn;
 
-export class QueryBuilder<TDatabaseType extends DatabaseType["tables"], TTableName extends keyof TDatabaseType> {
+export class QueryBuilder<TTableType extends TableType, TDatabaseType extends DatabaseType = DatabaseType> {
   constructor(
     private _databaseName: string,
-    private _tableName: TTableName,
+    private _tableName: string,
   ) {}
 
   buildSelectClause(select?: SelectClause<any>) {
@@ -144,7 +145,7 @@ export class QueryBuilder<TDatabaseType extends DatabaseType["tables"], TTableNa
     return typeof offset === "number" ? `OFFSET ${offset}` : "";
   }
 
-  buildClauses<T extends QueryBuilderParams<TDatabaseType, TTableName>>(params?: T) {
+  buildClauses(params?: QueryBuilderParams<TTableType, TDatabaseType>) {
     return {
       select: this.buildSelectClause(params?.select),
       from: this.buildFromClause(),
@@ -156,7 +157,7 @@ export class QueryBuilder<TDatabaseType extends DatabaseType["tables"], TTableNa
     };
   }
 
-  buildQuery(params?: QueryBuilderParams<TDatabaseType, TTableName>) {
+  buildQuery(params?: QueryBuilderParams<TTableType, TDatabaseType>) {
     return Object.values(this.buildClauses(params)).join(" ");
   }
 }

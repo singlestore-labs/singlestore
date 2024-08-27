@@ -36,40 +36,43 @@ export interface ChatCompletionMessage {
 /**
  * Parameters for creating a chat completion.
  *
- * @typeParam T - Indicates whether the completion should be streamed (boolean).
- * @typeParam U - An array of tools that can be used during the chat completion.
+ * @typeParam TStream - Indicates whether the completion should be streamed (boolean).
+ * @typeParam TChatCompletionTool - An array of tools that can be used during the chat completion.
  *
  * @property {string} [prompt] - The initial prompt to generate the chat completion.
  * @property {string} [model] - The model to use for generating the completion.
  * @property {string} [systemRole] - The role of the system in the conversation.
- * @property {T} [stream] - Whether the completion should be streamed.
+ * @property {TStream} [stream] - Whether the completion should be streamed.
  * @property {ChatCompletionMessage[]} [messages] - An array of previous messages in the conversation.
- * @property {U} [tools] - An array of tools that can be used during the completion.
+ * @property {TChatCompletionTool} [tools] - An array of tools that can be used during the completion.
  *
  * @property {Record<string, (tool: AnyChatCompletionTool, params: any) => Promise<void>>} [toolCallHandlers] - Optional handlers for when a tool is called during the completion.
  *
  * @property {Record<string, (tool: AnyChatCompletionTool, result: any, params: any) => Promise<void>>} [toolCallResultHandlers] - Optional handlers for when a tool returns a result during the completion.
  */
-export interface CreateChatCompletionParams<T extends boolean | undefined, U extends AnyChatCompletionTool[] | undefined> {
+export interface CreateChatCompletionParams<
+  TStream extends boolean | undefined,
+  TChatCompletionTool extends AnyChatCompletionTool[] | undefined,
+> {
   prompt?: string;
   model?: string;
   systemRole?: string;
-  stream?: T;
+  stream?: TStream;
   messages?: ChatCompletionMessage[];
-  tools?: U;
+  tools?: TChatCompletionTool;
 
-  toolCallHandlers?: U extends AnyChatCompletionTool[]
+  toolCallHandlers?: TChatCompletionTool extends AnyChatCompletionTool[]
     ? {
-        [K in U[number] as K["name"]]?: (
+        [K in TChatCompletionTool[number] as K["name"]]?: (
           tool: K,
           params: K["params"] extends z.AnyZodObject ? z.infer<K["params"]> : undefined,
         ) => Promise<void>;
       }
     : undefined;
 
-  toolCallResultHandlers?: U extends AnyChatCompletionTool[]
+  toolCallResultHandlers?: TChatCompletionTool extends AnyChatCompletionTool[]
     ? {
-        [K in U[number] as K["name"]]?: (
+        [K in TChatCompletionTool[number] as K["name"]]?: (
           tool: K,
           result: Awaited<ReturnType<K["call"]>>,
           params: K["params"] extends z.AnyZodObject ? z.infer<K["params"]> : undefined,
@@ -81,29 +84,31 @@ export interface CreateChatCompletionParams<T extends boolean | undefined, U ext
 /**
  * The result of creating a chat completion.
  *
- * @typeParam T - Indicates whether the result is a stream or a single completion.
+ * @typeParam TStream - Indicates whether the result is a stream or a single completion.
  *
  * @returns If T is true, returns a `ChatCompletionStream`, otherwise returns a single `ChatCompletion`.
  */
-export type CreateChatCompletionResult<T extends boolean | undefined> = T extends true ? ChatCompletionStream : ChatCompletion;
+export type CreateChatCompletionResult<TStream extends boolean | undefined> = TStream extends true
+  ? ChatCompletionStream
+  : ChatCompletion;
 
 /**
  * Abstract class representing a chat completions generator, capable of handling various tools.
  *
- * @typeParam T - An array of tools that can be used during the chat completion.
+ * @typeParam TChatCompletionTool - An array of tools that can be used during the chat completion.
  */
-export abstract class ChatCompletions<T extends AnyChatCompletionTool[] | undefined> {
+export abstract class ChatCompletions<TChatCompletionTool extends AnyChatCompletionTool[] | undefined> {
   /**
    * The tools that can be used during chat completion. Initialized to undefined.
    */
-  tools = undefined as T;
+  tools = undefined as TChatCompletionTool;
 
   /**
    * Initializes the tools to be used in chat completion.
    *
    * @param tools - An array of tools to be used in the chat completion.
    */
-  initTools(tools: T) {
+  initTools(tools: TChatCompletionTool) {
     this.tools = tools;
   }
 

@@ -26,9 +26,9 @@ export interface ChatMessagesTable {
 /**
  * Class representing a chat message, providing methods to manage chat messages in the database.
  *
- * @typeParam T - The type of the database, which extends `AnyDatabase`.
+ * @typeParam TDatabase - The type of the database, which extends `AnyDatabase`.
  *
- * @property {T} _database - The database instance where the chat message is stored.
+ * @property {TDatabase} _database - The database instance where the chat message is stored.
  * @property {number | undefined} id - The unique identifier of the chat message.
  * @property {string | undefined} createdAt - The timestamp when the chat message was created.
  * @property {number | undefined} sessionId - The session ID associated with the chat message.
@@ -37,9 +37,9 @@ export interface ChatMessagesTable {
  * @property {boolean} store - Whether the message is stored in the database.
  * @property {string} tableName - The name of the table where the message is stored.
  */
-export class ChatMessage<T extends AnyDatabase = AnyDatabase> {
+export class ChatMessage<TDatabase extends AnyDatabase = AnyDatabase> {
   constructor(
-    private _database: T,
+    private _database: TDatabase,
     public id: number | undefined,
     public createdAt: string | undefined,
     public sessionId: number | undefined,
@@ -52,17 +52,17 @@ export class ChatMessage<T extends AnyDatabase = AnyDatabase> {
   /**
    * Creates a table to store chat messages.
    *
-   * @typeParam T - The type of the database.
-   * @typeParam U - The name of the table to be created.
+   * @typeParam TDatabase - The type of the database.
+   * @typeParam TName - The name of the table to be created.
    *
-   * @param {T} database - The database instance where the table will be created.
-   * @param {U} name - The name of the table.
+   * @param {TDatabase} database - The database instance where the table will be created.
+   * @param {TName} name - The name of the table.
    *
    * @returns {Promise<Table<ChatMessagesTable>>} A promise that resolves to the created table instance.
    */
-  static createTable<T extends AnyDatabase, U extends ChatMessage["tableName"]>(
-    database: T,
-    name: U,
+  static createTable<TDatabase extends AnyDatabase, TName extends ChatMessage["tableName"]>(
+    database: TDatabase,
+    name: TName,
   ): Promise<Table<ChatMessagesTable>> {
     return database.createTable<ChatMessagesTable>({
       name,
@@ -79,15 +79,18 @@ export class ChatMessage<T extends AnyDatabase = AnyDatabase> {
   /**
    * Creates a new chat message instance and optionally stores it in the database.
    *
-   * @typeParam T - The type of the database.
-   * @typeParam U - The configuration object for the chat message.
+   * @typeParam TDatabase - The type of the database.
+   * @typeParam TConfig - The configuration object for the chat message.
    *
-   * @param {T} database - The database instance where the message may be stored.
-   * @param {U} config - The configuration object for the chat message.
+   * @param {TDatabase} database - The database instance where the message may be stored.
+   * @param {TConfig} config - The configuration object for the chat message.
    *
-   * @returns {Promise<ChatMessage<T>>} A promise that resolves to the created `ChatMessage` instance.
+   * @returns {Promise<ChatMessage<TDatabase>>} A promise that resolves to the created `ChatMessage` instance.
    */
-  static async create<T extends AnyDatabase, U extends ChatMessageConfig>(database: T, config: U): Promise<ChatMessage<T>> {
+  static async create<TDatabase extends AnyDatabase, TConfig extends ChatMessageConfig>(
+    database: TDatabase,
+    config: TConfig,
+  ): Promise<ChatMessage<TDatabase>> {
     const { sessionId, role, content, store, tableName } = config;
     const createdAt: ChatMessage["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 23);
     let id: ChatMessage["id"];
@@ -101,20 +104,20 @@ export class ChatMessage<T extends AnyDatabase = AnyDatabase> {
   }
 
   /**
-   * Deletes chat messages from the specified table based on the provided filters.
+   * Deletes chat messages from the specified table based on the provided where clauses.
    *
    * @param {AnyDatabase} database - The database instance where the messages are stored.
    * @param {ChatMessage["tableName"]} tableName - The name of the table where the messages are stored.
-   * @param {Parameters<Table<ChatMessagesTable>["delete"]>[0]} [filters] - The filters to apply to the delete operation.
+   * @param {Parameters<Table<ChatMessagesTable>["delete"]>[0]} [where] - The where clauses to apply to the delete operation.
    *
    * @returns {Promise<[ResultSetHeader, FieldPacket[]]>} A promise that resolves when the delete operation is complete.
    */
   static delete(
     database: AnyDatabase,
     tableName: ChatMessage["tableName"],
-    filters?: Parameters<Table<ChatMessagesTable>["delete"]>[0],
+    where?: Parameters<Table<ChatMessagesTable>["delete"]>[0],
   ): Promise<[ResultSetHeader, FieldPacket[]]> {
-    return database.table<ChatMessagesTable>(tableName).delete(filters);
+    return database.table<ChatMessagesTable>(tableName).delete(where);
   }
 
   /**

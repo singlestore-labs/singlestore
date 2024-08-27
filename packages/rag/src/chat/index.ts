@@ -1,5 +1,5 @@
 import type { AnyAI, AnyChatCompletionTool } from "@singlestore/ai";
-import type { AnyDatabase, FieldPacket, ResultSetHeader, Table } from "@singlestore/client";
+import type { AnyDatabase, FieldPacket, InferDatabaseType, ResultSetHeader, Table } from "@singlestore/client";
 
 import { ChatMessage } from "./message";
 import { ChatSession, type ChatSessionsTable } from "./session";
@@ -40,13 +40,13 @@ export type CreateChatConfig = Partial<ChatConfig>;
 /**
  * Class representing a chat, providing methods to manage the chat, its sessions, and messages in the database.
  *
- * @typeParam T - The type of the database, which extends `AnyDatabase`.
- * @typeParam U - The type of AI functionalities integrated with the chat, which extends `AnyAI`.
- * @typeParam K - The type of tools available in the chat, which can be `undefined`.
+ * @typeParam TDatabase - The type of the database, which extends `AnyDatabase`.
+ * @typeParam TAi - The type of AI functionalities integrated with the chat, which extends `AnyAI`.
+ * @typeParam TChatCompletionTool - The type of tools available in the chat, which can be `undefined`.
  *
- * @property {T} _database - The database instance where the chat and its sessions are stored.
- * @property {U} _ai - The AI instance used in the chat.
- * @property {K} _tools - The tools available in the chat.
+ * @property {TDatabase} _database - The database instance where the chat and its sessions are stored.
+ * @property {TAi} _ai - The AI instance used in the chat.
+ * @property {TChatCompletionTool} _tools - The tools available in the chat.
  * @property {number | undefined} id - The unique identifier of the chat.
  * @property {string | undefined} createdAt - The timestamp when the chat was created.
  * @property {string} name - The name of the chat.
@@ -57,38 +57,38 @@ export type CreateChatConfig = Partial<ChatConfig>;
  * @property {string} messagesTableName - The name of the table where the session's messages are stored.
  */
 export class Chat<
-  T extends AnyDatabase = AnyDatabase,
-  U extends AnyAI = AnyAI,
-  K extends AnyChatCompletionTool[] | undefined = undefined,
+  TDatabase extends AnyDatabase = AnyDatabase,
+  TAi extends AnyAI = AnyAI,
+  TChatCompletionTool extends AnyChatCompletionTool[] | undefined = undefined,
 > {
   constructor(
-    private _database: T,
-    private _ai: U,
-    private _tools: K,
+    private _database: TDatabase,
+    private _ai: TAi,
+    private _tools: TChatCompletionTool,
     public id: number | undefined,
     public createdAt: string | undefined,
     public name: string,
-    public systemRole: ChatSession<T>["systemRole"],
-    public store: ChatSession<T>["store"],
+    public systemRole: ChatSession<TDatabase>["systemRole"],
+    public store: ChatSession<TDatabase>["store"],
     public tableName: string,
-    public sessionsTableName: ChatSession<T>["tableName"],
-    public messagesTableName: ChatSession<T>["messagesTableName"],
+    public sessionsTableName: ChatSession<TDatabase>["tableName"],
+    public messagesTableName: ChatSession<TDatabase>["messagesTableName"],
   ) {}
 
   /**
    * Creates a table to store chats.
    *
-   * @typeParam T - The type of the database.
-   * @typeParam U - The name of the table to be created.
+   * @typeParam TDatabase - The type of the database.
+   * @typeParam TName - The name of the table to be created.
    *
-   * @param {T} database - The database instance where the table will be created.
-   * @param {U} name - The name of the table.
+   * @param {TDatabase} database - The database instance where the table will be created.
+   * @param {TName} name - The name of the table.
    *
    * @returns {Promise<Table<ChatsTable>>} A promise that resolves to the created table instance.
    */
-  private static _createTable<T extends AnyDatabase, U extends Chat["tableName"]>(
-    database: T,
-    name: U,
+  private static _createTable<TDatabase extends AnyDatabase, TName extends Chat["tableName"]>(
+    database: TDatabase,
+    name: TName,
   ): Promise<Table<ChatsTable>> {
     return database.createTable<ChatsTable>({
       name,
@@ -108,21 +108,21 @@ export class Chat<
   /**
    * Creates a new chat instance and optionally stores it in the database.
    *
-   * @typeParam T - The type of the database.
-   * @typeParam U - The type of AI functionalities integrated with the chat.
-   * @typeParam K - The configuration object for the chat.
+   * @typeParam TDatabase - The type of the database.
+   * @typeParam TAi - The type of AI functionalities integrated with the chat.
+   * @typeParam TConfig - The configuration object for the chat.
    *
-   * @param {T} database - The database instance where the chat may be stored.
-   * @param {U} ai - The AI instance used in the chat.
-   * @param {K} [config] - The configuration object for the chat.
+   * @param {TDatabase} database - The database instance where the chat may be stored.
+   * @param {TAi} ai - The AI instance used in the chat.
+   * @param {TConfig} [config] - The configuration object for the chat.
    *
-   * @returns {Promise<Chat<T, U, K["tools"]>>} A promise that resolves to the created `Chat` instance.
+   * @returns {Promise<Chat<TDatabase, TAi, TConfig["tools"]>>} A promise that resolves to the created `Chat` instance.
    */
-  static async create<T extends AnyDatabase, U extends AnyAI, K extends CreateChatConfig>(
-    database: T,
-    ai: U,
-    config?: K,
-  ): Promise<Chat<T, U, K["tools"]>> {
+  static async create<TDatabase extends AnyDatabase, TAi extends AnyAI, TConfig extends CreateChatConfig>(
+    database: TDatabase,
+    ai: TAi,
+    config?: TConfig,
+  ): Promise<Chat<TDatabase, TAi, TConfig["tools"]>> {
     const createdAt: Chat["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 23);
 
     const _config: ChatConfig = {
@@ -157,7 +157,7 @@ export class Chat<
       id = rows?.[0].insertId;
     }
 
-    return new Chat<T, U, K["tools"]>(
+    return new Chat<TDatabase, TAi, TConfig["tools"]>(
       database,
       ai,
       _config.tools,
@@ -179,7 +179,7 @@ export class Chat<
    * @param {Chat["tableName"]} tableName - The name of the table where the chats are stored.
    * @param {Chat["sessionsTableName"]} sessionsTable - The name of the table where the chat sessions are stored.
    * @param {Chat["messagesTableName"]} messagesTableName - The name of the table where the session's messages are stored.
-   * @param {Parameters<Table<ChatsTable>["delete"]>[0]} [filters] - The filters to apply to the delete operation.
+   * @param {Parameters<Table<ChatsTable>["delete"]>[0]} [where] - The filters to apply to the delete operation.
    *
    * @returns {Promise<[[ResultSetHeader, FieldPacket[]], [ResultSetHeader, FieldPacket[]][]]>} A promise that resolves when the delete operation is complete.
    */
@@ -188,14 +188,14 @@ export class Chat<
     tableName: Chat["tableName"],
     sessionsTable: Chat["sessionsTableName"],
     messagesTableName: Chat["messagesTableName"],
-    filters?: Parameters<Table<ChatsTable>["delete"]>[0],
+    where?: Parameters<Table<ChatsTable>["delete"]>[0],
   ): Promise<[[ResultSetHeader, FieldPacket[]], [ResultSetHeader, FieldPacket[]][]]> {
     const table = database.table<ChatsTable>(tableName);
-    const deletedRowIds = await table.select(filters, { columns: ["id"] });
+    const deletedRowIds = await table.find({ select: ["id"], where });
 
     return Promise.all([
-      table.delete(filters),
-      ChatSession.delete(database, sessionsTable, messagesTableName, { chatId: { in: deletedRowIds.map(({ id }) => id) } }),
+      table.delete(where),
+      ChatSession.delete(database, sessionsTable, messagesTableName, { chatId: { in: deletedRowIds.map(({ id }) => id!) } }),
     ]);
   }
 
@@ -230,13 +230,13 @@ export class Chat<
   /**
    * Creates a new chat session within the current chat and optionally stores it in the database.
    *
-   * @typeParam V - The name of the session.
+   * @typeParam TName - The name of the session.
    *
-   * @param {V} [name] - The name of the session.
+   * @param {TName} [name] - The name of the session.
    *
-   * @returns {Promise<ChatSession<T, U, K>>} A promise that resolves to the created `ChatSession` instance.
+   * @returns {Promise<ChatSession<TDatabase, TAi, TChatCompletionTool>>} A promise that resolves to the created `ChatSession` instance.
    */
-  createSession<V extends ChatSession["name"]>(name?: V): Promise<ChatSession<T, U, K>> {
+  createSession<TName extends ChatSession["name"]>(name?: TName): Promise<ChatSession<TDatabase, TAi, TChatCompletionTool>> {
     return ChatSession.create(this._database, this._ai, {
       chatId: this.id,
       name,
@@ -251,14 +251,16 @@ export class Chat<
   /**
    * Selects chat sessions from the current chat based on the provided filters and options.
    *
-   * @typeParam V - The parameters passed to the `select` method of the `Table` class.
+   * @typeParam T - The parameters passed to the `select` method of the `Table` class.
    *
-   * @param {...V} args - The arguments defining the filters and options for selecting sessions.
+   * @param {...T} args - The arguments defining the filters and options for selecting sessions.
    *
-   * @returns {Promise<ChatSession<T, U, K>[]>} A promise that resolves to an array of `ChatSession` instances representing the selected sessions.
+   * @returns {Promise<ChatSession<TDatabase, TAi, TChatCompletionTool>[]>} A promise that resolves to an array of `ChatSession` instances representing the selected sessions.
    */
-  async selectSessions<V extends Parameters<Table<ChatSessionsTable>["select"]>>(...args: V): Promise<ChatSession<T, U, K>[]> {
-    const rows = await this._database.table<ChatSessionsTable>(this.sessionsTableName).select(...args);
+  async selectSessions<T extends Parameters<Table<ChatSessionsTable, InferDatabaseType<TDatabase>>["find"]>>(
+    ...args: T
+  ): Promise<ChatSession<TDatabase, TAi, TChatCompletionTool>[]> {
+    const rows = await this._database.table<ChatSessionsTable>(this.sessionsTableName).find(...args);
 
     return rows.map(
       (row) =>
