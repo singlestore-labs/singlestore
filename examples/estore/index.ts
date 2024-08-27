@@ -165,13 +165,15 @@ async function main() {
 
     console.log("Executing database methods...");
     console.log('Creating "users" table...');
-    await db.createTable<Database["tables"]["users"]>({
+    const newUsersTable = await db.createTable<Database["tables"]["users"]>({
       name: "users",
       columns: {
         id: { type: "bigint", autoIncrement: true, primaryKey: true },
         name: { type: "varchar(32)" },
       },
     });
+
+    await newUsersTable.insert(dataset.users);
 
     console.log('Using the "users" table...');
     db.table("users");

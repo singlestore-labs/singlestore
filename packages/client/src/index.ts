@@ -4,6 +4,8 @@ import { Workspace, type ConnectWorkspaceConfig, type WorkspaceType } from "./wo
 
 export type * from "./types";
 
+export * from "./query.1/builder";
+
 /**
  * Configuration object for initializing a `SingleStoreClient` instance.
  *
