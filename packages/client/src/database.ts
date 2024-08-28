@@ -23,7 +23,7 @@ export interface DatabaseType {
  */
 export interface DatabaseSchema<TType extends DatabaseType> {
   name: string;
-  tables?: { [K in keyof TType["tables"]]: Omit<TableSchema<TType["tables"][K]>, "name"> };
+  tables?: { [K in keyof TType["tables"]]: Omit<TableSchema<any, TType["tables"][K]>, "name"> };
 }
 
 /**
@@ -255,7 +255,7 @@ export class Database<TDatabaseType extends DatabaseType = DatabaseType, TAi ext
    *
    * @param {TName} name - The name of the table to retrieve.
    *
-   * @returns {Table<TType extends TableType ? TType : TDatabaseType["tables"][TName] extends TableType ? TDatabaseType["tables"][TName] : TableType, TDatabaseType, TAi>} A `Table` instance representing the specified table.
+   * @returns {Table<TName, TType extends TableType ? TType : TDatabaseType["tables"][TName] extends TableType ? TDatabaseType["tables"][TName] : TableType, TDatabaseType, TAi>} A `Table` instance representing the specified table.
    */
   table<
     TType,
@@ -263,6 +263,7 @@ export class Database<TDatabaseType extends DatabaseType = DatabaseType, TAi ext
   >(
     name: TName,
   ): Table<
+    TName,
     TType extends TableType
       ? TType
       : TDatabaseType["tables"][TName] extends TableType
@@ -272,6 +273,7 @@ export class Database<TDatabaseType extends DatabaseType = DatabaseType, TAi ext
     TAi
   > {
     return new Table<
+      TName,
       TType extends TableType
         ? TType
         : TDatabaseType["tables"][TName] extends TableType
@@ -307,8 +309,10 @@ export class Database<TDatabaseType extends DatabaseType = DatabaseType, TAi ext
    *
    * @returns {Promise<Table<TType, TDatabaseType, TAi>>} A promise that resolves to the created `Table` instance.
    */
-  createTable<TType extends TableType = TableType>(schema: TableSchema<TType>): Promise<Table<TType, TDatabaseType, TAi>> {
-    return Table.create<TType, TDatabaseType, TAi>(this._connection, this.name, schema, this._ai);
+  createTable<TName extends string = string, TType extends TableType = TableType>(
+    schema: TableSchema<TName, TType>,
+  ): Promise<Table<TName, TType, TDatabaseType, TAi>> {
+    return Table.create<TName, TType, TDatabaseType, TAi>(this._connection, this.name, schema, this._ai);
   }
 
   /**
