@@ -2,14 +2,17 @@ import type { Connection } from "./connection";
 import type { FieldPacket, ResultSetHeader } from "mysql2/promise";
 
 /**
- * Represents a type for database column definitions. This is currently set to `any`
- * to allow flexibility in defining various column types.
+ * Represents a type for database column definitions.
+ * This is currently set to `any` to allow flexibility in defining various column types.
+ *
+ * @typedef {any} ColumnType
  */
 export type ColumnType = any;
 
 /**
  * Interface representing the schema of a database column.
  *
+ * @interface ColumnSchema
  * @property {string} name - The name of the column.
  * @property {string} type - The SQL data type of the column.
  * @property {boolean} [nullable] - Indicates whether the column allows NULL values.
@@ -31,8 +34,8 @@ export interface ColumnSchema {
 /**
  * Interface representing information about a column in the database.
  *
+ * @interface ColumnInfo
  * @typeParam T - A string literal representing the column name.
- *
  * @property {T} name - The name of the column.
  * @property {string} type - The SQL data type of the column.
  * @property {string} null - Indicates whether the column allows NULL values (`"YES"` or `"NO"`).
@@ -76,9 +79,7 @@ export class Column {
    * Normalizes raw database column information into a structured `ColumnInfo` object.
    *
    * @typeParam T - A string literal representing the column name.
-   *
    * @param {any} info - Raw column information from the database.
-   *
    * @returns {ColumnInfo<T>} A structured `ColumnInfo` object.
    */
   static normalizeInfo<T extends string = string>(info: any): ColumnInfo<T> {
@@ -96,7 +97,6 @@ export class Column {
    * Converts a `ColumnSchema` object into an SQL column definition string.
    *
    * @param {ColumnSchema} schema - The schema of the column to be converted.
-   *
    * @returns {string} An SQL string representing the column definition.
    */
   static schemaToClauses(schema: ColumnSchema): string {
@@ -116,7 +116,6 @@ export class Column {
    * @param {string} databaseName - The name of the database where the table is located.
    * @param {string} tableName - The name of the table where the column will be added.
    * @param {ColumnSchema} schema - The schema of the column to be added.
-   *
    * @returns {Promise<Column>} A promise that resolves to the created `Column` instance.
    */
   static async add(connection: Connection, databaseName: string, tableName: string, schema: ColumnSchema): Promise<Column> {
@@ -135,7 +134,6 @@ export class Column {
    * @param {string} databaseName - The name of the database where the table is located.
    * @param {string} tableName - The name of the table containing the column.
    * @param {string} name - The name of the column to be dropped.
-   *
    * @returns {Promise<[ResultSetHeader, FieldPacket[]]>} A promise that resolves when the column is dropped.
    */
   static drop(
@@ -175,7 +173,6 @@ export class Column {
    * Modifies the current column in the table based on the provided schema.
    *
    * @param {Partial<Omit<ColumnSchema, "name">>} schema - The schema containing modifications to be applied to the column.
-   *
    * @returns {Promise<[ResultSetHeader, FieldPacket[]]>} A promise that resolves when the column is modified.
    */
   modify(schema: Partial<Omit<ColumnSchema, "name">>): Promise<[ResultSetHeader, FieldPacket[]]> {
@@ -190,7 +187,6 @@ export class Column {
    * Renames the current column in the table.
    *
    * @param {string} newName - The new name for the column.
-   *
    * @returns {Promise<[ResultSetHeader, FieldPacket[]]>} A promise that resolves when the column is renamed.
    */
   async rename(newName: string): Promise<[ResultSetHeader, FieldPacket[]]> {

@@ -9,10 +9,10 @@ import { z } from "zod";
  *                If undefined, no parameters are expected.
  * @typeParam K - The return type of the `call` function, representing the value produced by the tool.
  *
- * @param params - The parameters passed to the tool, inferred from the Zod schema `U` if provided.
+ * @param {U extends z.AnyZodObject ? z.infer<U> : void} params - The parameters passed to the tool, inferred from the Zod schema `U` if provided.
  *                 If `U` is undefined, this parameter is void.
  *
- * @returns A Promise that resolves to an object containing the tool's name, the result value, and optionally the parameters.
+ * @returns {Promise<{ name: T; value: K; params?: U extends z.AnyZodObject ? z.infer<U> : undefined }>} A Promise that resolves to an object containing the tool's name, the result value, and optionally the parameters.
  */
 export type ChatCompletionToolCall<T extends string, U extends z.AnyZodObject | undefined, K> = (
   params: U extends z.AnyZodObject ? z.infer<U> : void,
@@ -52,7 +52,7 @@ interface ChatCompletionToolConfig<
 export type AnyChatCompletionTool = ChatCompletionTool<
   string,
   z.AnyZodObject | undefined,
-  ChatCompletionToolCall<string, any | undefined, any> // TODO: Fix the z.AnyZodObject | undefined type
+  ChatCompletionToolCall<string, any | undefined, any>
 >;
 
 /**
@@ -61,7 +61,7 @@ export type AnyChatCompletionTool = ChatCompletionTool<
  * @typeParam T - An array of ChatCompletionTools or undefined.
  * @typeParam U - Another array of ChatCompletionTools or undefined.
  *
- * @returns An array containing all tools from both input arrays, or undefined if both inputs are undefined.
+ * @returns {T extends AnyChatCompletionTool[] ? (U extends AnyChatCompletionTool[] ? [...T, ...U] : T) : U} An array containing all tools from both input arrays, or undefined if both inputs are undefined.
  */
 export type MergeChatCompletionTools<
   T extends AnyChatCompletionTool[] | undefined,
@@ -80,6 +80,11 @@ export type MergeChatCompletionTools<
  * @typeParam T - The name of the tool, represented as a string literal type.
  * @typeParam U - A Zod object schema or undefined, representing the parameters the tool requires.
  * @typeParam K - The function signature for the tool's `call` method.
+ *
+ * @property {T} name - The unique name of the tool.
+ * @property {string} description - A description of the tool's functionality.
+ * @property {U} [params] - Optional Zod schema defining the parameters for the tool.
+ * @property {K} call - The function that implements the tool's primary logic.
  */
 export class ChatCompletionTool<
   T extends string,

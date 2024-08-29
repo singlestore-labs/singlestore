@@ -43,6 +43,9 @@ export type CreateChatConfig = Partial<ChatConfig>;
  * @typeParam TDatabase - The type of the database, which extends `AnyDatabase`.
  * @typeParam TAi - The type of AI functionalities integrated with the chat, which extends `AnyAI`.
  * @typeParam TChatCompletionTool - The type of tools available in the chat, which can be `undefined`.
+ * @typeParam TTableName - The name of the table where the chat is stored.
+ * @typeParam TSessionsTableName - The name of the table where the chat sessions are stored.
+ * @typeParam TMessagesTableName - The name of the table where the session's messages are stored.
  *
  * @property {TDatabase} _database - The database instance where the chat and its sessions are stored.
  * @property {TAi} _ai - The AI instance used in the chat.
@@ -87,7 +90,7 @@ export class Chat<
    * @param {TDatabase} database - The database instance where the table will be created.
    * @param {TName} name - The name of the table.
    *
-   * @returns {Promise<Table<ChatsTable>>} A promise that resolves to the created table instance.
+   * @returns {Promise<Table<TName, ChatsTable>>} A promise that resolves to the created table instance.
    */
   private static _createTable<TDatabase extends AnyDatabase, TName extends Chat["tableName"]>(
     database: TDatabase,
@@ -233,7 +236,7 @@ export class Chat<
   /**
    * Deletes the current chat instance and its associated sessions and messages from the database.
    *
-   * @returns {Promise<any[]>} A promise that resolves when the delete operation is complete.
+   * @returns {Promise<[[ResultSetHeader, FieldPacket[]], [ResultSetHeader, FieldPacket[]][]]>} A promise that resolves when the delete operation is complete.
    */
   delete(): Promise<[[ResultSetHeader, FieldPacket[]], [ResultSetHeader, FieldPacket[]][]]> {
     return Chat.delete(this._database, this.tableName, this.sessionsTableName, this.messagesTableName, { id: this.id });
@@ -275,7 +278,7 @@ export class Chat<
    *
    * @typeParam T - The parameters passed to the `find` method of the `Table` class.
    *
-   * @param {params} params - The parameters defining the filters and options for finding sessions.
+   * @param {Parameters<Table<TSessionsTableName, ChatSessionsTable, InferDatabaseType<TDatabase>>["find"]>[0]} [params] - The parameters defining the filters and options for finding sessions.
    *
    * @returns {Promise<ChatSession<TDatabase, TAi, TChatCompletionTool, TSessionsTableName, TMessagesTableName>[]>} A promise that resolves to an array of `ChatSession` instances representing the found sessions.
    */

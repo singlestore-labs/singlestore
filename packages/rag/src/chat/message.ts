@@ -27,6 +27,7 @@ export interface ChatMessagesTable {
  * Class representing a chat message, providing methods to manage chat messages in the database.
  *
  * @typeParam TDatabase - The type of the database, which extends `AnyDatabase`.
+ * @typeParam TTableName - The name of the table where the message is stored.
  *
  * @property {TDatabase} _database - The database instance where the chat message is stored.
  * @property {number | undefined} id - The unique identifier of the chat message.
@@ -58,7 +59,7 @@ export class ChatMessage<TDatabase extends AnyDatabase = AnyDatabase, TTableName
    * @param {TDatabase} database - The database instance where the table will be created.
    * @param {TName} name - The name of the table.
    *
-   * @returns {Promise<Table<ChatMessagesTable>>} A promise that resolves to the created table instance.
+   * @returns {Promise<Table<TName, ChatMessagesTable>>} A promise that resolves to the created table instance.
    */
   static createTable<TDatabase extends AnyDatabase, TName extends ChatMessage["tableName"]>(
     database: TDatabase,
@@ -85,7 +86,7 @@ export class ChatMessage<TDatabase extends AnyDatabase = AnyDatabase, TTableName
    * @param {TDatabase} database - The database instance where the message may be stored.
    * @param {TConfig} config - The configuration object for the chat message.
    *
-   * @returns {Promise<ChatMessage<TDatabase>>} A promise that resolves to the created `ChatMessage` instance.
+   * @returns {Promise<ChatMessage<TDatabase, TConfig["tableName"]>>} A promise that resolves to the created `ChatMessage` instance.
    */
   static async create<TDatabase extends AnyDatabase, TConfig extends ChatMessageConfig>(
     database: TDatabase,
@@ -123,7 +124,7 @@ export class ChatMessage<TDatabase extends AnyDatabase = AnyDatabase, TTableName
   /**
    * Updates the current chat message instance in the database with the specified values.
    *
-   * @param {Parameters<Table<ChatMessagesTable>["update"]>[0]} values - The values to update in the chat message.
+   * @param {Parameters<Table<TTableName, ChatMessagesTable>["update"]>[0]} values - The values to update in the chat message.
    *
    * @returns {Promise<[ResultSetHeader, FieldPacket[]]>} A promise that resolves when the update operation is complete.
    */

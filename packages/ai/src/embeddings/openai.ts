@@ -7,21 +7,25 @@ import { Embeddings, type CreateEmbeddingsParams, type Embedding } from ".";
  * A type that omits specific properties from EmbeddingCreateParams
  * to allow for partial customization when creating embeddings.
  *
- * @typeParam _OpenAICreateEmbeddingsParams - Partial EmbeddingCreateParams excluding "input" and any properties defined in CreateEmbeddingsParams.
+ * This type excludes the `input` property and any properties already defined in `CreateEmbeddingsParams`.
+ *
+ * @type _OpenAICreateEmbeddingsParams
+ * @typeParam _OpenAICreateEmbeddingsParams - Partial `EmbeddingCreateParams` excluding "input" and any properties defined in `CreateEmbeddingsParams`.
  */
 type _OpenAICreateEmbeddingsParams = Omit<Partial<EmbeddingCreateParams>, "input" | keyof CreateEmbeddingsParams>;
 
 /**
  * Represents the possible models that can be used with OpenAI embeddings.
  *
- * @type OpenAIEmbeddingModel - The model name from EmbeddingCreateParams.
+ * @type OpenAIEmbeddingModel - The model name from `EmbeddingCreateParams`.
  */
 export type OpenAIEmbeddingModel = EmbeddingCreateParams["model"];
 
 /**
- * Parameters for creating embeddings with OpenAI, extending the base CreateEmbeddingsParams
- * and additional OpenAI-specific options.
+ * Parameters for creating embeddings with OpenAI, extending the base `CreateEmbeddingsParams`
+ * with additional OpenAI-specific options.
  *
+ * @interface OpenAICreateEmbeddingsParams
  * @extends CreateEmbeddingsParams - Inherits the base parameters for embedding creation.
  * @property {OpenAIEmbeddingModel} [model] - The OpenAI model to use for creating embeddings. Defaults to a model if not provided.
  */
@@ -30,7 +34,7 @@ export interface OpenAICreateEmbeddingsParams extends CreateEmbeddingsParams, _O
 }
 
 /**
- * A class that implements the Embeddings interface using OpenAI's API.
+ * A class that implements the `Embeddings` interface using OpenAI's API.
  * This class allows for the creation of embeddings via OpenAI's models.
  *
  * @class OpenAIEmbeddings

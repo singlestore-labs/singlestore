@@ -29,9 +29,10 @@ export interface WorkspaceConfig<TWorkspaceType extends WorkspaceType, TAi exten
 /**
  * Main client class for interacting with SingleStore, including the ability to connect to workspaces.
  *
- * @typeParam TAi - The type of AI functionalities integrated with the client, which can be undefined.
+ * This class provides methods for initializing a client instance and connecting to various workspaces
+ * within the SingleStore environment, optionally integrating AI functionalities.
  *
- * @property {TAi} _ai - The AI functionalities associated with the `SingleStoreClient`.
+ * @typeParam TAi - The type of AI functionalities integrated with the client, which can be undefined.
  */
 export class SingleStoreClient<TAi extends AnyAI | undefined = undefined> {
   private _ai: TAi;
@@ -40,6 +41,7 @@ export class SingleStoreClient<TAi extends AnyAI | undefined = undefined> {
    * Constructs a new `SingleStoreClient` instance.
    *
    * @param {SingleStoreClientConfig<TAi>} [config] - The configuration object for initializing the `SingleStoreClient`.
+   * This object may optionally include AI functionalities to enhance the client's capabilities.
    */
   constructor(config?: SingleStoreClientConfig<TAi>) {
     this._ai = config?.ai as TAi;
@@ -48,15 +50,20 @@ export class SingleStoreClient<TAi extends AnyAI | undefined = undefined> {
   /**
    * Connects to a workspace within the SingleStore environment.
    *
+   * This method establishes a connection to a specified workspace, using the provided configuration
+   * object, and returns a `Workspace` instance that represents the connected workspace. It supports
+   * different types of workspaces and allows for optional AI integration.
+   *
    * @typeParam TWorkspaceType - The type of the workspace to connect to.
    *
    * @param {WorkspaceConfig<TWorkspaceType, TAi>} config - The configuration object for connecting to the workspace.
+   * This object contains necessary details such as workspace type and optionally, AI integration.
    *
    * @returns {Workspace<TWorkspaceType, TAi>} A `Workspace` instance representing the connected workspace.
    */
   workspace<TWorkspaceType extends WorkspaceType = WorkspaceType>(
     config: WorkspaceConfig<TWorkspaceType, TAi>,
   ): Workspace<TWorkspaceType, TAi> {
-    return Workspace.connect<TWorkspaceType, TAi>({ ...config, ai: this._ai });
+    return Workspace.connect({ ...config, ai: this._ai });
   }
 }

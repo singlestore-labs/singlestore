@@ -35,11 +35,16 @@ export interface AIConfig<
 /**
  * Represents any `AI` instance with generic types for embeddings, tools, and chat completions.
  * This type is useful for handling `AI` instances in a generic context.
+ *
+ * @type AnyAI
  */
 export type AnyAI = AI<Embeddings, AnyChatCompletionTool[] | undefined, ChatCompletions<any>>;
 
 /**
  * Main class for handling AI operations, including embeddings and chat completions.
+ *
+ * This class provides methods to interact with AI services, such as generating embeddings and chat completions.
+ * It can be configured to use different types of embeddings and chat completions based on the provided configuration.
  *
  * @typeParam TEmbeddings - The type of `Embeddings` to be used, defaulting to `OpenAIEmbeddings`.
  * @typeParam TChatCompletionTool - An array of tools that can be used during chat completions, or undefined.
@@ -60,6 +65,7 @@ export class AI<
    * Constructs a new `AI` instance.
    *
    * @param {AIConfig<TEmbeddings, TChatCompletionTool, TChatCompletions>} config - The configuration object for initializing the `AI` instance.
+   * This configuration can include custom `Embeddings`, `ChatCompletions`, and tools for enhanced functionality.
    */
   constructor(config: AIConfig<TEmbeddings, TChatCompletionTool, TChatCompletions>) {
     const openai = new OpenAI({ apiKey: config.openAIApiKey });

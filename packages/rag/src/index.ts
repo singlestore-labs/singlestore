@@ -33,6 +33,11 @@ export class RAG<TDatabase extends AnyDatabase = AnyDatabase, TAi extends AnyAI 
   private _database: TDatabase;
   private _ai: TAi;
 
+  /**
+   * Constructs a new RAG instance.
+   *
+   * @param {RAGConfig<TDatabase, TAi>} config - The configuration object containing the database and AI instances.
+   */
   constructor(config: RAGConfig<TDatabase, TAi>) {
     this._database = config.database;
     this._ai = config.ai;
@@ -54,7 +59,7 @@ export class RAG<TDatabase extends AnyDatabase = AnyDatabase, TAi extends AnyAI 
    *
    * @param {TConfig} [config] - The configuration object for the chat.
    *
-   * @returns {Promise<Chat< TDatabase, TAi, TConfig["tools"], TConfig["tableName"] extends string ? TConfig["tableName"] : string, TConfig["sessionsTableName"] extends string ? TConfig["sessionsTableName"] : string, TConfig["messagesTableName"] extends string ? TConfig["messagesTableName"] : string>>} A promise that resolves to the created `Chat` instance.
+   * @returns {Promise<Chat<TDatabase, TAi, TConfig["tools"], TConfig["tableName"] extends string ? TConfig["tableName"] : string, TConfig["sessionsTableName"] extends string ? TConfig["sessionsTableName"] : string, TConfig["messagesTableName"] extends string ? TConfig["messagesTableName"] : string>>} A promise that resolves to the created `Chat` instance.
    */
   createChat<TConfig extends CreateChatConfig>(
     config?: TConfig,
@@ -77,7 +82,7 @@ export class RAG<TDatabase extends AnyDatabase = AnyDatabase, TAi extends AnyAI 
    * @typeParam TConfig - The configuration object for finding chats.
    *
    * @param {TConfig} [config] - The configuration object for finding chats.
-   * @param {findParams} findParams - The parameters defining the filters and options for finding chats.
+   * @param {Parameters<Table<TConfig["tableName"] extends string ? TConfig["tableName"] : string, ChatsTable, InferDatabaseType<TDatabase>>["find"]>[0]} [findParams] - The parameters defining the filters and options for finding chats.
    *
    * @returns {Promise<Chat<TDatabase, TAi, TConfig["tools"], TConfig['tableName'] extends string ? TConfig['tableName'] : string , string, string>[]>} A promise that resolves to an array of `Chat` instances representing the found chats.
    */
