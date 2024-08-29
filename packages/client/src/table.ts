@@ -93,7 +93,7 @@ type VectorScoreKey = "v_score";
  * @typeParam TAi - The type of AI functionalities integrated with the table, which can be undefined.
  */
 export class Table<
-  TName extends string = string,
+  TTableName extends string = string,
   TTableType extends TableType = TableType,
   TDatabaseType extends DatabaseType = DatabaseType,
   TAi extends AnyAI | undefined = undefined,
@@ -104,7 +104,7 @@ export class Table<
   constructor(
     private _connection: Connection,
     public databaseName: string,
-    public name: TName,
+    public name: TTableName,
     private _ai?: TAi,
   ) {
     this._path = [databaseName, name].join(".");
@@ -327,14 +327,14 @@ export class Table<
    *
    * @typeParam TParams - The type of the query builder arguments.
    * @param {TParams} params - The arguments defining the query, including selected columns, filters, and other options.
-   * @returns {Promise<(ExtractQuerySelectedColumn<TName, TDatabaseType, TParams> & RowDataPacket)[]>} A promise that resolves to an array of selected rows.
+   * @returns {Promise<(ExtractQuerySelectedColumn<TTableName, TDatabaseType, TParams> & RowDataPacket)[]>} A promise that resolves to an array of selected rows.
    */
   async find<
     TJoinClauseAs extends string,
     TJoinClauses extends JoinClause<TTableType, TDatabaseType, TJoinClauseAs>[],
     TSelectClause extends SelectClause<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses>,
   >(params?: QueryBuilderParams<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>) {
-    type SelectedColumn = ExtractQuerySelectedColumn<TName, TDatabaseType, any>;
+    type SelectedColumn = ExtractQuerySelectedColumn<TTableName, TDatabaseType, any>;
     const queryBuilder = new QueryBuilder<TTableType, TDatabaseType>(this.databaseName, this.name);
     const query = queryBuilder.buildQuery(params);
     console.dir({ query });
@@ -389,7 +389,7 @@ export class Table<
    *   - `embeddingParams` (optional): Additional parameters for creating the prompt embedding, if supported by the AI model.
    * @param {TQueryParams} [queryParams] - Optional query builder parameters to refine the search, such as filters,
    * groupings, orderings, limits, and offsets.
-   * @returns {Promise<(ExtractQuerySelectedColumn<TName, TDatabaseType, TQueryParams> & { v_score: number } & RowDataPacket)[]>}
+   * @returns {Promise<(ExtractQuerySelectedColumn<TTableName, TDatabaseType, TQueryParams> & { v_score: number } & RowDataPacket)[]>}
    * A promise that resolves to an array of rows matching the vector search criteria, each row including
    * the selected columns and a vector similarity score.
    */
@@ -403,7 +403,7 @@ export class Table<
       embeddingParams?: TAi extends AnyAI ? Parameters<TAi["embeddings"]["create"]>[1] : never;
     },
   >(params: TParams, queryParams?: QueryBuilderParams<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>) {
-    type SelectedColumn = ExtractQuerySelectedColumn<TName, TDatabaseType, any>;
+    type SelectedColumn = ExtractQuerySelectedColumn<TTableName, TDatabaseType, any>;
     type ResultColumn = SelectedColumn & { [K in VectorScoreKey]: number };
 
     const clauses = new QueryBuilder<TTableType, TDatabaseType>(this.databaseName, this.name).buildClauses(queryParams);

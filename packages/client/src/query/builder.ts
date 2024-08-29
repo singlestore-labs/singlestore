@@ -34,9 +34,11 @@ export type SelectClause<
   TJoinClauseAs extends string,
   TJoinClauses extends JoinClause<TTableType, TDatabaseType, TJoinClauseAs>[],
 > = (
+  | "*"
   | (string & {})
   | keyof TTableType["columns"]
   | ExtractJoinClauseColumns<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses>
+  | { [K in TJoinClauses[number] as K["as"]]: `${K["as"]}.*` }[TJoinClauses[number]["as"]]
 )[];
 
 export type WhereOperator<TColumnValue> = TColumnValue extends string
@@ -156,9 +158,13 @@ export class QueryBuilder<TTableType extends TableType, TDatabaseType extends Da
     if (!joinClauses || joinClauses.length === 0) return "";
     return joinClauses
       .map((clause) => {
+        let left = String(clause.on[0]);
+        left = isJoinColumn(left, joinClauses) ? left : `${this._tableName}.${left}`;
+        let right = String(clause.on[2]);
+        right = isJoinColumn(right, joinClauses) ? right : `${clause.as}.${right}`;
         const joinType = clause.type ? `${clause.type} JOIN` : "JOIN";
         const tableName = `${this._databaseName}.${String(clause.table)} AS ${clause.as}`;
-        const onCondition = `${this._tableName}.${String(clause.on[0])} ${clause.on[1]} ${clause.as}.${String(clause.on[2])}`;
+        const onCondition = `${left} ${clause.on[1]} ${right}`;
         return `${joinType} ${tableName} ON ${onCondition}`;
       })
       .join(" ");
