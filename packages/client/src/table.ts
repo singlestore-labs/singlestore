@@ -16,7 +16,7 @@ import {
 /**
  * Interface representing the structure of a table type, including its columns.
  *
- * @interface TableType
+ * @interface
  * @property {Record<string, ColumnType>} columns - A record where the keys are column names and the values are their respective column types.
  */
 export interface TableType {
@@ -26,7 +26,7 @@ export interface TableType {
 /**
  * Interface representing the schema of a table, including its columns, primary keys, full-text keys, and additional clauses.
  *
- * @interface TableSchema
+ * @interface
  * @typeParam TName - A type extending `string` that defines the name of the table.
  * @typeParam TType - A type extending `TableType` that defines the structure of the table.
  * @property {TName} name - The name of the table.
@@ -46,7 +46,7 @@ export interface TableSchema<TName extends string, TType extends TableType> {
 /**
  * Interface representing basic information about a table.
  *
- * @interface TableInfo
+ * @interface
  * @typeParam TName - A string literal representing the table name.
  * @property {TName} name - The name of the table.
  */
@@ -57,7 +57,7 @@ export interface TableInfo<TName extends string> {
 /**
  * Interface extending `TableInfo` to include additional details about the table's type, distribution, and storage.
  *
- * @interface TableInfoExtended
+ * @interface
  * @typeParam TName - A string literal representing the table name.
  * @property {string} tableType - The type of the table.
  * @property {boolean} distributed - Indicates whether the table is distributed.
@@ -72,7 +72,6 @@ export interface TableInfoExtended<TName extends string> extends TableInfo<TName
 /**
  * Type representing the name of a column within a specific table type.
  *
- * @type TableColumnName
  * @typeParam TType - The type of the table.
  */
 export type TableColumnName<TType extends TableType> = Extract<keyof TType["columns"], string>;
@@ -80,16 +79,17 @@ export type TableColumnName<TType extends TableType> = Extract<keyof TType["colu
 /**
  * Type representing a key used for vector scoring in vector search queries.
  *
- * @type VectorScoreKey
+ * @typedef {"v_score"} VectorScoreKey
  */
 type VectorScoreKey = "v_score";
 
 /**
  * Class representing a table in SingleStore, providing methods to manage its columns, query data, and perform vector search.
  *
- * @class Table
+ * @class
+ * @typeParam TTableName - The name of the table, which extends `string`.
+ * @typeParam TTableType - The type of the table, which extends `TableType`.
  * @typeParam TDatabaseType - The type of the database, which extends `DatabaseType`.
- * @typeParam TType - The type of the table, which extends `TableType`.
  * @typeParam TAi - The type of AI functionalities integrated with the table, which can be undefined.
  */
 export class Table<
@@ -145,10 +145,10 @@ export class Table<
   /**
    * Converts a `TableSchema` object into an SQL table definition string.
    *
-   * @param {TableSchema<any>} schema - The schema of the table to be converted.
+   * @param {TableSchema<string, TableType>} schema - The schema of the table to be converted.
    * @returns {string} An SQL string representing the table definition.
    */
-  static schemaToClauses(schema: TableSchema<any, any>): string {
+  static schemaToClauses(schema: TableSchema<string, TableType>): string {
     const clauses: string[] = [
       ...Object.entries(schema.columns).map(([name, schema]) => {
         return Column.schemaToClauses({ ...schema, name });
@@ -170,7 +170,7 @@ export class Table<
    * @typeParam TAi - The type of AI functionalities integrated with the table, which can be undefined.
    * @param {Connection} connection - The connection to the database.
    * @param {string} databaseName - The name of the database where the table will be created.
-   * @param {TableSchema<TType>} schema - The schema defining the structure of the table.
+   * @param {TableSchema<TName, TType>} schema - The schema defining the structure of the table.
    * @param {TAi} [ai] - Optional AI functionalities to associate with the table.
    * @returns {Promise<Table<TName, TType, TDatabaseType, TAi>>} A promise that resolves to the created `Table` instance.
    */
@@ -326,15 +326,19 @@ export class Table<
    * Finds rows from the table based on the specified query arguments.
    *
    * @typeParam TParams - The type of the query builder arguments.
-   * @param {TParams} params - The arguments defining the query, including selected columns, filters, and other options.
-   * @returns {Promise<(ExtractQuerySelectedColumn<TTableName, TDatabaseType, TParams> & RowDataPacket)[]>} A promise that resolves to an array of selected rows.
+   * @param {QueryBuilderParams<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>} params - The arguments defining the query, including selected columns, filters, and other options.
+   * @returns {Promise<(ExtractQuerySelectedColumn<TTableName, TDatabaseType, QueryBuilderParams<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>> & RowDataPacket)[]>} A promise that resolves to an array of selected rows.
    */
   async find<
     TJoinClauseAs extends string,
     TJoinClauses extends JoinClause<TTableType, TDatabaseType, TJoinClauseAs>[],
     TSelectClause extends SelectClause<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses>,
   >(params?: QueryBuilderParams<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>) {
-    type SelectedColumn = ExtractQuerySelectedColumn<TTableName, TDatabaseType, any>;
+    type SelectedColumn = ExtractQuerySelectedColumn<
+      TTableName,
+      TDatabaseType,
+      QueryBuilderParams<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>
+    >;
     const queryBuilder = new QueryBuilder<TTableType, TDatabaseType>(this.databaseName, this.name);
     const query = queryBuilder.buildQuery(params);
     console.dir({ query });
@@ -379,17 +383,15 @@ export class Table<
   /**
    * Performs a vector search on the table using a prompt and a specified vector column.
    *
-   * @typeParam TSearch - The parameters required for the vector search, including the prompt, vector column,
+   * @typeParam TParams - The parameters required for the vector search, including the prompt, vector column,
    * and optional embedding parameters specific to the AI model being used.
-   * @typeParam TParams - The query builder parameters used to refine the search query, such as filters,
+   * @typeParam TJoinClauseAs - The alias for join clauses.
+   * @typeParam TJoinClauses - The join clauses to include in the query.
+   * @typeParam TSelectClause - The select clause defining columns to select.
+   * @param {TParams} params - The search parameters object.
+   * @param {QueryBuilderParams<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>} [queryParams] - Optional query builder parameters to refine the search, such as filters,
    * groupings, orderings, limits, and offsets.
-   * @param {TParams} params - The search parameters object containing:
-   *   - `prompt`: The search prompt to be converted into an embedding.
-   *   - `vectorColumn`: The name of the vector column in the table to compare against the prompt embedding.
-   *   - `embeddingParams` (optional): Additional parameters for creating the prompt embedding, if supported by the AI model.
-   * @param {TQueryParams} [queryParams] - Optional query builder parameters to refine the search, such as filters,
-   * groupings, orderings, limits, and offsets.
-   * @returns {Promise<(ExtractQuerySelectedColumn<TTableName, TDatabaseType, TQueryParams> & { v_score: number } & RowDataPacket)[]>}
+   * @returns {Promise<(ExtractQuerySelectedColumn<TTableName, TDatabaseType, QueryBuilderParams<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>> & { v_score: number } & RowDataPacket)[]>}
    * A promise that resolves to an array of rows matching the vector search criteria, each row including
    * the selected columns and a vector similarity score.
    */
@@ -403,7 +405,11 @@ export class Table<
       embeddingParams?: TAi extends AnyAI ? Parameters<TAi["embeddings"]["create"]>[1] : never;
     },
   >(params: TParams, queryParams?: QueryBuilderParams<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>) {
-    type SelectedColumn = ExtractQuerySelectedColumn<TTableName, TDatabaseType, any>;
+    type SelectedColumn = ExtractQuerySelectedColumn<
+      TTableName,
+      TDatabaseType,
+      QueryBuilderParams<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>
+    >;
     type ResultColumn = SelectedColumn & { [K in VectorScoreKey]: number };
 
     const clauses = new QueryBuilder<TTableType, TDatabaseType>(this.databaseName, this.name).buildClauses(queryParams);
@@ -434,16 +440,11 @@ export class Table<
    *
    * @typeParam TParams - The parameters required to create a chat completion, including the prompt, vector search parameters,
    * optional system role, template, and additional parameters specific to the AI model being used.
-   * @typeParam TQueryParams - The query builder parameters used to refine the vector search query, such as filters,
-   * groupings, orderings, limits, and offsets.
-   * @param {TParams} params - The parameters object containing:
-   *   - `prompt`: The initial user prompt to generate a response for.
-   *   - `systemRole` (optional): The system role for guiding the AI's behavior during the chat completion.
-   *   - `template` (optional): A template to structure the prompt for the chat completion.
-   *   - `vectorColumn`: The name of the vector column to be used in the vector search.
-   *   - `embeddingParams` (optional): Additional parameters for creating the prompt embedding, if supported by the AI model.
-   *   - Additional parameters required by the AI's `chatCompletions.create` method.
-   * @param {TQueryParams} [queryParams] - Optional query builder parameters to refine the vector search, such as filters,
+   * @typeParam TJoinClauseAs - The alias for join clauses.
+   * @typeParam TJoinClauses - The join clauses to include in the query.
+   * @typeParam TSelectClause - The select clause defining columns to select.
+   * @param {TParams} params - The parameters object.
+   * @param {QueryBuilderParams<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>} [queryParams] - Optional query builder parameters to refine the vector search, such as filters,
    * groupings, orderings, limits, and offsets.
    * @returns {Promise<CreateChatCompletionResult<TParams["stream"]>>}
    * A promise that resolves to the result of the chat completion, containing the generated response
