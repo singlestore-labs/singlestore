@@ -155,7 +155,7 @@ async function main() {
 
     console.log("Executing database methods...");
     console.log('Creating "users" table...');
-    const newUsersTable = await db.createTable<Database["tables"]["users"]>({
+    const newUsersTable = await db.createTable<"users", Database["tables"]["users"]>({
       name: "users",
       columns: {
         id: { type: "bigint", autoIncrement: true, primaryKey: true },

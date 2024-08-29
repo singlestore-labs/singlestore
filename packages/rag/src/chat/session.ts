@@ -70,6 +70,8 @@ export class ChatSession<
   TDatabase extends AnyDatabase = AnyDatabase,
   TAi extends AnyAI = AnyAI,
   TChatCompletionTool extends AnyChatCompletionTool[] | undefined = undefined,
+  TTableName extends string = string,
+  TMessagesTableName extends string = string,
 > {
   constructor(
     private _database: TDatabase,
@@ -81,8 +83,8 @@ export class ChatSession<
     public name: string,
     public systemRole: string,
     public store: ChatMessage<TDatabase>["store"],
-    public tableName: string,
-    public messagesTableName: ChatMessage<TDatabase>["tableName"],
+    public tableName: TTableName,
+    public messagesTableName: TMessagesTableName,
   ) {}
 
   /**
@@ -99,8 +101,8 @@ export class ChatSession<
   static createTable<TDatabase extends AnyDatabase, TName extends ChatSession["tableName"]>(
     database: TDatabase,
     name: TName,
-  ): Promise<Table<ChatSessionsTable>> {
-    return database.createTable<ChatSessionsTable>({
+  ): Promise<Table<TName, ChatSessionsTable>> {
+    return database.createTable<TName, ChatSessionsTable>({
       name,
       columns: {
         id: { type: "bigint", autoIncrement: true, primaryKey: true },
@@ -122,13 +124,21 @@ export class ChatSession<
    * @param {TAi} ai - The AI instance used in the chat session.
    * @param {TConfig} [config] - The configuration object for the chat session.
    *
-   * @returns {Promise<ChatSession<TDatabase, TAi, TConfig["tools"]>>} A promise that resolves to the created `ChatSession` instance.
+   * @returns {Promise<ChatSession<TDatabase, TAi, TConfig["tools"], TConfig["tableName"] extends string ? TConfig["tableName"] : string, TConfig["messagesTableName"] extends string ? TConfig["messagesTableName"] : string>>} A promise that resolves to the created `ChatSession` instance.
    */
   static async create<TDatabase extends AnyDatabase, TAi extends AnyAI, TConfig extends Partial<ChatSessionConfig>>(
     database: TDatabase,
     ai: TAi,
     config?: TConfig,
-  ): Promise<ChatSession<TDatabase, TAi, TConfig["tools"]>> {
+  ): Promise<
+    ChatSession<
+      TDatabase,
+      TAi,
+      TConfig["tools"],
+      TConfig["tableName"] extends string ? TConfig["tableName"] : string,
+      TConfig["messagesTableName"] extends string ? TConfig["messagesTableName"] : string
+    >
+  > {
     const createdAt: ChatSession["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 23);
 
     const _config: ChatSessionConfig = {
@@ -150,7 +160,7 @@ export class ChatSession<
       id = rows?.[0].insertId;
     }
 
-    return new ChatSession<TDatabase, TAi, TConfig["tools"]>(
+    return new ChatSession(
       database,
       ai,
       _config.tools,
@@ -179,7 +189,7 @@ export class ChatSession<
     database: AnyDatabase,
     tableName: ChatSession["tableName"],
     messagesTableName: ChatSession["messagesTableName"],
-    where?: Parameters<Table<ChatSessionsTable>["delete"]>[0],
+    where?: Parameters<Table<ChatSession["tableName"], ChatSessionsTable>["delete"]>[0],
   ): Promise<[ResultSetHeader, FieldPacket[]][]> {
     const table = database.table<ChatSessionsTable>(tableName);
     const deletedRowIds = await table.find({ select: ["id"], where });
@@ -197,7 +207,9 @@ export class ChatSession<
    *
    * @returns {Promise<[ResultSetHeader, FieldPacket[]]>} A promise that resolves when the update operation is complete.
    */
-  async update(values: Parameters<Table<ChatSessionsTable>["update"]>[0]): Promise<[ResultSetHeader, FieldPacket[]]> {
+  async update(
+    values: Parameters<Table<TTableName, ChatSessionsTable>["update"]>[0],
+  ): Promise<[ResultSetHeader, FieldPacket[]]> {
     const result = await this._database.table<ChatSessionsTable>(this.tableName).update(values, { id: this.id });
 
     for (const [key, value] of Object.entries(values)) {
@@ -227,12 +239,12 @@ export class ChatSession<
    * @param {TRole} role - The role of the message sender.
    * @param {TContent} content - The content of the chat message.
    *
-   * @returns {Promise<ChatMessage<TDatabase>>} A promise that resolves to the created `ChatMessage` instance.
+   * @returns {Promise<ChatMessage<TDatabase, TMessagesTableName>>} A promise that resolves to the created `ChatMessage` instance.
    */
   createMessage<TRole extends ChatMessage["role"], TContent extends ChatMessage["content"]>(
     role: TRole,
     content: TContent,
-  ): Promise<ChatMessage<TDatabase>> {
+  ): Promise<ChatMessage<TDatabase, TMessagesTableName>> {
     return ChatMessage.create(this._database, {
       sessionId: this.id,
       role,
@@ -243,18 +255,16 @@ export class ChatSession<
   }
 
   /**
-   * Selects chat messages from the current session based on the provided filters and options.
+   * Finds chat messages from the current session based on the provided filters and options.
    *
-   * @typeParam T - The parameters passed to the `select` method of the `Table` class.
+   * @param {params} params - The parameters defining the filters and options for finding messages.
    *
-   * @param {...T} args - The arguments defining the filters and options for selecting messages.
-   *
-   * @returns {Promise<ChatMessage<TDatabase>[]>} A promise that resolves to an array of `ChatMessage` instances representing the selected messages.
+   * @returns {Promise<ChatMessage<TDatabase, TMessagesTableName>[]>} A promise that resolves to an array of `ChatMessage` instances representing the found messages.
    */
-  async selectMessages<T extends Parameters<Table<ChatMessagesTable, InferDatabaseType<TDatabase>>["find"]>>(
-    ...args: T
-  ): Promise<ChatMessage<TDatabase>[]> {
-    const rows = await this._database.table<ChatMessagesTable>(this.messagesTableName).find(...args);
+  async findMessages(
+    params?: Parameters<Table<TMessagesTableName, ChatMessagesTable, InferDatabaseType<TDatabase>>["find"]>[0],
+  ): Promise<ChatMessage<TDatabase, TMessagesTableName>[]> {
+    const rows = await this._database.table<ChatMessagesTable>(this.messagesTableName).find(params);
 
     return rows.map((row) => {
       return new ChatMessage(
@@ -320,7 +330,7 @@ export class ChatSession<
     if (loadDatabaseSchema || loadHistory) {
       const [databaseSchema, historyMessages] = await Promise.all([
         loadDatabaseSchema ? this._database.describe() : undefined,
-        loadHistory ? this.selectMessages({ orderBy: { createdAt: "asc" } }) : undefined,
+        loadHistory ? this.findMessages({ orderBy: { createdAt: "asc" } }) : undefined,
       ]);
 
       if (databaseSchema) {

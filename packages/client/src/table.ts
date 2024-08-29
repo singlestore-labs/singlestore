@@ -4,13 +4,7 @@ import type { FieldPacket, ResultSetHeader, RowDataPacket } from "mysql2/promise
 
 import { Column, type ColumnInfo, type ColumnSchema, type ColumnType } from "./column";
 import { Connection } from "./connection";
-import {
-  type ExtractQuerySelectedColumn,
-  QueryBuilder,
-  type WhereClause,
-  type QueryBuilderParams,
-  type JoinClauseRecord,
-} from "./query/builder";
+import { type ExtractQuerySelectedColumn, QueryBuilder, type WhereClause, type QueryBuilderParams } from "./query/builder";
 
 /**
  * Interface representing the structure of a table type, including its columns.
@@ -341,13 +335,11 @@ export class Table<
    *
    * @param {TParams} params - The arguments defining the query, including selected columns, filters, and other options.
    *
-   * @returns {Promise<(ExtractQuerySelectedColumn<TType["columns"], TParams> & RowDataPacket)[]>} A promise that resolves to an array of selected rows.
+   * @returns {Promise<(ExtractQuerySelectedColumn<TName, TDatabaseType, TParams> & RowDataPacket)[]>} A promise that resolves to an array of selected rows.
    */
-  async find<TJoinAs extends string, TJoin extends JoinClauseRecord<TName, TDatabaseType, TJoinAs>[] | undefined = undefined>(
-    params?: QueryBuilderParams<TName, TDatabaseType, TJoin>,
-  ) {
-    type SelectedColumn = ExtractQuerySelectedColumn<TType["columns"], any>;
-    const queryBuilder = new QueryBuilder<TName, TDatabaseType>(this.databaseName, this.name);
+  async find<TParams extends QueryBuilderParams<TName, TType, TDatabaseType>>(params?: TParams) {
+    type SelectedColumn = ExtractQuerySelectedColumn<TName, TDatabaseType, TParams>;
+    const queryBuilder = new QueryBuilder<TName, TType, TDatabaseType>(this.databaseName, this.name);
     const query = queryBuilder.buildQuery(params);
     const [rows] = await this._connection.client.execute<(SelectedColumn & RowDataPacket)[]>(query);
     return rows;
@@ -363,7 +355,7 @@ export class Table<
    */
   update(
     values: Partial<TType["columns"]>,
-    where: WhereClause<TName, TDatabaseType>,
+    where: WhereClause<TName, TType, TDatabaseType>,
   ): Promise<[ResultSetHeader, FieldPacket[]]> {
     const _where = new QueryBuilder(this.databaseName, this.name).buildWhereClause(where);
 
@@ -382,7 +374,7 @@ export class Table<
    *
    * @returns {Promise<[ResultSetHeader, FieldPacket[]]>} A promise that resolves when the delete operation is complete.
    */
-  delete(where?: WhereClause<TName, TDatabaseType>): Promise<[ResultSetHeader, FieldPacket[]]> {
+  delete(where?: WhereClause<TName, TType, TDatabaseType>): Promise<[ResultSetHeader, FieldPacket[]]> {
     if (!where) return this.truncate();
     const _where = new QueryBuilder(this.databaseName, this.name).buildWhereClause(where);
     const query = `DELETE FROM ${this._path} ${_where}`;
@@ -408,7 +400,7 @@ export class Table<
    * @param {TQueryParams} [queryParams] - Optional query builder parameters to refine the search, such as filters,
    * groupings, orderings, limits, and offsets.
    *
-   * @returns {Promise<(ExtractQuerySelectedColumn<TType["columns"], TQueryParams> & { [K in VectorScoreKey]: number } & RowDataPacket)[]>}
+   * @returns {Promise<(ExtractQuerySelectedColumn<TName, TDatabaseType, TQueryParams> & { v_score: number } & RowDataPacket)[]>}
    * A promise that resolves to an array of rows matching the vector search criteria, each row including
    * the selected columns and a vector similarity score.
    */
@@ -418,17 +410,12 @@ export class Table<
       vectorColumn: TableColumnName<TType>;
       embeddingParams?: TAi extends AnyAI ? Parameters<TAi["embeddings"]["create"]>[1] : never;
     },
-    TQueryParams extends QueryBuilderParams<TName, TDatabaseType, any>,
-  >(
-    params: TParams,
-    queryParams?: TQueryParams,
-  ): Promise<
-    (ExtractQuerySelectedColumn<TType["columns"], TQueryParams> & { [K in VectorScoreKey]: number } & RowDataPacket)[]
-  > {
-    type SelectedColumn = ExtractQuerySelectedColumn<TType["columns"], TQueryParams>;
+    TQueryParams extends QueryBuilderParams<TName, TType, TDatabaseType>,
+  >(params: TParams, queryParams?: TQueryParams) {
+    type SelectedColumn = ExtractQuerySelectedColumn<TName, TDatabaseType, TQueryParams>;
     type ResultColumn = SelectedColumn & { [K in VectorScoreKey]: number };
 
-    const clauses = new QueryBuilder<TName, TDatabaseType>(this.databaseName, this.name).buildClauses(queryParams);
+    const clauses = new QueryBuilder<TName, TType, TDatabaseType>(this.databaseName, this.name).buildClauses(queryParams);
     const promptEmbedding = (await this.ai.embeddings.create(params.prompt, params.embeddingParams))[0] || [];
     let orderByClause = `ORDER BY ${this.vScoreKey} DESC`;
 
@@ -477,7 +464,7 @@ export class Table<
   async createChatCompletion<
     TParams extends Parameters<this["vectorSearch"]>[0] &
       (TAi extends AnyAI ? Parameters<TAi["chatCompletions"]["create"]>[0] : never) & { template?: string },
-    TQueryParams extends QueryBuilderParams<TName, TDatabaseType, any>,
+    TQueryParams extends QueryBuilderParams<TName, TType, TDatabaseType>,
   >(params: TParams, queryParams?: TQueryParams): Promise<CreateChatCompletionResult<TParams["stream"]>> {
     const { prompt, systemRole, template, vectorColumn, embeddingParams, ...createChatCompletionParams } = params;
 

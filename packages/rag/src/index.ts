@@ -1,14 +1,5 @@
 import type { AnyAI, AnyChatCompletionTool } from "@singlestore/ai";
-import type {
-  AnyDatabase,
-  Database,
-  DatabaseType,
-  FieldPacket,
-  InferDatabaseType,
-  QueryBuilderParams,
-  ResultSetHeader,
-  Table,
-} from "@singlestore/client";
+import type { AnyDatabase, FieldPacket, InferDatabaseType, ResultSetHeader, Table } from "@singlestore/client";
 
 import { Chat, type CreateChatConfig, type ChatsTable } from "./chat";
 
@@ -63,31 +54,56 @@ export class RAG<TDatabase extends AnyDatabase = AnyDatabase, TAi extends AnyAI 
    *
    * @param {TConfig} [config] - The configuration object for the chat.
    *
-   * @returns {Promise<Chat<TDatabase, TAi, TConfig["tools"]>>} A promise that resolves to the created `Chat` instance.
+   * @returns {Promise<Chat< TDatabase, TAi, TConfig["tools"], TConfig["tableName"] extends string ? TConfig["tableName"] : string, TConfig["sessionsTableName"] extends string ? TConfig["sessionsTableName"] : string, TConfig["messagesTableName"] extends string ? TConfig["messagesTableName"] : string>>} A promise that resolves to the created `Chat` instance.
    */
-  createChat<TConfig extends CreateChatConfig>(config?: TConfig): Promise<Chat<TDatabase, TAi, TConfig["tools"]>> {
+  createChat<TConfig extends CreateChatConfig>(
+    config?: TConfig,
+  ): Promise<
+    Chat<
+      TDatabase,
+      TAi,
+      TConfig["tools"],
+      TConfig["tableName"] extends string ? TConfig["tableName"] : string,
+      TConfig["sessionsTableName"] extends string ? TConfig["sessionsTableName"] : string,
+      TConfig["messagesTableName"] extends string ? TConfig["messagesTableName"] : string
+    >
+  > {
     return Chat.create(this._database, this._ai, config);
   }
 
   /**
-   * Selects chat instances from the database based on the provided configuration and arguments.
+   * Finds chat instances from the database based on the provided configuration and parameters.
    *
-   * @typeParam TConfig - The configuration object for selecting chats.
-   * @typeParam TSelectArgs - The parameters passed to the `select` method of the `Table` class.
+   * @typeParam TConfig - The configuration object for finding chats.
    *
-   * @param {TConfig} [config] - The configuration object for selecting chats.
-   * @param {...TSelectArgs} selectArgs - The arguments defining the filters and options for selecting chats.
+   * @param {TConfig} [config] - The configuration object for finding chats.
+   * @param {findParams} findParams - The parameters defining the filters and options for finding chats.
    *
-   * @returns {Promise<Chat<TDatabase, TAi, TConfig["tools"]>[]>} A promise that resolves to an array of `Chat` instances representing the selected chats.
+   * @returns {Promise<Chat<TDatabase, TAi, TConfig["tools"], TConfig['tableName'] extends string ? TConfig['tableName'] : string , string, string>[]>} A promise that resolves to an array of `Chat` instances representing the found chats.
    */
   async findChats<TConfig extends { tableName?: string; tools?: AnyChatCompletionTool[] }>(
     config?: TConfig,
-    findParams?: QueryBuilderParams<ChatsTable, InferDatabaseType<TDatabase>>,
-  ): Promise<Chat<TDatabase, TAi, TConfig["tools"]>[]> {
+    findParams?: Parameters<
+      Table<
+        TConfig["tableName"] extends string ? TConfig["tableName"] : string,
+        ChatsTable,
+        InferDatabaseType<TDatabase>
+      >["find"]
+    >[0],
+  ): Promise<
+    Chat<
+      TDatabase,
+      TAi,
+      TConfig["tools"],
+      TConfig["tableName"] extends string ? TConfig["tableName"] : string,
+      string,
+      string
+    >[]
+  > {
     const rows = await this._database.table<ChatsTable>(config?.tableName || "chats").find(findParams);
     return rows.map(
       (row) =>
-        new Chat<TDatabase, TAi, TConfig["tools"]>(
+        new Chat(
           this._database,
           this._ai,
           config?.tools || [],
