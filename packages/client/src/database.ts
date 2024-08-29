@@ -193,7 +193,7 @@ export class Database<TDatabaseType extends DatabaseType = DatabaseType, TAi ext
       );
     }
 
-    return new Database<TType, TAi>(connection, schema.name, workspaceName, ai);
+    return new Database(connection, schema.name, workspaceName, ai);
   }
 
   /**

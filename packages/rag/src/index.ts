@@ -1,5 +1,5 @@
 import type { AnyAI, AnyChatCompletionTool } from "@singlestore/ai";
-import type { AnyDatabase, FieldPacket, InferDatabaseType, ResultSetHeader, Table } from "@singlestore/client";
+import type { AnyDatabase, FieldPacket, ResultSetHeader, Table } from "@singlestore/client";
 
 import { Chat, type CreateChatConfig, type ChatsTable } from "./chat";
 
@@ -25,9 +25,6 @@ export interface RAGConfig<TDatabase extends AnyDatabase, TAi extends AnyAI> {
  *
  * @typeParam TDatabase - The type of the database, which extends `AnyDatabase`.
  * @typeParam TAi - The type of AI functionalities integrated with the RAG instance, which extends `AnyAI`.
- *
- * @property {TDatabase} _database - The database instance used for storing and retrieving chat data.
- * @property {TAi} _ai - The AI instance used for generating chat completions and other AI-driven tasks.
  */
 export class RAG<TDatabase extends AnyDatabase = AnyDatabase, TAi extends AnyAI = AnyAI> {
   private _database: TDatabase;
@@ -56,9 +53,7 @@ export class RAG<TDatabase extends AnyDatabase = AnyDatabase, TAi extends AnyAI 
    * Creates a new chat instance and optionally stores it in the database.
    *
    * @typeParam TConfig - The configuration object for creating the chat.
-   *
    * @param {TConfig} [config] - The configuration object for the chat.
-   *
    * @returns {Promise<Chat<TDatabase, TAi, TConfig["tools"], TConfig["tableName"] extends string ? TConfig["tableName"] : string, TConfig["sessionsTableName"] extends string ? TConfig["sessionsTableName"] : string, TConfig["messagesTableName"] extends string ? TConfig["messagesTableName"] : string>>} A promise that resolves to the created `Chat` instance.
    */
   createChat<TConfig extends CreateChatConfig>(
@@ -80,21 +75,13 @@ export class RAG<TDatabase extends AnyDatabase = AnyDatabase, TAi extends AnyAI 
    * Finds chat instances from the database based on the provided configuration and parameters.
    *
    * @typeParam TConfig - The configuration object for finding chats.
-   *
    * @param {TConfig} [config] - The configuration object for finding chats.
-   * @param {Parameters<Table<TConfig["tableName"] extends string ? TConfig["tableName"] : string, ChatsTable, InferDatabaseType<TDatabase>>["find"]>[0]} [findParams] - The parameters defining the filters and options for finding chats.
-   *
-   * @returns {Promise<Chat<TDatabase, TAi, TConfig["tools"], TConfig['tableName'] extends string ? TConfig['tableName'] : string , string, string>[]>} A promise that resolves to an array of `Chat` instances representing the found chats.
+   * @param {Parameters<Table<ChatsTable<TConfig["tableName"] extends string ? TConfig["tableName"] : string>>["find"]>[0]} [findParams] - The parameters defining the filters and options for finding chats.
+   * @returns {Promise<Chat<TDatabase, TAi, TConfig["tools"], TConfig['tableName'] extends string ? TConfig['tableName'] : string, string, string>[]>} A promise that resolves to an array of `Chat` instances representing the found chats.
    */
   async findChats<TConfig extends { tableName?: string; tools?: AnyChatCompletionTool[] }>(
     config?: TConfig,
-    findParams?: Parameters<
-      Table<
-        TConfig["tableName"] extends string ? TConfig["tableName"] : string,
-        ChatsTable,
-        InferDatabaseType<TDatabase>
-      >["find"]
-    >[0],
+    findParams?: Parameters<Table<ChatsTable<TConfig["tableName"] extends string ? TConfig["tableName"] : string>>["find"]>[0],
   ): Promise<
     Chat<
       TDatabase,
@@ -105,7 +92,7 @@ export class RAG<TDatabase extends AnyDatabase = AnyDatabase, TAi extends AnyAI 
       string
     >[]
   > {
-    const rows = await this._database.table<ChatsTable>(config?.tableName || "chats").find(findParams);
+    const rows = await this._database.table(config?.tableName || "chats").find(findParams);
     return rows.map(
       (row) =>
         new Chat(
@@ -128,7 +115,6 @@ export class RAG<TDatabase extends AnyDatabase = AnyDatabase, TAi extends AnyAI 
    * Deletes chat instances from the database based on the provided arguments.
    *
    * @param {...any[]} args - The arguments defining the filters and options for deleting chats.
-   *
    * @returns {Promise<[[ResultSetHeader, FieldPacket[]], [ResultSetHeader, FieldPacket[]][]]>} A promise that resolves when the delete operation is complete.
    */
   deleteChats(

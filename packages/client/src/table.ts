@@ -16,7 +16,7 @@ import {
 /**
  * Interface representing the structure of a table type, including its columns.
  *
- * @interface
+ * @interface TableType
  * @property {string} name - A table name.
  * @property {Record<string, ColumnType>} columns - A record where the keys are column names and the values are their respective column types.
  */
@@ -28,7 +28,7 @@ export interface TableType {
 /**
  * Interface representing the schema of a table, including its columns, primary keys, full-text keys, and additional clauses.
  *
- * @interface
+ * @interface TableSchema
  * @typeParam TType - A type extending `TableType` that defines the structure of the table.
  * @property {TType['name']} name - The name of the table.
  * @property {Object} columns - An object where each key is a column name and each value is the schema of that column, excluding the name.
@@ -47,7 +47,7 @@ export interface TableSchema<TType extends TableType> {
 /**
  * Interface representing basic information about a table.
  *
- * @interface
+ * @interface TableInfo
  * @typeParam TName - A string literal representing the table name.
  * @property {TName} name - The name of the table.
  */
@@ -58,7 +58,7 @@ export interface TableInfo<TName extends string> {
 /**
  * Interface extending `TableInfo` to include additional details about the table's type, distribution, and storage.
  *
- * @interface
+ * @interface TableInfoExtended
  * @typeParam TName - A string literal representing the table name.
  * @property {string} tableType - The type of the table.
  * @property {boolean} distributed - Indicates whether the table is distributed.
@@ -87,7 +87,7 @@ type VectorScoreKey = "v_score";
 /**
  * Class representing a table in SingleStore, providing methods to manage its columns, query data, and perform vector search.
  *
- * @class
+ * @class Table
  * @typeParam TTableName - The name of the table, which extends `string`.
  * @typeParam TTableType - The type of the table, which extends `TableType`.
  * @typeParam TDatabaseType - The type of the database, which extends `DatabaseType`.
@@ -174,7 +174,6 @@ export class Table<
    * @returns {Promise<Table<TType, TDatabaseType, TAi>>} A promise that resolves to the created `Table` instance.
    */
   static async create<
-    TName extends string = string,
     TType extends TableType = TableType,
     TDatabaseType extends DatabaseType = DatabaseType,
     TAi extends AnyAI | undefined = undefined,
