@@ -37,7 +37,7 @@ export interface ChatMessagesTable {
  * @property {boolean} store - Whether the message is stored in the database.
  * @property {string} tableName - The name of the table where the message is stored.
  */
-export class ChatMessage<TDatabase extends AnyDatabase = AnyDatabase> {
+export class ChatMessage<TDatabase extends AnyDatabase = AnyDatabase, TTableName extends string = string> {
   constructor(
     private _database: TDatabase,
     public id: number | undefined,
@@ -46,7 +46,7 @@ export class ChatMessage<TDatabase extends AnyDatabase = AnyDatabase> {
     public role: ChatCompletionMessage["role"],
     public content: ChatCompletionMessage["content"],
     public store: boolean,
-    public tableName: string,
+    public tableName: TTableName,
   ) {}
 
   /**
@@ -63,8 +63,8 @@ export class ChatMessage<TDatabase extends AnyDatabase = AnyDatabase> {
   static createTable<TDatabase extends AnyDatabase, TName extends ChatMessage["tableName"]>(
     database: TDatabase,
     name: TName,
-  ): Promise<Table<ChatMessagesTable>> {
-    return database.createTable<ChatMessagesTable>({
+  ): Promise<Table<TName, ChatMessagesTable>> {
+    return database.createTable<TName, ChatMessagesTable>({
       name,
       columns: {
         id: { type: "bigint", autoIncrement: true, primaryKey: true },
@@ -90,7 +90,7 @@ export class ChatMessage<TDatabase extends AnyDatabase = AnyDatabase> {
   static async create<TDatabase extends AnyDatabase, TConfig extends ChatMessageConfig>(
     database: TDatabase,
     config: TConfig,
-  ): Promise<ChatMessage<TDatabase>> {
+  ): Promise<ChatMessage<TDatabase, TConfig["tableName"]>> {
     const { sessionId, role, content, store, tableName } = config;
     const createdAt: ChatMessage["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 23);
     let id: ChatMessage["id"];
@@ -115,7 +115,7 @@ export class ChatMessage<TDatabase extends AnyDatabase = AnyDatabase> {
   static delete(
     database: AnyDatabase,
     tableName: ChatMessage["tableName"],
-    where?: Parameters<Table<ChatMessagesTable>["delete"]>[0],
+    where?: Parameters<Table<ChatMessage["tableName"], ChatMessagesTable>["delete"]>[0],
   ): Promise<[ResultSetHeader, FieldPacket[]]> {
     return database.table<ChatMessagesTable>(tableName).delete(where);
   }
@@ -127,7 +127,9 @@ export class ChatMessage<TDatabase extends AnyDatabase = AnyDatabase> {
    *
    * @returns {Promise<[ResultSetHeader, FieldPacket[]]>} A promise that resolves when the update operation is complete.
    */
-  async update(values: Parameters<Table<ChatMessagesTable>["update"]>[0]): Promise<[ResultSetHeader, FieldPacket[]]> {
+  async update(
+    values: Parameters<Table<TTableName, ChatMessagesTable>["update"]>[0],
+  ): Promise<[ResultSetHeader, FieldPacket[]]> {
     const result = await this._database.table<ChatMessagesTable>(this.tableName).update(values, { id: this.id });
 
     for (const [key, value] of Object.entries(values)) {

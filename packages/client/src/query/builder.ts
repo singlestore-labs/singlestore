@@ -3,7 +3,12 @@ import { escape } from "mysql2";
 import type { DatabaseType } from "../database";
 import type { TableType } from "../table";
 
-export type SelectClause<TColumn> = (keyof TColumn | (string & {}))[];
+export type SelectClause<
+  TTableName extends string,
+  TTableType extends TableType,
+  TDatabaseType extends DatabaseType,
+  _TTableColumns = TTableType["columns"],
+> = ((string & {}) | keyof _TTableColumns)[];
 
 export type WhereOperator<TColumnValue> = TColumnValue extends string
   ? {
@@ -26,44 +31,65 @@ export type WhereOperator<TColumnValue> = TColumnValue extends string
       }
     : never;
 
-export type WhereClause<TColumn> = {
-  [K in keyof TColumn]?: WhereOperator<TColumn[K]> | TColumn[K];
-} & {
-  OR?: WhereClause<TColumn>[];
-  NOT?: WhereClause<TColumn>;
+export type WhereClause<
+  TTableName extends string,
+  TTableType extends TableType,
+  TDatabaseType extends DatabaseType,
+  _TTableColumns = TTableType["columns"],
+> = { [K in keyof _TTableColumns]?: WhereOperator<_TTableColumns[K]> | _TTableColumns[K] } & {
+  OR?: WhereClause<TTableName, TTableType, TDatabaseType>[];
+  NOT?: WhereClause<TTableName, TTableType, TDatabaseType>;
 };
 
-export type GroupByClause<TColumn> = (keyof TColumn)[];
+export type GroupByClause<
+  TTableName extends string,
+  TTableType extends TableType,
+  TDatabaseType extends DatabaseType,
+  _TTableColumns = TTableType["columns"],
+> = ((string & {}) | keyof _TTableColumns)[];
 
 export type OrderByDirection = "asc" | "desc";
 
-export type OrderByClause<TColumn> = {
-  [K in keyof TColumn]?: OrderByDirection;
-};
+export type OrderByClause<
+  TTableName extends string,
+  TTableType extends TableType,
+  TDatabaseType extends DatabaseType,
+  _TTableColumns = TTableType["columns"],
+> = { [K in string & {}]: OrderByDirection } & { [K in keyof _TTableColumns]?: OrderByDirection };
 
-export interface QueryBuilderParams<TTableType extends TableType, TDatabaseType extends DatabaseType = DatabaseType> {
-  select?: SelectClause<TTableType["columns"]>;
-  where?: WhereClause<TTableType["columns"]>;
-  groupBy?: GroupByClause<TTableType["columns"]>;
-  orderBy?: OrderByClause<TTableType["columns"]>;
+export interface QueryBuilderParams<
+  TTableName extends string,
+  TTableType extends TableType,
+  TDatabaseType extends DatabaseType,
+> {
+  select?: SelectClause<TTableName, TTableType, TDatabaseType>;
+  where?: WhereClause<TTableName, TTableType, TDatabaseType>;
+  groupBy?: GroupByClause<TTableName, TTableType, TDatabaseType>;
+  orderBy?: OrderByClause<TTableName, TTableType, TDatabaseType>;
   limit?: number;
   offset?: number;
 }
 
-export type ExtractQuerySelectedColumn<TColumn, TParams extends QueryBuilderParams<any, any> | undefined> =
-  TParams extends QueryBuilderParams<any, any>
-    ? TParams["select"] extends (keyof TColumn)[]
-      ? Pick<TColumn, TParams["select"][number]>
-      : TColumn
-    : TColumn;
+export type AnyQueryBuilderParams = QueryBuilderParams<any, any, any>;
 
-export class QueryBuilder<TTableType extends TableType, TDatabaseType extends DatabaseType = DatabaseType> {
+export type ExtractQuerySelectedColumn<
+  TTableName extends string,
+  TDatabaseType extends DatabaseType,
+  TParams extends AnyQueryBuilderParams | undefined,
+  _Table extends TDatabaseType["tables"][TTableName] = TDatabaseType["tables"][TTableName],
+> = TParams extends AnyQueryBuilderParams
+  ? TParams["select"] extends (keyof _Table["columns"])[]
+    ? Pick<_Table["columns"], TParams["select"][number]>
+    : _Table["columns"]
+  : _Table["columns"];
+
+export class QueryBuilder<TName extends string, TTableType extends TableType, TDatabaseType extends DatabaseType> {
   constructor(
     private _databaseName: string,
-    private _tableName: string,
+    private _tableName: TName,
   ) {}
 
-  buildSelectClause(select?: SelectClause<any>) {
+  buildSelectClause(select?: SelectClause<any, any, any>) {
     const columns = select ? select : ["*"];
     return `SELECT ${columns.join(", ")}`;
   }
@@ -97,7 +123,7 @@ export class QueryBuilder<TTableType extends TableType, TDatabaseType extends Da
     }
   }
 
-  buildWhereClause(conditions?: WhereClause<any>): string {
+  buildWhereClause(conditions?: WhereClause<any, any, any>): string {
     if (!conditions || !Object.keys(conditions).length) return "";
 
     const clauses: string[] = [];
@@ -119,11 +145,11 @@ export class QueryBuilder<TTableType extends TableType, TDatabaseType extends Da
     return `WHERE ${clauses.join(" AND ")}`;
   }
 
-  buildGroupByClause(columns?: GroupByClause<any>): string {
+  buildGroupByClause(columns?: GroupByClause<any, any, any>): string {
     return columns?.length ? `GROUP BY ${columns.join(", ")}` : "";
   }
 
-  buildOrderByClause(clauses?: OrderByClause<any>): string {
+  buildOrderByClause(clauses?: OrderByClause<any, any, any>): string {
     if (!clauses) return "";
 
     const condition = Object.entries(clauses)
@@ -145,7 +171,7 @@ export class QueryBuilder<TTableType extends TableType, TDatabaseType extends Da
     return typeof offset === "number" ? `OFFSET ${offset}` : "";
   }
 
-  buildClauses(params?: QueryBuilderParams<TTableType, TDatabaseType>) {
+  buildClauses<TParams extends QueryBuilderParams<TName, TTableType, TDatabaseType>>(params?: TParams) {
     return {
       select: this.buildSelectClause(params?.select),
       from: this.buildFromClause(),
@@ -157,7 +183,7 @@ export class QueryBuilder<TTableType extends TableType, TDatabaseType extends Da
     };
   }
 
-  buildQuery(params?: QueryBuilderParams<TTableType, TDatabaseType>) {
-    return Object.values(this.buildClauses(params)).join(" ");
+  buildQuery<TParams extends QueryBuilderParams<TName, TTableType, TDatabaseType>>(params?: TParams) {
+    return Object.values(this.buildClauses(params)).join(" ").trim();
   }
 }

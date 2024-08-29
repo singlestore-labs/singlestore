@@ -18,16 +18,17 @@ export interface TableType {
 /**
  * Interface representing the schema of a table, including its columns, primary keys, full-text keys, and additional clauses.
  *
+ * @typeParam TName - A type extending `string` that defines the name of the table.
  * @typeParam TType - A type extending `TableType` that defines the structure of the table.
  *
- * @property {string} name - The name of the table.
+ * @property {TName} name - The name of the table.
  * @property {Object} columns - An object where each key is a column name and each value is the schema of that column, excluding the name.
  * @property {string[]} [primaryKeys] - An optional array of column names that form the primary key.
  * @property {string[]} [fulltextKeys] - An optional array of column names that form full-text keys.
  * @property {string[]} [clauses] - An optional array of additional SQL clauses for the table definition.
  */
-export interface TableSchema<TType extends TableType> {
-  name: string;
+export interface TableSchema<TName extends string, TType extends TableType> {
+  name: TName;
   columns: { [K in keyof TType["columns"]]: Omit<ColumnSchema, "name"> };
   primaryKeys?: string[];
   fulltextKeys?: string[];
@@ -87,6 +88,7 @@ type VectorScoreKey = "v_score";
  * @property {VectorScoreKey} vScoreKey - The key used for vector scoring in vector search queries, defaulting to `"v_score"`.
  */
 export class Table<
+  TName extends string = string,
   TType extends TableType = TableType,
   TDatabaseType extends DatabaseType = DatabaseType,
   TAi extends AnyAI | undefined = undefined,
@@ -97,7 +99,7 @@ export class Table<
   constructor(
     private _connection: Connection,
     public databaseName: string,
-    public name: string,
+    public name: TName,
     private _ai?: TAi,
   ) {
     this._path = [databaseName, name].join(".");
@@ -144,7 +146,7 @@ export class Table<
    *
    * @returns {string} An SQL string representing the table definition.
    */
-  static schemaToClauses(schema: TableSchema<any>): string {
+  static schemaToClauses(schema: TableSchema<any, any>): string {
     const clauses: string[] = [
       ...Object.entries(schema.columns).map(([name, schema]) => {
         return Column.schemaToClauses({ ...schema, name });
@@ -160,6 +162,7 @@ export class Table<
   /**
    * Creates a new table in the database with the specified schema.
    *
+   * @typeParam TName - The name of the table, which extends `string`.
    * @typeParam TType - The type of the table, which extends `TableType`.
    * @typeParam TDatabaseType - The type of the database, which extends `DatabaseType`.
    * @typeParam TAi - The type of AI functionalities integrated with the table, which can be undefined.
@@ -169,24 +172,25 @@ export class Table<
    * @param {TableSchema<TType>} schema - The schema defining the structure of the table.
    * @param {TAi} [ai] - Optional AI functionalities to associate with the table.
    *
-   * @returns {Promise<Table<TDatabaseType, TType, TAi>>} A promise that resolves to the created `Table` instance.
+   * @returns {Promise<Table<TName, TType, TDatabaseType, TAi>>} A promise that resolves to the created `Table` instance.
    */
   static async create<
+    TName extends string = string,
     TType extends TableType = TableType,
     TDatabaseType extends DatabaseType = DatabaseType,
     TAi extends AnyAI | undefined = undefined,
   >(
     connection: Connection,
     databaseName: string,
-    schema: TableSchema<TType>,
+    schema: TableSchema<TName, TType>,
     ai?: TAi,
-  ): Promise<Table<TType, TDatabaseType, TAi>> {
+  ): Promise<Table<TName, TType, TDatabaseType, TAi>> {
     const clauses = Table.schemaToClauses(schema);
     await connection.client.execute<ResultSetHeader>(`\
       CREATE TABLE IF NOT EXISTS ${databaseName}.${schema.name} (${clauses})
     `);
 
-    return new Table<TType, TDatabaseType, TAi>(connection, databaseName, schema.name, ai);
+    return new Table<TName, TType, TDatabaseType, TAi>(connection, databaseName, schema.name, ai);
   }
 
   /**
@@ -331,13 +335,11 @@ export class Table<
    *
    * @param {TParams} params - The arguments defining the query, including selected columns, filters, and other options.
    *
-   * @returns {Promise<(ExtractQuerySelectedColumn<TType["columns"], TParams> & RowDataPacket)[]>} A promise that resolves to an array of selected rows.
+   * @returns {Promise<(ExtractQuerySelectedColumn<TName, TDatabaseType, TParams> & RowDataPacket)[]>} A promise that resolves to an array of selected rows.
    */
-  async find<TParams extends QueryBuilderParams<TType, TDatabaseType> | undefined>(
-    params?: TParams,
-  ): Promise<(ExtractQuerySelectedColumn<TType["columns"], TParams> & RowDataPacket)[]> {
-    type SelectedColumn = ExtractQuerySelectedColumn<TType["columns"], TParams>;
-    const queryBuilder = new QueryBuilder<TType, TDatabaseType>(this.databaseName, this.name);
+  async find<TParams extends QueryBuilderParams<TName, TType, TDatabaseType>>(params?: TParams) {
+    type SelectedColumn = ExtractQuerySelectedColumn<TName, TDatabaseType, TParams>;
+    const queryBuilder = new QueryBuilder<TName, TType, TDatabaseType>(this.databaseName, this.name);
     const query = queryBuilder.buildQuery(params);
     const [rows] = await this._connection.client.execute<(SelectedColumn & RowDataPacket)[]>(query);
     return rows;
@@ -347,11 +349,14 @@ export class Table<
    * Updates rows in the table based on the specified values and filters.
    *
    * @param {Partial<TType["columns"]>} values - The values to update in the table.
-   * @param {WhereClause<TType["columns"]>} where - The where clause to apply to the update query.
+   * @param {WhereClause<TName, TDatabaseType>} where - The where clause to apply to the update query.
    *
    * @returns {Promise<[ResultSetHeader, FieldPacket[]]>} A promise that resolves when the update is complete.
    */
-  update(values: Partial<TType["columns"]>, where: WhereClause<TType["columns"]>): Promise<[ResultSetHeader, FieldPacket[]]> {
+  update(
+    values: Partial<TType["columns"]>,
+    where: WhereClause<TName, TType, TDatabaseType>,
+  ): Promise<[ResultSetHeader, FieldPacket[]]> {
     const _where = new QueryBuilder(this.databaseName, this.name).buildWhereClause(where);
 
     const columnAssignments = Object.keys(values)
@@ -365,11 +370,11 @@ export class Table<
   /**
    * Deletes rows from the table based on the specified filters. If no filters are provided, the table is truncated.
    *
-   * @param {WhereClause<TType["columns"]>} [where] - The where clause to apply to the delete query.
+   * @param {WhereClause<TName, TDatabaseType>} [where] - The where clause to apply to the delete query.
    *
    * @returns {Promise<[ResultSetHeader, FieldPacket[]]>} A promise that resolves when the delete operation is complete.
    */
-  delete(where?: WhereClause<TType["columns"]>): Promise<[ResultSetHeader, FieldPacket[]]> {
+  delete(where?: WhereClause<TName, TType, TDatabaseType>): Promise<[ResultSetHeader, FieldPacket[]]> {
     if (!where) return this.truncate();
     const _where = new QueryBuilder(this.databaseName, this.name).buildWhereClause(where);
     const query = `DELETE FROM ${this._path} ${_where}`;
@@ -395,7 +400,7 @@ export class Table<
    * @param {TQueryParams} [queryParams] - Optional query builder parameters to refine the search, such as filters,
    * groupings, orderings, limits, and offsets.
    *
-   * @returns {Promise<(ExtractQuerySelectedColumn<TType["columns"], TQueryParams> & { [K in VectorScoreKey]: number } & RowDataPacket)[]>}
+   * @returns {Promise<(ExtractQuerySelectedColumn<TName, TDatabaseType, TQueryParams> & { v_score: number } & RowDataPacket)[]>}
    * A promise that resolves to an array of rows matching the vector search criteria, each row including
    * the selected columns and a vector similarity score.
    */
@@ -405,17 +410,12 @@ export class Table<
       vectorColumn: TableColumnName<TType>;
       embeddingParams?: TAi extends AnyAI ? Parameters<TAi["embeddings"]["create"]>[1] : never;
     },
-    TQueryParams extends QueryBuilderParams<TType, TDatabaseType>,
-  >(
-    params: TParams,
-    queryParams?: TQueryParams,
-  ): Promise<
-    (ExtractQuerySelectedColumn<TType["columns"], TQueryParams> & { [K in VectorScoreKey]: number } & RowDataPacket)[]
-  > {
-    type SelectedColumn = ExtractQuerySelectedColumn<TType["columns"], TQueryParams>;
+    TQueryParams extends QueryBuilderParams<TName, TType, TDatabaseType>,
+  >(params: TParams, queryParams?: TQueryParams) {
+    type SelectedColumn = ExtractQuerySelectedColumn<TName, TDatabaseType, TQueryParams>;
     type ResultColumn = SelectedColumn & { [K in VectorScoreKey]: number };
 
-    const clauses = new QueryBuilder<TType, TDatabaseType>(this.databaseName, this.name).buildClauses(queryParams);
+    const clauses = new QueryBuilder<TName, TType, TDatabaseType>(this.databaseName, this.name).buildClauses(queryParams);
     const promptEmbedding = (await this.ai.embeddings.create(params.prompt, params.embeddingParams))[0] || [];
     let orderByClause = `ORDER BY ${this.vScoreKey} DESC`;
 
@@ -464,7 +464,7 @@ export class Table<
   async createChatCompletion<
     TParams extends Parameters<this["vectorSearch"]>[0] &
       (TAi extends AnyAI ? Parameters<TAi["chatCompletions"]["create"]>[0] : never) & { template?: string },
-    TQueryParams extends QueryBuilderParams<TType, TDatabaseType>,
+    TQueryParams extends QueryBuilderParams<TName, TType, TDatabaseType>,
   >(params: TParams, queryParams?: TQueryParams): Promise<CreateChatCompletionResult<TParams["stream"]>> {
     const { prompt, systemRole, template, vectorColumn, embeddingParams, ...createChatCompletionParams } = params;
 

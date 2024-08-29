@@ -4,6 +4,7 @@ import { Workspace, type ConnectWorkspaceConfig, type WorkspaceType } from "./wo
 
 export type * from "./types";
 export { escape } from "mysql2";
+export { QueryBuilder } from "./query/builder";
 
 /**
  * Configuration object for initializing a `SingleStoreClient` instance.
