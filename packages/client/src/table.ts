@@ -17,9 +17,11 @@ import {
  * Interface representing the structure of a table type, including its columns.
  *
  * @interface
+ * @property {string} name - A table name.
  * @property {Record<string, ColumnType>} columns - A record where the keys are column names and the values are their respective column types.
  */
 export interface TableType {
+  name: string;
   columns: Record<string, ColumnType>;
 }
 
@@ -27,16 +29,15 @@ export interface TableType {
  * Interface representing the schema of a table, including its columns, primary keys, full-text keys, and additional clauses.
  *
  * @interface
- * @typeParam TName - A type extending `string` that defines the name of the table.
  * @typeParam TType - A type extending `TableType` that defines the structure of the table.
- * @property {TName} name - The name of the table.
+ * @property {TType['name']} name - The name of the table.
  * @property {Object} columns - An object where each key is a column name and each value is the schema of that column, excluding the name.
  * @property {string[]} [primaryKeys] - An optional array of column names that form the primary key.
  * @property {string[]} [fulltextKeys] - An optional array of column names that form full-text keys.
  * @property {string[]} [clauses] - An optional array of additional SQL clauses for the table definition.
  */
-export interface TableSchema<TName extends string, TType extends TableType> {
-  name: TName;
+export interface TableSchema<TType extends TableType> {
+  name: TType["name"];
   columns: { [K in keyof TType["columns"]]: Omit<ColumnSchema, "name"> };
   primaryKeys?: string[];
   fulltextKeys?: string[];
@@ -93,7 +94,6 @@ type VectorScoreKey = "v_score";
  * @typeParam TAi - The type of AI functionalities integrated with the table, which can be undefined.
  */
 export class Table<
-  TTableName extends string = string,
   TTableType extends TableType = TableType,
   TDatabaseType extends DatabaseType = DatabaseType,
   TAi extends AnyAI | undefined = undefined,
@@ -104,7 +104,7 @@ export class Table<
   constructor(
     private _connection: Connection,
     public databaseName: string,
-    public name: TTableName,
+    public name: TTableType["name"],
     private _ai?: TAi,
   ) {
     this._path = [databaseName, name].join(".");
@@ -145,10 +145,10 @@ export class Table<
   /**
    * Converts a `TableSchema` object into an SQL table definition string.
    *
-   * @param {TableSchema<string, TableType>} schema - The schema of the table to be converted.
+   * @param {TableSchema<TableType>} schema - The schema of the table to be converted.
    * @returns {string} An SQL string representing the table definition.
    */
-  static schemaToClauses(schema: TableSchema<string, TableType>): string {
+  static schemaToClauses(schema: TableSchema<TableType>): string {
     const clauses: string[] = [
       ...Object.entries(schema.columns).map(([name, schema]) => {
         return Column.schemaToClauses({ ...schema, name });
@@ -164,15 +164,14 @@ export class Table<
   /**
    * Creates a new table in the database with the specified schema.
    *
-   * @typeParam TName - The name of the table, which extends `string`.
    * @typeParam TType - The type of the table, which extends `TableType`.
    * @typeParam TDatabaseType - The type of the database, which extends `DatabaseType`.
    * @typeParam TAi - The type of AI functionalities integrated with the table, which can be undefined.
    * @param {Connection} connection - The connection to the database.
    * @param {string} databaseName - The name of the database where the table will be created.
-   * @param {TableSchema<TName, TType>} schema - The schema defining the structure of the table.
+   * @param {TableSchema<TType>} schema - The schema defining the structure of the table.
    * @param {TAi} [ai] - Optional AI functionalities to associate with the table.
-   * @returns {Promise<Table<TName, TType, TDatabaseType, TAi>>} A promise that resolves to the created `Table` instance.
+   * @returns {Promise<Table<TType, TDatabaseType, TAi>>} A promise that resolves to the created `Table` instance.
    */
   static async create<
     TName extends string = string,
@@ -182,9 +181,9 @@ export class Table<
   >(
     connection: Connection,
     databaseName: string,
-    schema: TableSchema<TName, TType>,
+    schema: TableSchema<TType>,
     ai?: TAi,
-  ): Promise<Table<TName, TType, TDatabaseType, TAi>> {
+  ): Promise<Table<TType, TDatabaseType, TAi>> {
     const clauses = Table.schemaToClauses(schema);
     await connection.client.execute<ResultSetHeader>(`\
       CREATE TABLE IF NOT EXISTS ${databaseName}.${schema.name} (${clauses})
@@ -335,13 +334,12 @@ export class Table<
     TSelectClause extends SelectClause<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses>,
   >(params?: QueryBuilderParams<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>) {
     type SelectedColumn = ExtractQuerySelectedColumn<
-      TTableName,
+      TTableType["name"],
       TDatabaseType,
       QueryBuilderParams<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>
     >;
     const queryBuilder = new QueryBuilder<TTableType, TDatabaseType>(this.databaseName, this.name);
     const query = queryBuilder.buildQuery(params);
-    console.dir({ query });
     const [rows] = await this._connection.client.execute<(SelectedColumn & RowDataPacket)[]>(query);
     return rows;
   }
@@ -406,7 +404,7 @@ export class Table<
     },
   >(params: TParams, queryParams?: QueryBuilderParams<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>) {
     type SelectedColumn = ExtractQuerySelectedColumn<
-      TTableName,
+      TTableType["name"],
       TDatabaseType,
       QueryBuilderParams<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>
     >;
