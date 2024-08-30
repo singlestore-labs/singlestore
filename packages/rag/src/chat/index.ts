@@ -4,71 +4,18 @@ import type { AnyDatabase, FieldPacket, InferDatabaseType, ResultSetHeader, Tabl
 import { ChatMessage } from "./message";
 import { ChatSession, type ChatSessionsTable } from "./session";
 
-/**
- * Interface for configuring a `Chat` instance.
- *
- * Represents a subset of the properties of the `Chat` class, excluding the `id`, `createdAt`, and `_database` fields.
- *
- * @interface ChatConfig
- * @property {string} name - The name of the chat.
- * @property {string} systemRole - The system role for the chat session.
- * @property {boolean} store - Indicates whether to store the chat and its sessions in the database.
- * @property {string} tableName - The name of the table where the chat is stored.
- * @property {string} sessionsTableName - The name of the table where the chat sessions are stored.
- * @property {string} messagesTableName - The name of the table where the session's messages are stored.
- * @property {AnyChatCompletionTool[]} tools - The tools available in the chat session.
- */
 export interface ChatConfig
   extends Pick<Chat, "name" | "systemRole" | "store" | "tableName" | "sessionsTableName" | "messagesTableName"> {
   tools: AnyChatCompletionTool[];
 }
 
-/**
- * Interface representing the schema of the chats table.
- *
- * Defines the structure of the chats table, including the necessary columns and their types.
- *
- * @interface ChatsTable
- * @typeParam TName - The name of the chats table.
- * @property {TName} name - The name of the chats table.
- * @property {Pick<Chat, "id" | "createdAt"> & Omit<ChatConfig, "tools">} columns - The columns in the chats table, excluding the `tools` property.
- */
 export interface ChatsTable<TName extends string = string> extends TableType {
   name: TName;
   columns: Pick<Chat, "id" | "createdAt"> & Omit<ChatConfig, "tools">;
 }
 
-/**
- * Type alias for partial configuration of a `Chat`.
- *
- * @typedef {Partial<ChatConfig>} CreateChatConfig
- */
 export type CreateChatConfig = Partial<ChatConfig>;
 
-/**
- * Class representing a chat, providing methods to manage the chat, its sessions, and messages in the database.
- *
- * This class supports various operations, including creating, updating, and deleting chats and their associated sessions.
- *
- * @typeParam TDatabase - The type of the database, which extends `AnyDatabase`.
- * @typeParam TAi - The type of AI functionalities integrated with the chat, which extends `AnyAI`.
- * @typeParam TChatCompletionTool - The type of tools available in the chat, which can be `undefined`.
- * @typeParam TTableName - The name of the table where the chat is stored.
- * @typeParam TSessionsTableName - The name of the table where the chat sessions are stored.
- * @typeParam TMessagesTableName - The name of the table where the session's messages are stored.
- *
- * @property {TDatabase} _database - The database instance where the chat and its sessions are stored.
- * @property {TAi} _ai - The AI instance used in the chat.
- * @property {TChatCompletionTool} _tools - The tools available in the chat.
- * @property {number | undefined} id - The unique identifier of the chat.
- * @property {string | undefined} createdAt - The timestamp when the chat was created.
- * @property {string} name - The name of the chat.
- * @property {string} systemRole - The system role for the chat session.
- * @property {boolean} store - Whether the chat and its sessions are stored in the database.
- * @property {string} tableName - The name of the table where the chat is stored.
- * @property {string} sessionsTableName - The name of the table where the chat sessions are stored.
- * @property {string} messagesTableName - The name of the table where the session's messages are stored.
- */
 export class Chat<
   TDatabase extends AnyDatabase = AnyDatabase,
   TAi extends AnyAI = AnyAI,
@@ -91,18 +38,6 @@ export class Chat<
     public messagesTableName: TMessagesTableName,
   ) {}
 
-  /**
-   * Creates a table to store chats.
-   *
-   * @typeParam TDatabase - The type of the database.
-   * @typeParam TName - The name of the table to be created.
-   *
-   * @param {TDatabase} database - The database instance where the table will be created.
-   * @param {TName} name - The name of the table.
-   *
-   * @returns {Promise<Table<ChatsTable<TName>, InferDatabaseType<TDatabase>>>} A promise that resolves to the created table instance.
-   * @private
-   */
   private static _createTable<TDatabase extends AnyDatabase, TName extends Chat["tableName"]>(
     database: TDatabase,
     name: TName,
@@ -122,20 +57,6 @@ export class Chat<
     });
   }
 
-  /**
-   * Creates a new chat instance and optionally stores it in the database.
-   *
-   * @typeParam TDatabase - The type of the database.
-   * @typeParam TAi - The type of AI functionalities integrated with the chat.
-   * @typeParam TConfig - The configuration object for the chat.
-   *
-   * @param {TDatabase} database - The database instance where the chat may be stored.
-   * @param {TAi} ai - The AI instance used in the chat.
-   * @param {TConfig} [config] - The configuration object for the chat.
-   *
-   * @returns {Promise<Chat<TDatabase, TAi, TConfig["tools"], TConfig["tableName"], TConfig["sessionsTableName"], TConfig["messagesTableName"]>>} A promise that resolves to the created `Chat` instance.
-   * @static
-   */
   static async create<TDatabase extends AnyDatabase, TAi extends AnyAI, TConfig extends CreateChatConfig>(
     database: TDatabase,
     ai: TAi,
@@ -199,18 +120,6 @@ export class Chat<
     );
   }
 
-  /**
-   * Deletes chats and their associated sessions and messages from the database based on the provided filters.
-   *
-   * @param {AnyDatabase} database - The database instance where the chats are stored.
-   * @param {Chat["tableName"]} tableName - The name of the table where the chats are stored.
-   * @param {Chat["sessionsTableName"]} sessionsTable - The name of the table where the chat sessions are stored.
-   * @param {Chat["messagesTableName"]} messagesTableName - The name of the table where the session's messages are stored.
-   * @param {Parameters<Table<ChatsTable>["delete"]>[0]} [where] - The filters to apply to the delete operation.
-   *
-   * @returns {Promise<[[ResultSetHeader, FieldPacket[]], [ResultSetHeader, FieldPacket[]][]]>} A promise that resolves when the delete operation is complete.
-   * @static
-   */
   static async delete(
     database: AnyDatabase,
     tableName: Chat["tableName"],
@@ -227,13 +136,6 @@ export class Chat<
     ]);
   }
 
-  /**
-   * Updates the current chat instance in the database with the specified values.
-   *
-   * @param {Parameters<Table<ChatsTable<TTableName>>["update"]>[0]} values - The values to update in the chat.
-   *
-   * @returns {Promise<[ResultSetHeader, FieldPacket[]]>} A promise that resolves when the update operation is complete.
-   */
   async update(values: Parameters<Table<ChatsTable<TTableName>>["update"]>[0]): Promise<[ResultSetHeader, FieldPacket[]]> {
     const result = await this._database.table<ChatsTable, TTableName>(this.tableName).update(values, { id: this.id });
 
@@ -246,24 +148,10 @@ export class Chat<
     return result;
   }
 
-  /**
-   * Deletes the current chat instance and its associated sessions and messages from the database.
-   *
-   * @returns {Promise<[[ResultSetHeader, FieldPacket[]], [ResultSetHeader, FieldPacket[]][]]>} A promise that resolves when the delete operation is complete.
-   */
   delete(): Promise<[[ResultSetHeader, FieldPacket[]], [ResultSetHeader, FieldPacket[]][]]> {
     return Chat.delete(this._database, this.tableName, this.sessionsTableName, this.messagesTableName, { id: this.id });
   }
 
-  /**
-   * Creates a new chat session within the current chat and optionally stores it in the database.
-   *
-   * @typeParam TName - The name of the session.
-   *
-   * @param {TName} [name] - The name of the session.
-   *
-   * @returns {Promise<ChatSession<TDatabase, TAi, TChatCompletionTool, TSessionsTableName extends string ? TSessionsTableName : string, TMessagesTableName extends string ? TMessagesTableName : string>>} A promise that resolves to the created `ChatSession` instance.
-   */
   createSession<TName extends ChatSession["name"]>(
     name?: TName,
   ): Promise<
@@ -286,15 +174,6 @@ export class Chat<
     });
   }
 
-  /**
-   * Finds chat sessions from the current chat based on the provided filters and options.
-   *
-   * @typeParam T - The parameters passed to the `find` method of the `Table` class.
-   *
-   * @param {Parameters<Table<TSessionsTableName, ChatSessionsTable>["find"]>[0]} [params] - The parameters defining the filters and options for finding sessions.
-   *
-   * @returns {Promise<ChatSession<TDatabase, TAi, TChatCompletionTool, TSessionsTableName, TMessagesTableName>[]>} A promise that resolves to an array of `ChatSession` instances representing the found sessions.
-   */
   async findSessions(
     params?: Parameters<Table<ChatSessionsTable<TSessionsTableName>>["find"]>[0],
   ): Promise<ChatSession<TDatabase, TAi, TChatCompletionTool, TSessionsTableName, TMessagesTableName>[]> {
@@ -318,13 +197,6 @@ export class Chat<
     );
   }
 
-  /**
-   * Deletes chat sessions from the current chat based on the provided filters.
-   *
-   * @param {Parameters<typeof ChatSession.delete>[3]} [filters] - The filters to apply to the delete operation. Defaults to deleting sessions from the current chat.
-   *
-   * @returns {Promise<[ResultSetHeader, FieldPacket[]][]>} A promise that resolves when the delete operation is complete.
-   */
   deleteSessions(
     filters: Parameters<typeof ChatSession.delete>[3] = { chatId: this.id },
   ): Promise<[ResultSetHeader, FieldPacket[]][]> {

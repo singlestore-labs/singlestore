@@ -14,33 +14,11 @@ import type { Stream } from "openai/streaming.mjs";
 
 import { ChatCompletions } from ".";
 
-/**
- * Represents the model type used in OpenAI chat completions.
- *
- * @typedef {string} OpenAIChatCompletionModel
- */
 export type OpenAIChatCompletionModel = ChatCompletionCreateParamsBase["model"];
 
-/**
- * Internal interface that extends the base parameters for creating an OpenAI chat completion,
- * excluding properties already defined in `CreateChatCompletionParams`.
- *
- * @interface _OpenAICreateChatCompletionParams
- */
 interface _OpenAICreateChatCompletionParams
   extends Omit<Partial<ChatCompletionCreateParamsBase>, keyof CreateChatCompletionParams<any, any>> {}
 
-/**
- * Parameters for creating an OpenAI chat completion.
- *
- * @typeParam TStream - Indicates whether the completion should be streamed (boolean).
- * @typeParam TChatCompletionTool - An array of tools that can be used during the chat completion.
- *
- * @interface OpenAICreateChatCompletionParams
- * @extends CreateChatCompletionParams<TStream, TChatCompletionTool>
- * @extends _OpenAICreateChatCompletionParams
- * @property {OpenAIChatCompletionModel} [model] - The model to use for generating the completion.
- */
 export interface OpenAICreateChatCompletionParams<
   TStream extends boolean | undefined,
   TChatCompletionTool extends AnyChatCompletionTool[] | undefined,
@@ -49,15 +27,6 @@ export interface OpenAICreateChatCompletionParams<
   model?: OpenAIChatCompletionModel;
 }
 
-/**
- * Class representing chat completions using OpenAI's API, with support for tools and streaming.
- *
- * This class provides methods to create chat completions with optional tool integration and streaming capabilities.
- *
- * @class OpenAIChatCompletions
- * @typeParam TChatCompletionTool - An array of tools that can be used during the chat completion.
- * @extends ChatCompletions<TChatCompletionTool>
- */
 export class OpenAIChatCompletions<
   TChatCompletionTool extends AnyChatCompletionTool[] | undefined,
 > extends ChatCompletions<TChatCompletionTool> {
@@ -65,11 +34,6 @@ export class OpenAIChatCompletions<
     super();
   }
 
-  /**
-   * Retrieves the list of models available for OpenAI chat completions.
-   *
-   * @returns {OpenAIChatCompletionModel[]} An array of model names.
-   */
   getModels(): OpenAIChatCompletionModel[] {
     // TODO: Replace with dynamic values
     return [
@@ -92,16 +56,6 @@ export class OpenAIChatCompletions<
     ];
   }
 
-  /**
-   * Creates a chat completion using OpenAI's API, with optional support for streaming and tool integration.
-   *
-   * @typeParam TStream - Indicates whether the completion should be streamed (boolean).
-   * @typeParam TChatCompletionTool - An array of tools that can be used during the chat completion.
-   *
-   * @param {OpenAICreateChatCompletionParams<TStream, MergeChatCompletionTools<TChatCompletionTool, TChatCompletionTool>>} params - Parameters for creating the chat completion, including prompt, system role, messages, tools, and handlers.
-   *
-   * @returns {Promise<CreateChatCompletionResult<TStream>>} A promise that resolves to either a single chat completion or a stream of chat completions, depending on the `stream` parameter.
-   */
   async create<
     TStream extends boolean | undefined = false,
     TChatCompletionTool extends AnyChatCompletionTool[] | undefined = undefined,
@@ -223,13 +177,6 @@ export class OpenAIChatCompletions<
       return { content: message?.content || "" } as CreateChatCompletionResult<TStream>;
     }
 
-    /**
-     * Handles the streaming of chat completion chunks, processing tool calls and yielding content.
-     *
-     * @param {Stream<ChatCompletionChunk>} stream - The stream of chat completion chunks.
-     *
-     * @returns {ChatCompletionStream} A `ChatCompletionStream` that yields processed chat completion content.
-     */
     async function* handleStream(stream: Stream<ChatCompletionChunk>): ChatCompletionStream {
       let delta: ChatCompletionChunk["choices"][number]["delta"] | undefined = undefined;
 

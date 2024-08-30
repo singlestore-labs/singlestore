@@ -2,15 +2,6 @@ import { type AnyAI, ChatCompletionTool } from "@singlestore/ai";
 import { type AnyDatabase } from "@singlestore/client";
 import z from "zod";
 
-/**
- * Creates a `ChatCompletionTool` that generates a detailed description of the database schema.
- *
- * @typeParam TDatabase - The type of the database.
- *
- * @param {TDatabase} database - The database instance to describe.
- *
- * @returns {ChatCompletionTool} A chat tool that, when called, returns a JSON string describing the database schema.
- */
 export function describeDatabaseChatTool<TDatabase extends AnyDatabase>(database: TDatabase) {
   return new ChatCompletionTool({
     name: "database_describe",
@@ -22,19 +13,6 @@ export function describeDatabaseChatTool<TDatabase extends AnyDatabase>(database
   });
 }
 
-/**
- * Creates a `ChatCompletionTool` that generates and executes a MySQL SELECT query based on a natural language prompt.
- *
- * @typeParam TDatabase - The type of the database.
- * @typeParam TAi - The type of AI functionalities integrated with the tool.
- *
- * @param {TDatabase} database - The database instance on which the query will be executed.
- * @param {TAi} ai - The AI instance used to generate the query.
- * @param {Object} [options] - Optional configuration for the AI model.
- * @param {string} [options.model] - The specific AI model to use for generating the query.
- *
- * @returns {ChatCompletionTool} A chat tool that, when called, generates and executes a MySQL SELECT query.
- */
 export function textToSQLChatTool<TDatabase extends AnyDatabase, TAi extends AnyAI>(
   database: TDatabase,
   ai: TAi,
@@ -77,15 +55,6 @@ export function textToSQLChatTool<TDatabase extends AnyDatabase, TAi extends Any
   });
 }
 
-/**
- * Creates a `ChatCompletionTool` that executes a vector-based search across specified tables to find data.
- *
- * @typeParam TDatabase - The type of the database.
- *
- * @param {TDatabase} database - The database instance on which the vector search will be performed.
- *
- * @returns {ChatCompletionTool} A chat tool that, when called, performs a vector search and returns the result.
- */
 export function vectorSearchChatTool<TDatabase extends AnyDatabase>(database: TDatabase) {
   return new ChatCompletionTool({
     name: "vector_search",
