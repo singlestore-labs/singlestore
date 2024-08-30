@@ -25,14 +25,17 @@ async function main() {
 
     console.log("Setting up database schema for better TypeScript support...");
     interface Database {
+      name: "estore_example";
       tables: {
         users: {
+          name: "users";
           columns: {
             id: number;
             name: string;
           };
         };
         products: {
+          name: "products";
           columns: {
             id: number;
             name: string;
@@ -155,7 +158,7 @@ async function main() {
 
     console.log("Executing database methods...");
     console.log('Creating "users" table...');
-    const newUsersTable = await db.createTable<"users", Database["tables"]["users"]>({
+    const newUsersTable = await db.createTable<Database["tables"]["users"]>({
       name: "users",
       columns: {
         id: { type: "bigint", autoIncrement: true, primaryKey: true },

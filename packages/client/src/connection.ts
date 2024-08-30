@@ -7,7 +7,7 @@ import { createPool, type Pool, type PoolOptions } from "mysql2/promise";
  * of any connection pool options provided by the `mysql2` library, except for the `name` and `database`
  * properties which are explicitly omitted.
  *
- * @interface
+ * @interface ConnectionConfig
  */
 export interface ConnectionConfig extends Partial<Omit<PoolOptions, "name" | "database">> {}
 
