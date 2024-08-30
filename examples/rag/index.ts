@@ -8,14 +8,17 @@ import { describeDatabaseChatTool, RAG, textToSQLChatTool, vectorSearchChatTool 
  * Interface for defining the database schema.
  */
 interface Database {
+  name: "estore_example";
   tables: {
     users: {
+      name: "users";
       columns: {
         id: number;
         name: string;
       };
     };
     products: {
+      name: "products";
       columns: {
         id: number;
         name: string;
