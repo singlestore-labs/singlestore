@@ -161,6 +161,17 @@ export type ExtractSelectedQueryColumns<
     >
   : never;
 
+const ALIAS_PATTERN = /(.+)\s+AS\s+(.+)/i;
+
+function extractSelectClauseAliases(selectClauses: string[] = []): string[] {
+  return selectClauses
+    .map((column) => {
+      const match = column.match(ALIAS_PATTERN);
+      return match ? match[2]?.trim() : null;
+    })
+    .filter((alias): alias is string => alias !== null);
+}
+
 function isJoinColumn<TTableType extends TableType, TDatabaseType extends DatabaseType, TJoinClauseAs extends string>(
   column: string,
   joinClauses: JoinClause<TTableType, TDatabaseType, TJoinClauseAs>[] = [],
@@ -173,6 +184,7 @@ function isJoinColumn<TTableType extends TableType, TDatabaseType extends Databa
 
   return false;
 }
+
 export class QueryBuilder<TTableType extends TableType, TDatabaseType extends DatabaseType> {
   constructor(
     private _databaseName: string,
@@ -180,15 +192,15 @@ export class QueryBuilder<TTableType extends TableType, TDatabaseType extends Da
   ) {}
 
   buildJoinClause<TJoinClauseAs extends string, TJoinClauses extends JoinClause<TTableType, TDatabaseType, TJoinClauseAs>[]>(
-    joinClauses?: TJoinClauses,
+    clauses?: TJoinClauses,
   ) {
-    if (!joinClauses || joinClauses.length === 0) return "";
-    return joinClauses
+    if (!clauses || clauses.length === 0) return "";
+    return clauses
       .map((clause) => {
         let left = String(clause.on[0]);
-        left = isJoinColumn(left, joinClauses) ? left : `${this._tableName}.${left}`;
+        left = isJoinColumn(left, clauses) ? left : `${this._tableName}.${left}`;
         let right = String(clause.on[2]);
-        right = isJoinColumn(right, joinClauses) ? right : `${clause.as}.${right}`;
+        right = isJoinColumn(right, clauses) ? right : `${clause.as}.${right}`;
         const joinType = clause.type ? `${clause.type} JOIN` : "JOIN";
         const tableName = `${this._databaseName}.${String(clause.table)} AS ${clause.as}`;
         const onCondition = `${left} ${clause.on[1]} ${right}`;
@@ -198,21 +210,21 @@ export class QueryBuilder<TTableType extends TableType, TDatabaseType extends Da
   }
 
   buildSelectClause<TJoinClauseAs extends string, TJoinClauses extends JoinClause<TTableType, TDatabaseType, TJoinClauseAs>[]>(
-    select?: SelectClause<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses>,
+    clauses?: SelectClause<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses>,
     joinClauses?: TJoinClauses,
   ) {
-    let columns = select?.length ? select : [];
+    let _clauses = clauses?.length ? clauses : [];
 
-    if (!select?.length) {
-      columns.push("*");
+    if (!clauses?.length) {
+      _clauses.push("*");
     }
 
     if (joinClauses?.length) {
-      if (!select?.length) {
-        columns = [...columns, ...joinClauses.map((join) => `${join.as}.*`)];
+      if (!clauses?.length) {
+        _clauses = [..._clauses, ...joinClauses.map((join) => `${join.as}.*`)];
       }
 
-      columns = columns.map((column) => {
+      _clauses = _clauses.map((column) => {
         const _column = String(column);
 
         if (isJoinColumn(_column, joinClauses)) {
@@ -220,7 +232,7 @@ export class QueryBuilder<TTableType extends TableType, TDatabaseType extends Da
           return `${_column}${!_column.endsWith("*") ? ` AS ${tableName}_${columnName}` : ""}`;
         }
 
-        if (/.+\s+AS\s+.+/.test(_column)) {
+        if (ALIAS_PATTERN.test(_column)) {
           return _column;
         }
 
@@ -228,7 +240,7 @@ export class QueryBuilder<TTableType extends TableType, TDatabaseType extends Da
       });
     }
 
-    return `SELECT ${columns.join(", ")}`;
+    return `SELECT ${_clauses.join(", ")}`;
   }
 
   buildFromClause(hasJoinClauses?: boolean) {
@@ -261,18 +273,18 @@ export class QueryBuilder<TTableType extends TableType, TDatabaseType extends Da
   }
 
   buildWhereClause<TJoinClauseAs extends string, TJoinClauses extends JoinClause<TTableType, TDatabaseType, TJoinClauseAs>[]>(
-    conditions?: WhereClause<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses>,
+    clauses?: WhereClause<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses>,
     joinClauses?: TJoinClauses,
   ): string {
-    if (!conditions || !Object.keys(conditions).length) return "";
+    if (!clauses || !Object.keys(clauses).length) return "";
 
-    const clauses: string[] = [];
+    const _clauses: string[] = [];
 
-    for (const [column, value] of Object.entries(conditions) as [string, any][]) {
+    for (const [column, value] of Object.entries(clauses) as [string, any][]) {
       if (column === "OR" && Array.isArray(value)) {
-        clauses.push(`(${value.map((v) => `(${this.buildWhereClause(v, joinClauses)})`).join(" OR ")})`);
+        _clauses.push(`(${value.map((v) => `(${this.buildWhereClause(v, joinClauses)})`).join(" OR ")})`);
       } else if (column === "NOT" && typeof value === "object") {
-        clauses.push(`NOT (${this.buildWhereClause(value, joinClauses)})`);
+        _clauses.push(`NOT (${this.buildWhereClause(value, joinClauses)})`);
       } else if (typeof value === "object" && !Array.isArray(value)) {
         for (const [operator, _value] of Object.entries(value) as [string, any][]) {
           const _column = joinClauses?.length
@@ -281,7 +293,7 @@ export class QueryBuilder<TTableType extends TableType, TDatabaseType extends Da
               : `${this._tableName}.${column}`
             : column;
 
-          clauses.push(this.buildWhereCondition(_column, operator, _value));
+          _clauses.push(this.buildWhereCondition(_column, operator, _value));
         }
       } else {
         const _column = joinClauses?.length
@@ -290,36 +302,47 @@ export class QueryBuilder<TTableType extends TableType, TDatabaseType extends Da
             : `${this._tableName}.${column}`
           : column;
 
-        clauses.push(this.buildWhereCondition(_column, "eq", value));
+        _clauses.push(this.buildWhereCondition(_column, "eq", value));
       }
     }
 
-    return `WHERE ${clauses.join(" AND ")}`;
+    return `WHERE ${_clauses.join(" AND ")}`;
   }
 
   buildGroupByClause<TJoinClauseAs extends string, TJoinClauses extends JoinClause<TTableType, TDatabaseType, TJoinClauseAs>[]>(
-    columns?: GroupByClause<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses>,
+    clauses?: GroupByClause<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses>,
     joinClauses?: TJoinClauses,
+    aliases?: string[],
   ): string {
-    if (!columns || !columns.length) return "";
+    if (!clauses || !clauses.length) return "";
 
-    const _columns = columns.map((column) => {
+    const _clauses = clauses.map((column) => {
       const _column = String(column);
+
+      if (aliases?.includes(_column)) {
+        return _column;
+      }
+
       return joinClauses?.length ? (isJoinColumn(_column, joinClauses) ? _column : `${this._tableName}.${_column}`) : _column;
     });
 
-    return `GROUP BY ${_columns.join(", ")}`;
+    return `GROUP BY ${_clauses.join(", ")}`;
   }
 
   buildOrderByClause<TJoinClauseAs extends string, TJoinClauses extends JoinClause<TTableType, TDatabaseType, TJoinClauseAs>[]>(
     clauses?: OrderByClause<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses>,
     joinClauses?: TJoinClauses,
+    aliases?: string[],
   ): string {
     if (!clauses) return "";
 
     const condition = Object.entries(clauses)
       .map(([column, direction = "asc"]) => {
         let _column = String(column);
+
+        if (aliases?.includes(_column)) {
+          return _column;
+        }
 
         _column = joinClauses?.length
           ? isJoinColumn(_column, joinClauses)
@@ -347,13 +370,15 @@ export class QueryBuilder<TTableType extends TableType, TDatabaseType extends Da
     TJoinClauses extends JoinClause<TTableType, TDatabaseType, TJoinClauseAs>[],
     TSelectClause extends SelectClause<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses>,
   >(params?: QueryBuilderParams<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>) {
+    const aliases = extractSelectClauseAliases(params?.select as string[]);
+
     return {
       select: this.buildSelectClause(params?.select, params?.join),
       from: this.buildFromClause(Boolean(params?.join?.length)),
       join: this.buildJoinClause(params?.join),
       where: this.buildWhereClause(params?.where, params?.join),
-      groupBy: this.buildGroupByClause(params?.groupBy, params?.join),
-      orderBy: this.buildOrderByClause(params?.orderBy, params?.join),
+      groupBy: this.buildGroupByClause(params?.groupBy, params?.join, aliases),
+      orderBy: this.buildOrderByClause(params?.orderBy, params?.join, aliases),
       limit: this.buildLimitClause(params?.limit),
       offset: this.buildOffsetClause(params?.offset),
     };
