@@ -3,6 +3,8 @@ import { escape } from "mysql2";
 import type { DatabaseType } from "../database";
 import type { TableType } from "../table";
 
+type MergeUnion<T> = (T extends any ? (i: T) => void : never) extends (i: infer U) => void ? { [K in keyof U]: U[K] } : never;
+
 type JoinType = "INNER" | "LEFT" | "RIGHT" | "FULL";
 type JoinOperator = "=" | "<" | ">" | "<=" | ">=" | "!=";
 
@@ -35,10 +37,10 @@ export type SelectClause<
   TJoinClauses extends JoinClause<TTableType, TDatabaseType, TJoinClauseAs>[],
 > = (
   | "*"
-  | (string & {})
   | keyof TTableType["columns"]
   | ExtractJoinClauseColumns<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses>
-  | { [K in TJoinClauses[number] as K["as"]]: `${K["as"]}.*` }[TJoinClauses[number]["as"]]
+  | `${TJoinClauseAs}.*`
+  | `${string} AS ${string}`
 )[];
 
 export type WhereOperator<TColumnValue> = TColumnValue extends string
@@ -123,16 +125,41 @@ export interface QueryBuilderParams<
 
 export type AnyQueryBuilderParams = QueryBuilderParams<any, any, any, any, any>;
 
-export type ExtractQuerySelectedColumn<
-  TTableName extends string,
+export type ExtractSelectedQueryColumns<
+  TTableType extends TableType,
   TDatabaseType extends DatabaseType,
-  TParams extends AnyQueryBuilderParams | undefined,
-  _Table extends TDatabaseType["tables"][TTableName] = TDatabaseType["tables"][TTableName],
-> = TParams extends AnyQueryBuilderParams
-  ? TParams["select"] extends (keyof _Table["columns"])[]
-    ? Pick<_Table["columns"], TParams["select"][number]>
-    : _Table["columns"]
-  : _Table["columns"];
+  TJoinClauseAs extends string,
+  TJoinClauses extends JoinClause<TTableType, TDatabaseType, TJoinClauseAs>[],
+  TSelectClause extends SelectClause<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses>,
+> = TSelectClause extends (infer TColumn)[]
+  ? MergeUnion<
+      TColumn extends "*"
+        ? TTableType["columns"]
+        : TColumn extends keyof TTableType["columns"]
+          ? { [K in TColumn]: TTableType["columns"][K] }
+          : TColumn extends `${infer TJoinAs}.${infer TJoinColumn}`
+            ? TJoinAs extends TJoinClauseAs
+              ? TJoinColumn extends keyof TDatabaseType["tables"][Extract<
+                  TJoinClauses[number],
+                  { as: TJoinAs }
+                >["table"]]["columns"]
+                ? {
+                    [K in `${TJoinAs}_${TJoinColumn}`]: TDatabaseType["tables"][Extract<
+                      TJoinClauses[number],
+                      { as: TJoinAs }
+                    >["table"]]["columns"][TJoinColumn];
+                  }
+                : never
+              : never
+            : TColumn extends `${infer TAlias}.*`
+              ? TAlias extends TJoinClauseAs
+                ? TDatabaseType["tables"][Extract<TJoinClauses[number], { as: TAlias }>["table"]]["columns"]
+                : never
+              : TColumn extends `${string} AS ${infer TAs}`
+                ? { [K in TAs]: any }
+                : never
+    >
+  : never;
 
 function isJoinColumn<TTableType extends TableType, TDatabaseType extends DatabaseType, TJoinClauseAs extends string>(
   column: string,
@@ -191,6 +218,10 @@ export class QueryBuilder<TTableType extends TableType, TDatabaseType extends Da
         if (isJoinColumn(_column, joinClauses)) {
           const [tableName, columnName] = _column.split(".");
           return `${_column}${!_column.endsWith("*") ? ` AS ${tableName}_${columnName}` : ""}`;
+        }
+
+        if (/.+\s+AS\s+.+/.test(_column)) {
+          return _column;
         }
 
         return `${this._tableName}.${_column}${!_column.endsWith("*") ? ` AS ${_column}` : ""}`;
@@ -333,6 +364,6 @@ export class QueryBuilder<TTableType extends TableType, TDatabaseType extends Da
     TJoinClauses extends JoinClause<TTableType, TDatabaseType, TJoinClauseAs>[],
     TSelectClause extends SelectClause<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses>,
   >(params?: QueryBuilderParams<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>) {
-    return Object.values(this.buildClauses(params)).join(" ").trim();
+    return Object.values(this.buildClauses(params)).filter(Boolean).join(" ").trim();
   }
 }

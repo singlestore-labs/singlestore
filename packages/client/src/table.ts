@@ -5,7 +5,7 @@ import type { FieldPacket, ResultSetHeader, RowDataPacket } from "mysql2/promise
 import { Column, type ColumnInfo, type ColumnSchema, type ColumnType } from "./column";
 import { Connection } from "./connection";
 import {
-  type ExtractQuerySelectedColumn,
+  type ExtractSelectedQueryColumns,
   QueryBuilder,
   type WhereClause,
   type QueryBuilderParams,
@@ -325,18 +325,14 @@ export class Table<
    *
    * @typeParam TParams - The type of the query builder arguments.
    * @param {QueryBuilderParams<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>} params - The arguments defining the query, including selected columns, filters, and other options.
-   * @returns {Promise<(ExtractQuerySelectedColumn<TTableName, TDatabaseType, QueryBuilderParams<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>> & RowDataPacket)[]>} A promise that resolves to an array of selected rows.
+   * @returns {Promise<(ExtractSelectedQueryColumns<TTableName, TDatabaseType, QueryBuilderParams<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>> & RowDataPacket)[]>} A promise that resolves to an array of selected rows.
    */
   async find<
     TJoinClauseAs extends string,
     TJoinClauses extends JoinClause<TTableType, TDatabaseType, TJoinClauseAs>[],
     TSelectClause extends SelectClause<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses>,
   >(params?: QueryBuilderParams<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>) {
-    type SelectedColumn = ExtractQuerySelectedColumn<
-      TTableType["name"],
-      TDatabaseType,
-      QueryBuilderParams<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>
-    >;
+    type SelectedColumn = ExtractSelectedQueryColumns<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>;
     const queryBuilder = new QueryBuilder<TTableType, TDatabaseType>(this.databaseName, this.name);
     const query = queryBuilder.buildQuery(params);
     const [rows] = await this._connection.client.execute<(SelectedColumn & RowDataPacket)[]>(query);
@@ -388,7 +384,7 @@ export class Table<
    * @param {TParams} params - The search parameters object.
    * @param {QueryBuilderParams<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>} [queryParams] - Optional query builder parameters to refine the search, such as filters,
    * groupings, orderings, limits, and offsets.
-   * @returns {Promise<(ExtractQuerySelectedColumn<TTableName, TDatabaseType, QueryBuilderParams<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>> & { v_score: number } & RowDataPacket)[]>}
+   * @returns {Promise<(ExtractSelectedQueryColumns<TTableName, TDatabaseType, QueryBuilderParams<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>> & { v_score: number } & RowDataPacket)[]>}
    * A promise that resolves to an array of rows matching the vector search criteria, each row including
    * the selected columns and a vector similarity score.
    */
@@ -402,11 +398,7 @@ export class Table<
       embeddingParams?: TAi extends AnyAI ? Parameters<TAi["embeddings"]["create"]>[1] : never;
     },
   >(params: TParams, queryParams?: QueryBuilderParams<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>) {
-    type SelectedColumn = ExtractQuerySelectedColumn<
-      TTableType["name"],
-      TDatabaseType,
-      QueryBuilderParams<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>
-    >;
+    type SelectedColumn = ExtractSelectedQueryColumns<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses, TSelectClause>;
     type ResultColumn = SelectedColumn & { [K in VectorScoreKey]: number };
 
     const clauses = new QueryBuilder<TTableType, TDatabaseType>(this.databaseName, this.name).buildClauses(queryParams);
