@@ -8,6 +8,7 @@ import { OpenAIEmbeddings } from "./embeddings/openai";
 
 export type * from "./types";
 export { Embeddings, ChatCompletions, ChatCompletionTool };
+export * from "./chat-completions/errors";
 
 export interface AIConfig<
   TEmbeddings extends Embeddings,

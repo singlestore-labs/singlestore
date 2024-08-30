@@ -1,8 +1,8 @@
+import { BadRequestError, type OpenAI } from "openai";
 import zodToJsonSchema from "zod-to-json-schema";
 
 import type { ChatCompletionMessage, ChatCompletionStream, CreateChatCompletionParams, CreateChatCompletionResult } from ".";
 import type { AnyChatCompletionTool, MergeChatCompletionTools } from "./tool";
-import type { OpenAI } from "openai";
 import type {
   ChatCompletionChunk,
   ChatCompletionCreateParamsBase,
@@ -11,6 +11,9 @@ import type {
   ChatCompletionToolMessageParam,
 } from "openai/resources/chat/completions.mjs";
 import type { Stream } from "openai/streaming.mjs";
+
+import { MessageLengthExceededError, MessagesLengthExceededError } from "./errors";
+import { parseLengthErrorMessage } from "./errors/lib/parse-length-error-message";
 
 import { ChatCompletions } from ".";
 
@@ -79,18 +82,36 @@ export class OpenAIChatCompletions<
     if (this.tools?.length) _tools = [..._tools, ...this.tools];
     if (tools?.length) _tools = [..._tools, ...tools];
 
-    const response = await this._openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0,
-      ...params,
-      messages: _messages as ChatCompletionMessageParam[],
-      tools: _tools.length
-        ? _tools.map(({ name, description, params }) => ({
-            type: "function",
-            function: { name, description, parameters: params ? zodToJsonSchema(params) : undefined },
-          }))
-        : undefined,
-    });
+    let response;
+
+    try {
+      response = await this._openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        temperature: 0,
+        ...params,
+        messages: _messages as ChatCompletionMessageParam[],
+        tools: _tools.length
+          ? _tools.map(({ name, description, params }) => ({
+              type: "function",
+              function: { name, description, parameters: params ? zodToJsonSchema(params) : undefined },
+            }))
+          : undefined,
+      });
+    } catch (error) {
+      if (error instanceof BadRequestError) {
+        if (error.code === "array_above_max_length") {
+          const [length, maxLength] = parseLengthErrorMessage(error.message);
+          throw new MessagesLengthExceededError(error.message, { length, maxLength, cause: error });
+        }
+
+        if (error.code === "string_above_max_length") {
+          const [length, maxLength] = parseLengthErrorMessage(error.message);
+          throw new MessageLengthExceededError(error.message, { length, maxLength, cause: error });
+        }
+      }
+
+      throw error;
+    }
 
     const handleToolCalls = (
       toolCalls: ChatCompletionMessageToolCall[] | ChatCompletionChunk["choices"][number]["delta"]["tool_calls"] = [],
