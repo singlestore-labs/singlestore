@@ -1,12 +1,15 @@
-import type {
-  AnyAI,
-  AnyChatCompletionTool,
-  ChatCompletionMessage,
-  ChatCompletionStream,
-  CreateChatCompletionParams,
-  CreateChatCompletionResult,
-  MergeChatCompletionTools,
+import {
+  MessageLengthExceededError,
+  MessagesLengthExceededError,
+  type AnyAI,
+  type AnyChatCompletionTool,
+  type ChatCompletionMessage,
+  type ChatCompletionStream,
+  type CreateChatCompletionParams,
+  type CreateChatCompletionResult,
+  type MergeChatCompletionTools,
 } from "@singlestore/ai";
+
 import type { AnyDatabase, FieldPacket, InferDatabaseType, ResultSetHeader, Table } from "@singlestore/client";
 
 import { ChatMessage, type ChatMessagesTable } from "./message";
@@ -180,24 +183,32 @@ export class ChatSession<
   }
 
   async createChatCompletion<
-    _TParams extends Parameters<TAi["chatCompletions"]["create"]>[0],
-    TParams extends Omit<_TParams, "toolCallHandlers" | "toolCallResultHandlers"> &
+    TParams extends Omit<Parameters<TAi["chatCompletions"]["create"]>[0], "toolCallHandlers" | "toolCallResultHandlers"> &
       Pick<
         CreateChatCompletionParams<
           ExtractStreamParam<TParams>,
-          MergeChatCompletionTools<TChatCompletionTool, _TParams["tools"]>
+          MergeChatCompletionTools<TChatCompletionTool, Parameters<TAi["chatCompletions"]["create"]>[0]["tools"]>
         >,
         "toolCallHandlers" | "toolCallResultHandlers"
       > & {
         loadHistory?: boolean;
         loadDatabaseSchema?: boolean;
+        maxMessagesLength?: number;
+        onMessagesLengthSlice?: () => Promise<void> | void;
+        onMessageLengthExceededError?: (error: MessageLengthExceededError) => Promise<void> | void;
+        onMessagesLengthExceededError?: (error: MessagesLengthExceededError) => Promise<void> | void;
       },
   >({
     prompt = "",
-    loadHistory = this.store,
+    systemRole,
+    loadHistory = false,
     loadDatabaseSchema = false,
     messages = [],
+    maxMessagesLength = 2048,
     tools = [],
+    onMessagesLengthSlice,
+    onMessageLengthExceededError,
+    onMessagesLengthExceededError,
     ...params
   }: TParams): Promise<CreateChatCompletionResult<ExtractStreamParam<TParams>>> {
     let _messages: ChatCompletionMessage[] = [];
@@ -206,7 +217,7 @@ export class ChatSession<
     if (loadDatabaseSchema || loadHistory) {
       const [databaseSchema, historyMessages] = await Promise.all([
         loadDatabaseSchema ? this._database.describe() : undefined,
-        loadHistory ? this.findMessages({ orderBy: { createdAt: "asc" } }) : undefined,
+        loadHistory ? this.findMessages({ orderBy: { createdAt: "desc" }, limit: maxMessagesLength }) : undefined,
       ]);
 
       if (databaseSchema) {
@@ -214,7 +225,10 @@ export class ChatSession<
       }
 
       if (historyMessages?.length) {
-        _messages = [..._messages, ...historyMessages.map((message) => ({ role: message.role, content: message.content }))];
+        _messages = [
+          ..._messages,
+          ...historyMessages.map((message) => ({ role: message.role, content: message.content })).reverse(),
+        ];
       }
     }
 
@@ -222,12 +236,62 @@ export class ChatSession<
       _messages = [..._messages, ...messages];
     }
 
-    const [, response] = await Promise.all([
-      this.createMessage("user", prompt),
-      this._ai.chatCompletions.create({ ...params, prompt, messages: _messages, tools: _tools }),
-    ]);
+    if (typeof maxMessagesLength === "number" && _messages.length >= maxMessagesLength) {
+      _messages = _messages.slice(-maxMessagesLength);
 
-    const handleResponseContent = (content: string) => this.createMessage("assistant", content);
+      if (prompt && _messages[_messages.length - 1]?.role === "user" && _messages[_messages.length - 1]?.content === prompt) {
+        prompt = "";
+      } else if (prompt && _messages.length + 1 > maxMessagesLength) {
+        _messages = _messages.slice(1);
+      }
+
+      if (systemRole && _messages[0]?.role === "system" && _messages[0]?.content === systemRole) {
+        systemRole = undefined;
+      } else if (systemRole && _messages.length + 1 >= maxMessagesLength) {
+        _messages = _messages.slice(1);
+      }
+
+      await onMessagesLengthSlice?.();
+    }
+
+    let response;
+
+    try {
+      response = await this._ai.chatCompletions.create({
+        ...params,
+        prompt,
+        systemRole,
+        messages: _messages,
+        tools: _tools,
+      });
+    } catch (error) {
+      if (error instanceof MessagesLengthExceededError) {
+        await onMessagesLengthExceededError?.(error);
+
+        return this.createChatCompletion({
+          ...params,
+          prompt,
+          systemRole,
+          loadHistory: false,
+          loadDatabaseSchema: false,
+          messages: _messages,
+          maxMessagesLength: error.maxLength,
+          tools: _tools,
+        } as TParams);
+      }
+
+      if (error instanceof MessageLengthExceededError) {
+        await onMessageLengthExceededError?.(error);
+      }
+
+      throw error;
+    }
+
+    await this.createMessage("user", prompt);
+
+    const handleResponseContent = (content: string) => {
+      return this.createMessage("assistant", content);
+    };
 
     if ("content" in response && typeof response.content === "string") {
       await handleResponseContent(response.content);
