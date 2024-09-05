@@ -2,6 +2,7 @@ import { AnyAI } from "@singlestore/ai";
 
 import { ManagementApi } from "./management-api";
 import { Organization } from "./organization";
+import { Region } from "./region";
 import { Workspace, type ConnectWorkspaceConfig, type WorkspaceType } from "./workspace";
 
 export type * from "./types";
@@ -25,8 +26,12 @@ export class SingleStoreClient<TAi extends AnyAI | undefined = undefined> {
     this._managementApi = new ManagementApi(config?.apiKey);
   }
 
-  organization<TId extends string, TName extends string>() {
-    return Organization.get<TId, TName>(this._managementApi);
+  organization<TName extends string>() {
+    return Organization.get<TName>(this._managementApi);
+  }
+
+  regions() {
+    return Region.get(this._managementApi);
   }
 
   workspace<TWorkspaceType extends WorkspaceType = WorkspaceType>(

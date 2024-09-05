@@ -5,3 +5,5 @@ export type * from "./database";
 export type * from "./table";
 export type * from "./column";
 export type * from "./query/builder";
+export type * from "./organization";
+export type * from "./region";
