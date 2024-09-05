@@ -189,7 +189,7 @@ export class Table<
     const queryBuilder = new QueryBuilder<TTableType, TDatabaseType>(this.databaseName, this.name);
     const query = queryBuilder.buildQuery(params);
     const [rows] = await this._connection.client.execute<(SelectedColumn & RowDataPacket)[]>(query);
-    return rows;
+    return rows as SelectedColumn[];
   }
 
   update(
@@ -242,7 +242,7 @@ export class Table<
     `;
 
     const [rows] = await this._connection.client.execute<[any, (ResultColumn & RowDataPacket)[]]>(query);
-    return rows[1];
+    return rows[1] as ResultColumn[];
   }
 
   async createChatCompletion<

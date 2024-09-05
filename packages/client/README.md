@@ -37,7 +37,7 @@ Instantiate the `SingleStoreClient` to interact with the SingleStore.
 ```ts
 import { SingleStoreClient } from "@singlestore/client";
 
-const client = new SingleStoreClient({ ai });
+const client = new SingleStoreClient();
 ```
 
 ### Connect to a Workspace
