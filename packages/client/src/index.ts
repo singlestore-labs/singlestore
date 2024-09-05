@@ -1,8 +1,9 @@
 import { AnyAI } from "@singlestore/ai";
 
-import { ManagementApi } from "./management-api";
-import { Organization } from "./organization";
-import { Region } from "./region";
+import { API } from "./api";
+import { BillingManager } from "./billing/manager";
+import { OrganizationManager } from "./organization/manager";
+import { RegionManager } from "./region/manager";
 import { Workspace, type ConnectWorkspaceConfig, type WorkspaceType } from "./workspace";
 
 export type * from "./types";
@@ -19,19 +20,20 @@ export interface WorkspaceConfig<TWorkspaceType extends WorkspaceType, TAi exten
 
 export class SingleStoreClient<TAi extends AnyAI | undefined = undefined> {
   private _ai: TAi;
-  private _managementApi: ManagementApi;
+  private _api: API;
+
+  billing: BillingManager;
+  organization: OrganizationManager;
+  region: RegionManager;
 
   constructor(config?: SingleStoreClientConfig<TAi>) {
     this._ai = config?.ai as TAi;
-    this._managementApi = new ManagementApi(config?.apiKey);
-  }
 
-  organization<TName extends string>() {
-    return Organization.get<TName>(this._managementApi);
-  }
+    this._api = new API(config?.apiKey);
 
-  regions() {
-    return Region.get(this._managementApi);
+    this.billing = new BillingManager(this._api);
+    this.organization = new OrganizationManager(this._api);
+    this.region = new RegionManager(this._api);
   }
 
   workspace<TWorkspaceType extends WorkspaceType = WorkspaceType>(

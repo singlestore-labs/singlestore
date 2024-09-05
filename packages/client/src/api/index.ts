@@ -1,4 +1,4 @@
-export class ManagementApi {
+export class API {
   private readonly _baseUrl: string;
 
   constructor(
@@ -8,7 +8,7 @@ export class ManagementApi {
     this._baseUrl = `https://api.singlestore.com/v${this._version}`;
   }
 
-  async execute<T>(url: string): Promise<T> {
+  async execute<T>(url: string, params?: RequestInit): Promise<T> {
     if (!this._apiKey) {
       throw new Error(
         "The Management API key is undefined. Please generate a valid API key. For more info read: https://docs.singlestore.com/cloud/reference/management-api/#generate-an-api-key",
@@ -17,7 +17,9 @@ export class ManagementApi {
 
     const response = await fetch(`${this._baseUrl}${url}`, {
       method: "GET",
+      ...params,
       headers: {
+        ...params?.headers,
         Accept: "application/json",
         Authorization: `Bearer ${this._apiKey}`,
       },

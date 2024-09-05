@@ -1,5 +1,3 @@
-import type { ManagementApi } from "./management-api";
-
 export type RegionProvider = "AWS" | "GCP" | "Azure";
 
 export type RegionName =
@@ -28,9 +26,4 @@ export class Region {
     public name: RegionName,
     public provider: RegionProvider,
   ) {}
-
-  static async get(api: ManagementApi) {
-    const response = await api.execute<{ regionID: string; region: RegionName; provider: RegionProvider }[]>("/regions");
-    return response.map((data) => new Region(data.regionID, data.region, data.provider));
-  }
 }
