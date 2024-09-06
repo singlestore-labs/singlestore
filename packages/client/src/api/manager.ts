@@ -5,7 +5,7 @@ export abstract class APIManager {
 
   constructor(protected readonly _api: API) {}
 
-  protected execute<T>(...[url, params]: Partial<Parameters<API["execute"]>>) {
+  protected execute<T = any>(...[url, params]: Partial<Parameters<API["execute"]>>) {
     return this._api.execute<T>(`${this._baseUrl}${url ?? ""}`, params);
   }
 }

@@ -1,12 +1,16 @@
-import { APIManager } from "../api/manager";
+import type { Region, RegionName, RegionProvider } from ".";
 
-import { Region, type RegionName, type RegionProvider } from ".";
+import { APIManager } from "../api/manager";
 
 export class RegionManager extends APIManager {
   protected _baseUrl: string = "/regions";
 
-  async get() {
+  async get(): Promise<Region[]> {
     const response = await this.execute<{ regionID: string; region: RegionName; provider: RegionProvider }[]>();
-    return response.map((data) => new Region(data.regionID, data.region, data.provider));
+    return response.map((data) => ({
+      id: data.regionID,
+      name: data.region,
+      provider: data.provider,
+    }));
   }
 }

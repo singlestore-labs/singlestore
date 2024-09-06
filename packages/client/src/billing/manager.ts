@@ -1,11 +1,14 @@
+import type {
+  BillingByMetric,
+  BillingMetric,
+  BillingUsage,
+  ComputeCreditBilling,
+  ComputeCreditBillingUsage,
+  StorageAvgByteBilling,
+  StorageAvgByteBillingUsage,
+} from ".";
+
 import { APIManager } from "../api/manager";
-
-import { ComputeCreditBilling } from "./compute-credit";
-import { StorageAvgByteBilling } from "./storage-avg-byte";
-import { ComputeCreditBillingUsage } from "./usage-compute-credit";
-import { StorageAvgByteBillingUsage } from "./usage-storage-avg-byte";
-
-import { type BillingMetric } from ".";
 
 export interface GetBillingParams {
   metric: BillingMetric;
@@ -17,12 +20,7 @@ export interface GetBillingParams {
 export class BillingManager extends APIManager {
   protected _baseUrl: string = "/billing";
 
-  async get<T extends GetBillingParams>({
-    metric,
-    startTime,
-    endTime,
-    aggregateBy,
-  }: T): Promise<T["metric"] extends "ComputeCredit" ? ComputeCreditBilling[] : StorageAvgByteBilling[]> {
+  async get<T extends GetBillingParams>({ metric, startTime, endTime, aggregateBy }: T): Promise<BillingByMetric<T["metric"]>> {
     const params = new URLSearchParams({ metric });
 
     Object.entries({ startTime, endTime }).forEach(([key, value]) => {
@@ -50,28 +48,29 @@ export class BillingManager extends APIManager {
     }>(`/usage?${params.toString()}`);
 
     return response.billingUsage.map((data) => {
-      const usage = data.Usage.map((usage) => {
-        const args = [
-          usage.resourceID,
-          usage.resourceName,
-          usage.resourceType,
-          usage.startTime,
-          usage.endTime,
-          usage.value,
-        ] as const;
+      const usage = data.Usage.map(({ ownerID: ownerId, resourceID: resourceId, ...usage }) => {
+        const _usage = { ...usage, resourceId } satisfies BillingUsage;
 
         if (metric === "ComputeCredit") {
-          return new ComputeCreditBillingUsage(usage.ownerID, ...args);
+          return { ..._usage, ownerId } satisfies ComputeCreditBillingUsage;
         }
 
-        return new StorageAvgByteBillingUsage(...args);
+        return _usage satisfies StorageAvgByteBillingUsage;
       });
 
       if (metric === "ComputeCredit") {
-        return new ComputeCreditBilling(data.description, usage as ComputeCreditBillingUsage[]);
+        return {
+          metric: "ComputeCredit",
+          description: data.description,
+          usage: usage as ComputeCreditBillingUsage[],
+        } satisfies ComputeCreditBilling;
       }
 
-      return new StorageAvgByteBilling(data.description, usage as StorageAvgByteBillingUsage[]);
-    }) as T["metric"] extends "ComputeCredit" ? ComputeCreditBilling[] : StorageAvgByteBilling[];
+      return {
+        metric: "StorageAvgByte",
+        description: data.description,
+        usage: usage as StorageAvgByteBillingUsage[],
+      } satisfies StorageAvgByteBilling;
+    }) as BillingByMetric<T["metric"]>;
   }
 }

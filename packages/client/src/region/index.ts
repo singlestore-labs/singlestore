@@ -20,10 +20,8 @@ export type RegionName =
   | "Asia Pacific South 1 (Mumbai)"
   | "Europe North 1 (Stockholm)";
 
-export class Region {
-  constructor(
-    public id: string,
-    public name: RegionName,
-    public provider: RegionProvider,
-  ) {}
+export interface Region {
+  id: string;
+  name: RegionName;
+  provider: RegionProvider;
 }

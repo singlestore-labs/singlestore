@@ -8,7 +8,7 @@ export class API {
     this._baseUrl = `https://api.singlestore.com/v${this._version}`;
   }
 
-  async execute<T>(url: string, params?: RequestInit): Promise<T> {
+  async execute<T = any>(url: string, params?: RequestInit): Promise<T> {
     if (!this._apiKey) {
       throw new Error(
         "The Management API key is undefined. Please generate a valid API key. For more info read: https://docs.singlestore.com/cloud/reference/management-api/#generate-an-api-key",
