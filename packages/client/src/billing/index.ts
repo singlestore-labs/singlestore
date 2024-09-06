@@ -4,8 +4,8 @@ export interface BillingUsage {
   resourceId: string;
   resourceName: string;
   resourceType: string;
-  startTime: string;
-  endTime: string;
+  startTime: Date;
+  endTime: Date;
   value: string;
 }
 

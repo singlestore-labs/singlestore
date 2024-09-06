@@ -2,56 +2,52 @@ import type { API } from "../api";
 
 import { APIManager } from "../api/manager";
 
-export type JobRuntimeName = "notebooks-cpu-small" | "notebooks-cpu-medium" | "notebooks-gpu-t4";
-
 export interface JobRuntime {
-  name: JobRuntimeName;
+  name: "notebooks-cpu-small" | "notebooks-cpu-medium" | "notebooks-gpu-t4";
   description: string;
 }
 
-export type JobExecutionStatus = "Scheduled" | "Running" | "Completed" | "Failed";
-
-export interface JobExecution {
-  id: string;
-  number: number;
-  jobId: string;
-  scheduledStartTime: Date;
-  startedAt: Date;
-  finishedAt: Date;
-  snapshotNotebookPath: string;
-  status: JobExecutionStatus;
-}
-
-export interface JobExecutionConfig {
-  createSnapshot: boolean;
-  maxAllowedExecutionDurationInMinutes: number;
-  notebookPath: string;
-}
-
 export interface JobMetadata {
-  avgDurationInSeconds: number;
+  avgDurationInSeconds: number | null;
   count: number;
-  maxDurationInSeconds: number;
-  status: "Completed" | "Failed" | "Error";
+  maxDurationInSeconds: number | null;
+  status: "Unknown" | "Scheduled" | "Running" | "Completed" | "Failed" | "Error" | "Canceled";
 }
 
 export interface JobSchedule {
-  executionIntervalInMinutes: number;
-  mode: "Recurring" | "One-Time";
-  startAt: string | null;
+  executionIntervalInMinutes: number | null;
+  mode: "Recurring" | "Once";
+  startAt: Date | null;
 }
 
 export interface JobTargetConfig {
   databaseName: string;
   resumeTarget: boolean;
   targetID: string;
-  targetType: string;
+  targetType: "Workspace" | "Cluster" | "VirtualWorkspace";
 }
 
 export interface JobParameter {
   name: string;
-  type: string;
-  value: any;
+  type: "string" | "integer" | "float" | "boolean";
+  value: string;
+}
+
+export interface JobExecution {
+  id: string;
+  number: number;
+  jobId: string;
+  scheduledStartTime: Date;
+  startedAt: Date | null;
+  finishedAt: Date | null;
+  snapshotNotebookPath: string | null;
+  status: "Scheduled" | "Running" | "Completed" | "Failed";
+}
+
+export interface JobExecutionConfig {
+  createSnapshot: boolean;
+  maxAllowedExecutionDurationInMinutes: number;
+  notebookPath: string;
 }
 
 export class Job extends APIManager {
@@ -75,9 +71,13 @@ export class Job extends APIManager {
     this._baseUrl = `/jobs/${this.id}`;
   }
 
-  async getExecutions(start: number, end: number): Promise<JobExecution[]> {
+  static async drop(api: API, id: string): Promise<boolean> {
+    return api.execute<boolean>(`/jobs/${id}`, { method: "DELETE" });
+  }
+
+  static async getExecutions(api: API, id: string, start: number, end: number): Promise<JobExecution[]> {
     const params = new URLSearchParams({ start: start.toString(), end: end.toString() });
-    const response = await this._execute(`/executions?${params.toString()}`);
+    const response = await api.execute(`/jobs/${id}/executions?${params.toString()}`);
     return response.executions.map((execution: any) => {
       return {
         id: execution.executionID,
@@ -92,7 +92,19 @@ export class Job extends APIManager {
     });
   }
 
-  async getParameters(): Promise<JobParameter[]> {
-    return this._execute<JobParameter[]>("/parameters");
+  static async getParameters(api: API, id: string): Promise<JobParameter[]> {
+    return api.execute<JobParameter[]>(`/jobs/${id}/parameters`);
+  }
+
+  async drop() {
+    return Job.drop(this._api, this.id);
+  }
+
+  async getExecutions(start: number, end: number) {
+    return Job.getExecutions(this._api, this.id, start, end);
+  }
+
+  async getParameters() {
+    return Job.getParameters(this._api, this.id);
   }
 }

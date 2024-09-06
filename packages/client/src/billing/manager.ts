@@ -48,8 +48,13 @@ export class BillingManager extends APIManager {
     }>(`/usage?${params.toString()}`);
 
     return response.billingUsage.map((data) => {
-      const usage = data.Usage.map(({ ownerID: ownerId, resourceID: resourceId, ...usage }) => {
-        const _usage = { ...usage, resourceId } satisfies BillingUsage;
+      const usage = data.Usage.map(({ ownerID: ownerId, resourceID: resourceId, startTime, endTime, ...usage }) => {
+        const _usage = {
+          ...usage,
+          resourceId,
+          startTime: new Date(startTime),
+          endTime: new Date(endTime),
+        } satisfies BillingUsage;
 
         if (metric === "ComputeCredit") {
           return { ..._usage, ownerId } satisfies ComputeCreditBillingUsage;

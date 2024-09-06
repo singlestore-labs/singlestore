@@ -20,8 +20,9 @@ export class API {
       ...params,
       headers: {
         ...params?.headers,
-        Accept: "application/json",
-        Authorization: `Bearer ${this._apiKey}`,
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${this._apiKey}`,
       },
     });
 
