@@ -6,7 +6,14 @@ export class OrganizationManager extends APIManager {
   protected _baseUrl: string = "/organizations";
 
   async getCurrent<TName extends string>(): Promise<Organization<TName>> {
-    const respnose = await this.execute<{ orgID: string; name: TName }>("/current");
-    return { id: respnose.orgID, name: respnose.name };
+    const respnose = await this._execute<{
+      orgID: string;
+      name: TName;
+    }>("/current");
+
+    return {
+      id: respnose.orgID,
+      name: respnose.name,
+    };
   }
 }

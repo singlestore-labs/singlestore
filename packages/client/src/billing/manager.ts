@@ -31,7 +31,7 @@ export class BillingManager extends APIManager {
       params.set("aggregateBy", aggregateBy);
     }
 
-    const response = await this.execute<{
+    const response = await this._execute<{
       billingUsage: {
         metric: T["metric"];
         description: string;
