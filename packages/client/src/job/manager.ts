@@ -1,4 +1,4 @@
-import { Optional } from "@repo/utils";
+import type { Optional } from "@repo/utils";
 
 import { APIManager } from "../api/manager";
 
@@ -20,31 +20,31 @@ export interface CreateJobBody {
 export class JobManager extends APIManager {
   protected _baseUrl: string = "/jobs";
 
-  private _createByResponse(response: any): Job {
+  private _create(data: any): Job {
     return new Job(
       this._api,
-      response.jobID,
-      response.name,
-      response.description,
-      response.enqueuedBy,
-      response.executionConfig,
-      response.jobMetadata,
-      response.targetConfig,
-      response.completedExecutionsCount,
-      { ...response.schedule, startAt: new Date(response.schedule.startAt) },
-      new Date(response.createdAt),
-      new Date(response.terminatedAt),
+      data.jobID,
+      data.name,
+      data.description,
+      data.enqueuedBy,
+      data.executionConfig,
+      data.jobMetadata,
+      data.targetConfig,
+      data.completedExecutionsCount,
+      { ...data.schedule, startAt: new Date(data.schedule.startAt) },
+      new Date(data.createdAt),
+      new Date(data.terminatedAt),
     );
   }
 
   async create<TBody extends CreateJobBody>(body: TBody) {
     const response = await this._execute("", { method: "POST", body: JSON.stringify(body) });
-    return this._createByResponse(response);
+    return this._create(response);
   }
 
   async get(id: string) {
     const response = await this._execute(`/${id}`);
-    return this._createByResponse(response);
+    return this._create(response);
   }
 
   async drop(id: string) {

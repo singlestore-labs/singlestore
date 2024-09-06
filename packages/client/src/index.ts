@@ -5,6 +5,7 @@ import { BillingManager } from "./billing/manager";
 import { JobManager } from "./job/manager";
 import { OrganizationManager } from "./organization/manager";
 import { RegionManager } from "./region/manager";
+import { SecretManager } from "./secret/manager";
 import { Workspace, type ConnectWorkspaceConfig, type WorkspaceType } from "./workspace";
 
 export type * from "./types";
@@ -27,6 +28,7 @@ export class SingleStoreClient<TAi extends AnyAI | undefined = undefined> {
   organization: OrganizationManager;
   region: RegionManager;
   job: JobManager;
+  secret: SecretManager;
 
   constructor(config?: SingleStoreClientConfig<TAi>) {
     this._ai = config?.ai as TAi;
@@ -36,6 +38,7 @@ export class SingleStoreClient<TAi extends AnyAI | undefined = undefined> {
     this.organization = new OrganizationManager(this._api);
     this.region = new RegionManager(this._api);
     this.job = new JobManager(this._api);
+    this.secret = new SecretManager(this._api);
   }
 
   workspace<TWorkspaceType extends WorkspaceType = WorkspaceType>(
