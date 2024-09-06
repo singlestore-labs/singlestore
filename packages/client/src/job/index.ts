@@ -48,6 +48,12 @@ export interface JobTargetConfig {
   targetType: string;
 }
 
+export interface JobParameter {
+  name: string;
+  type: string;
+  value: any;
+}
+
 export class Job extends APIManager {
   protected _baseUrl: string;
 
@@ -84,5 +90,9 @@ export class Job extends APIManager {
         status: execution.status,
       } satisfies JobExecution;
     });
+  }
+
+  async getParameters(): Promise<JobParameter[]> {
+    return this._execute<JobParameter[]>("/parameters");
   }
 }
