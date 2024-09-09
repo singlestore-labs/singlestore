@@ -1,16 +1,9 @@
 import { APIManager } from "../api/manager";
 
-import { Secret } from ".";
+import { Secret, type SecretSchema } from ".";
 
-export interface CreateSecretBody {}
-
-interface SecretSchema {
-  createdAt: string;
-  createdBy: string;
-  lastUpdatedAt: string;
-  lastUpdatedBy: string;
+export interface CreateSecretBody {
   name: string;
-  secretID: string;
   value: string;
 }
 
@@ -30,14 +23,18 @@ export class SecretManager extends APIManager {
     );
   }
 
-  async create<TBody extends CreateSecretBody>(body: TBody) {
-    const response = await this._execute("", { method: "POST", body: JSON.stringify(body) });
-    return this._create(response);
+  async create(body: CreateSecretBody) {
+    const response = await this._execute<{ secret: SecretSchema }>("", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    return this._create(response.secret);
   }
 
-  async get<T extends { id: string } | { name: string } | undefined = undefined>(
-    where?: T,
-  ): Promise<(T extends undefined ? Secret[] : Secret) | undefined> {
+  async get<
+    T extends { id: string } | { name: string } | undefined = undefined,
+    _TReturnType = T extends undefined ? Secret[] : Secret | undefined,
+  >(where?: T): Promise<_TReturnType> {
     let url = "";
     const params = new URLSearchParams();
 
@@ -49,15 +46,32 @@ export class SecretManager extends APIManager {
       }
     }
 
-    const response = await this._execute<{ secrets: SecretSchema[] }>(`${url}?${params.toString()}`);
+    type Response = T extends undefined
+      ? SecretSchema[]
+      : T extends { id: string }
+        ? { secret: SecretSchema }
+        : { secrets: SecretSchema[] };
+    const response = await this._execute<Response>(`${url}?${params.toString()}`);
 
-    if (!where) {
-      return response.secrets.map((data) => this._create(data)) as T extends undefined ? Secret[] : Secret;
+    if ("secrets" in response) {
+      if (!where) {
+        return response.secrets.map((data) => this._create(data)) as _TReturnType;
+      }
+
+      if (response.secrets[0]) {
+        return this._create(response.secrets[0]) as _TReturnType;
+      }
     }
 
-    if (response.secrets[0]) {
-      return this._create(response.secrets[0]) as T extends undefined ? Secret[] : Secret;
+    if ("secret" in response && response.secret) {
+      return this._create(response.secret) as _TReturnType;
     }
+
+    return [] as unknown as _TReturnType;
+  }
+
+  async update(id: string, value: string) {
+    return Secret.update(this._api, id, value);
   }
 
   async drop(id: string) {
