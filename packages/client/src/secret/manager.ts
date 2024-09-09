@@ -1,10 +1,12 @@
+import type { Defined } from "@repo/utils";
+
 import { APIManager } from "../api/manager";
 
 import { Secret, type SecretSchema } from ".";
 
 export interface CreateSecretBody {
-  name: string;
-  value: string;
+  name: SecretSchema["name"];
+  value: Defined<SecretSchema["value"]>;
 }
 
 export class SecretManager extends APIManager {
@@ -16,10 +18,10 @@ export class SecretManager extends APIManager {
       data.secretID,
       data.name,
       data.value,
-      data.createdBy,
       data.lastUpdatedBy,
-      new Date(data.createdAt),
       new Date(data.lastUpdatedAt),
+      data.createdBy,
+      new Date(data.createdAt),
     );
   }
 
@@ -32,7 +34,7 @@ export class SecretManager extends APIManager {
   }
 
   async get<
-    T extends { id: string } | { name: string } | undefined = undefined,
+    T extends { id: SecretSchema["secretID"] } | { name: SecretSchema["name"] } | undefined = undefined,
     _TReturnType = T extends undefined ? Secret[] : Secret | undefined,
   >(where?: T): Promise<_TReturnType> {
     let url = "";
@@ -70,11 +72,11 @@ export class SecretManager extends APIManager {
     return [] as unknown as _TReturnType;
   }
 
-  async update(id: string, value: string) {
+  async update(id: SecretSchema["secretID"], value: Defined<SecretSchema["value"]>) {
     return Secret.update(this._api, id, value);
   }
 
-  async drop(id: string) {
-    return Secret.drop(this._api, id);
+  async delete(id: SecretSchema["secretID"]) {
+    return Secret.delete(this._api, id);
   }
 }

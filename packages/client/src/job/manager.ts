@@ -47,8 +47,8 @@ export class JobManager extends APIManager {
     return this._create(response);
   }
 
-  async drop(id: string) {
-    return Job.drop(this._api, id);
+  async delete(id: string) {
+    return Job.delete(this._api, id);
   }
 
   async getExecutions(id: string, ...args: Parameters<Job["getExecutions"]>) {

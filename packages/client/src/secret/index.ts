@@ -1,15 +1,16 @@
 import type { API } from "../api";
+import type { Defined } from "@repo/utils";
 
 import { APIManager } from "../api/manager";
 
 export interface SecretSchema {
-  createdAt: string;
-  createdBy: string;
-  lastUpdatedAt: string;
-  lastUpdatedBy: string;
-  name: string;
   secretID: string;
-  value: string;
+  name: string;
+  value: string | undefined;
+  lastUpdatedBy: string;
+  lastUpdatedAt: string;
+  createdBy: string;
+  createdAt: string;
 }
 
 export class Secret extends APIManager {
@@ -17,19 +18,19 @@ export class Secret extends APIManager {
 
   constructor(
     api: API,
-    public id: string,
-    public name: string,
-    public value: string | undefined,
-    public createdBy: string,
-    public lastUpdatedBy: string,
-    public createdAt: Date,
+    public id: SecretSchema["secretID"],
+    public name: SecretSchema["name"],
+    public value: SecretSchema["value"],
+    public lastUpdatedBy: SecretSchema["lastUpdatedBy"],
     public lastUpdatedAt: Date,
+    public createdBy: SecretSchema["createdBy"],
+    public createdAt: Date,
   ) {
     super(api);
     this._baseUrl = `/secrets/${this.id}`;
   }
 
-  static async update(api: API, id: string, value: string): Promise<Secret> {
+  static async update(api: API, id: SecretSchema["secretID"], value: Defined<SecretSchema["value"]>): Promise<Secret> {
     const response = await api.execute<SecretSchema>(`/secrets/${id}`, {
       method: "PATCH",
       body: JSON.stringify({ value }),
@@ -40,23 +41,23 @@ export class Secret extends APIManager {
       response.secretID,
       response.name,
       response.value,
-      response.createdBy,
       response.lastUpdatedBy,
-      new Date(response.createdAt),
       new Date(response.lastUpdatedAt),
+      response.createdBy,
+      new Date(response.createdAt),
     );
   }
 
-  static async drop(api: API, id: string): Promise<string> {
-    const response = await api.execute<{ secretID: string }>(`/secrets/${id}`, { method: "DELETE" });
+  static async delete(api: API, id: SecretSchema["secretID"]): Promise<SecretSchema["secretID"]> {
+    const response = await api.execute<Pick<SecretSchema, "secretID">>(`/secrets/${id}`, { method: "DELETE" });
     return response.secretID;
   }
 
-  async update(value: string) {
+  async update(value: Defined<SecretSchema["value"]>) {
     return Secret.update(this._api, this.id, value);
   }
 
-  async drop() {
-    return Secret.drop(this._api, this.id);
+  async delete() {
+    return Secret.delete(this._api, this.id);
   }
 }

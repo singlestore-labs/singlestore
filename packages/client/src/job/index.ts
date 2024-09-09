@@ -71,7 +71,7 @@ export class Job extends APIManager {
     this._baseUrl = `/jobs/${this.id}`;
   }
 
-  static async drop(api: API, id: string): Promise<boolean> {
+  static async delete(api: API, id: string): Promise<boolean> {
     return api.execute<boolean>(`/jobs/${id}`, { method: "DELETE" });
   }
 
@@ -96,8 +96,8 @@ export class Job extends APIManager {
     return api.execute<JobParameter[]>(`/jobs/${id}/parameters`);
   }
 
-  async drop() {
-    return Job.drop(this._api, this.id);
+  async delete() {
+    return Job.delete(this._api, this.id);
   }
 
   async getExecutions(start: number, end: number) {
