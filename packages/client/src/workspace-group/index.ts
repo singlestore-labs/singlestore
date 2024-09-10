@@ -1,3 +1,5 @@
+import { getKeyByValue } from "@repo/utils";
+
 import type { API } from "../api";
 
 import { APIManager } from "../api/manager";
@@ -25,6 +27,23 @@ export interface WorkspaceGroupSchema {
   terminatedAt: string | undefined;
 }
 
+export interface UpdateWorkspaceGroupBody
+  extends Partial<Pick<WorkspaceGroupSchema, "name" | "allowAllTraffic" | "firewallRanges">> {
+  expiresAt?: Date;
+  adminPassword?: string;
+  updateWindow?: WorkspaceGroupUpdateWindow;
+}
+
+export const updateWindowDaysMap: Record<number, WorkspaceGroupUpdateWindow["day"]> = {
+  0: "su",
+  1: "mo",
+  2: "tu",
+  3: "we",
+  4: "th",
+  5: "fr",
+  6: "sa",
+};
+
 export class WorkspaceGroup extends APIManager {
   protected _baseUrl: string;
 
@@ -46,6 +65,32 @@ export class WorkspaceGroup extends APIManager {
     this._baseUrl = `/workspaceGroups/${this.id}`;
   }
 
+  static serializeUpdateWindow(updateWindow: WorkspaceGroupUpdateWindow): WorkspaceGroupUpdateWindowSchema {
+    const day = getKeyByValue(updateWindowDaysMap, updateWindow.day);
+    if (!day) {
+      throw new Error(
+        `Day not found with the given name. Please provide a valid day from the following list: ${Object.values(updateWindowDaysMap).join(", ")}.`,
+      );
+    }
+
+    return { ...updateWindow, day: Number(day) };
+  }
+
+  static async update(
+    api: API,
+    id: WorkspaceGroupSchema["workspaceGroupID"],
+    body: UpdateWorkspaceGroupBody,
+  ): Promise<WorkspaceGroupSchema["workspaceGroupID"]> {
+    const expiresAt = body.expiresAt ? body.expiresAt.toISOString().split(".")[0] + "Z" : undefined;
+    const updateWindow = body.updateWindow ? WorkspaceGroup.serializeUpdateWindow(body.updateWindow) : undefined;
+    const response = await api.execute<Pick<WorkspaceGroupSchema, "workspaceGroupID">>(`/workspaceGroups/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ ...body, expiresAt, updateWindow }),
+    });
+
+    return response.workspaceGroupID;
+  }
+
   static async delete(
     api: API,
     id: WorkspaceGroupSchema["workspaceGroupID"],
@@ -54,11 +99,14 @@ export class WorkspaceGroup extends APIManager {
     const params = new URLSearchParams({ force: force ? String(force) : String(false) });
     const response = await api.execute<Pick<WorkspaceGroupSchema, "workspaceGroupID">>(
       `/workspaceGroups/${id}?${params.toString()}`,
-      {
-        method: "DELETE",
-      },
+      { method: "DELETE" },
     );
+
     return response.workspaceGroupID;
+  }
+
+  async update(body: UpdateWorkspaceGroupBody) {
+    return WorkspaceGroup.update(this._api, this.id, body);
   }
 
   async delete(force?: boolean) {

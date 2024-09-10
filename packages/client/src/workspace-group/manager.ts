@@ -11,6 +11,7 @@ import {
   type WorkspaceGroupUpdateWindow,
   type WorkspaceGroupSchema,
   WorkspaceGroupUpdateWindowSchema,
+  updateWindowDaysMap,
 } from ".";
 
 export interface CreateWorkspaceGroupBody {
@@ -24,16 +25,6 @@ export interface CreateWorkspaceGroupBody {
   backupBucketKMSKeyID?: string;
   expiresAt?: Date;
 }
-
-const updateWindowDaysMap: Record<number, WorkspaceGroupUpdateWindow["day"]> = {
-  0: "su",
-  1: "mo",
-  2: "tu",
-  3: "we",
-  4: "th",
-  5: "fr",
-  6: "sa",
-};
 
 export class WorkspaceGroupManager extends APIManager {
   protected _baseUrl: string = "/workspaceGroups";
@@ -68,17 +59,7 @@ export class WorkspaceGroupManager extends APIManager {
       throw new Error("Region not found with the given name. Please provide a valid region name.");
     }
 
-    let updateWindow: WorkspaceGroupUpdateWindowSchema | undefined;
-    if (body.updateWindow) {
-      const day = getKeyByValue(updateWindowDaysMap, body.updateWindow.day);
-      if (!day) {
-        throw new Error(
-          `Day not found with the given name. Please provide a valid day from the following list: ${Object.values(updateWindowDaysMap).join(", ")}.`,
-        );
-      }
-
-      updateWindow = { ...body.updateWindow, day: Number(day) };
-    }
+    const updateWindow = body.updateWindow ? WorkspaceGroup.serializeUpdateWindow(body.updateWindow) : undefined;
 
     const response = await this._execute<
       Pick<WorkspaceGroupSchema, "workspaceGroupID"> & { adminPassword: string | undefined }
@@ -126,6 +107,10 @@ export class WorkspaceGroupManager extends APIManager {
     }
 
     return this._create(response) as _ReturnType;
+  }
+
+  async update(id: WorkspaceGroupSchema["workspaceGroupID"], ...args: Parameters<WorkspaceGroup["update"]>) {
+    return WorkspaceGroup.update(this._api, id, ...args);
   }
 
   async delete(id: WorkspaceGroupSchema["workspaceGroupID"], ...args: Parameters<WorkspaceGroup["delete"]>) {
