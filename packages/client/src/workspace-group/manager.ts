@@ -1,8 +1,29 @@
+import { getKeyByValue } from "@repo/utils";
+
+import type { RegionName } from "../region";
+import type { RegionManager } from "../region/manager";
+
+import { type API } from "../api";
 import { APIManager } from "../api/manager";
 
-import { WorkspaceGroup, WorkspaceGroupUpdateWindow, type WorkspaceGroupSchema } from ".";
+import {
+  WorkspaceGroup,
+  type WorkspaceGroupUpdateWindow,
+  type WorkspaceGroupSchema,
+  WorkspaceGroupUpdateWindowSchema,
+} from ".";
 
-export interface CreateWorkspaceGroupBody {}
+export interface CreateWorkspaceGroupBody {
+  name: WorkspaceGroupSchema["name"];
+  adminPassword?: string;
+  allowAllTraffic?: boolean;
+  firewallRanges?: string[];
+  regionName: RegionName;
+  updateWindow?: WorkspaceGroupUpdateWindow;
+  dataBucketKMSKeyID?: string;
+  backupBucketKMSKeyID?: string;
+  expiresAt?: Date;
+}
 
 const updateWindowDaysMap: Record<number, WorkspaceGroupUpdateWindow["day"]> = {
   0: "su",
@@ -16,6 +37,13 @@ const updateWindowDaysMap: Record<number, WorkspaceGroupUpdateWindow["day"]> = {
 
 export class WorkspaceGroupManager extends APIManager {
   protected _baseUrl: string = "/workspaceGroups";
+
+  constructor(
+    protected readonly _api: API,
+    private _region: RegionManager,
+  ) {
+    super(_api);
+  }
 
   private _create(data: WorkspaceGroupSchema): WorkspaceGroup {
     return new WorkspaceGroup(
@@ -34,12 +62,38 @@ export class WorkspaceGroupManager extends APIManager {
     );
   }
 
-  async create(body: CreateWorkspaceGroupBody) {
-    const response = await this._execute<{ workspaceGroup: WorkspaceGroupSchema }>("", {
+  async create({ regionName, firewallRanges = [], ...body }: CreateWorkspaceGroupBody) {
+    const regions = await this._region.get();
+    const regionID = regions.find((region) => region.name === regionName)?.id;
+    if (!regionID) {
+      throw new Error("Region not found with the given name. Please provide a valid region name.");
+    }
+
+    let updateWindow: WorkspaceGroupUpdateWindowSchema | undefined;
+    if (body.updateWindow) {
+      const day = getKeyByValue(updateWindowDaysMap, body.updateWindow.day);
+      if (!day) {
+        throw new Error(
+          `Day not found with the given name. Please provide a valid day from the following list: ${Object.values(updateWindowDaysMap).join(", ")}.`,
+        );
+      }
+
+      updateWindow = { ...body.updateWindow, day: Number(day) };
+    }
+
+    const response = await this._execute<
+      Pick<WorkspaceGroupSchema, "workspaceGroupID"> & { adminPassword: string | undefined }
+    >("", {
       method: "POST",
-      body: JSON.stringify(body),
+      body: JSON.stringify({ ...body, regionID, firewallRanges, updateWindow }),
     });
-    return this._create(response.workspaceGroup);
+
+    const newWorkspaceGroup = await this._execute<WorkspaceGroupSchema>(`/${response.workspaceGroupID}`);
+
+    return {
+      workspaceGroup: this._create(newWorkspaceGroup),
+      adminPassword: body.adminPassword || response.adminPassword,
+    };
   }
 
   async get<

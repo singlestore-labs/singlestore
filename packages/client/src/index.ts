@@ -44,7 +44,7 @@ export class SingleStoreClient<TAi extends AnyAI | undefined = undefined> {
     this.region = new RegionManager(this._api);
     this.secret = new SecretManager(this._api);
     this.team = new TeamManager(this._api);
-    this.workspaceGroup = new WorkspaceGroupManager(this._api);
+    this.workspaceGroup = new WorkspaceGroupManager(this._api, this.region);
   }
 
   workspace<TWorkspaceType extends WorkspaceType = WorkspaceType>(
