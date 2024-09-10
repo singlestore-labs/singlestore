@@ -3,7 +3,7 @@ import type { API } from "../../api";
 
 import { APIManager } from "../../api/manager";
 
-import { WorkspaceGroupStage, type WorkspaceGroupStageSchema } from ".";
+import { type UpdateWorkspaceGroupStageBody, WorkspaceGroupStage, type WorkspaceGroupStageSchema } from ".";
 
 export class WorkspaceGroupStageManager extends APIManager {
   protected _baseUrl: string;
@@ -37,11 +37,15 @@ export class WorkspaceGroupStageManager extends APIManager {
     );
   }
 
-  async update(path: WorkspaceGroupStageSchema["path"], ...args: Parameters<WorkspaceGroupStage["update"]>) {
-    return WorkspaceGroupStage.update(this._api, this._id, path, ...args);
+  async update(body: UpdateWorkspaceGroupStageBody, path: WorkspaceGroupStageSchema["path"]) {
+    return WorkspaceGroupStage.update(this._api, this._id, path, body);
   }
 
   async delete(path: WorkspaceGroupStageSchema["path"]) {
     return WorkspaceGroupStage.delete(this._api, this._id, path);
+  }
+
+  async createFolder(name: string, path: WorkspaceGroupStage["path"]) {
+    return WorkspaceGroupStage.createFolder(this._api, this._id, path, name);
   }
 }

@@ -24,8 +24,8 @@ export class API {
       method: "GET",
       ...params,
       headers: {
-        ...params?.headers,
         "Content-Type": "application/json",
+        ...params?.headers,
         "Authorization": `Bearer ${this._apiKey}`,
       },
     });

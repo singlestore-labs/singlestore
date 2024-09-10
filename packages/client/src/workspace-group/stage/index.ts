@@ -64,11 +64,27 @@ export class WorkspaceGroupStage extends APIManager {
     });
   }
 
-  async update(body: UpdateWorkspaceGroupStageBody) {
-    return WorkspaceGroupStage.update(this._api, this._id, this.path, body);
+  static async createFolder(
+    api: API,
+    id: WorkspaceGroupSchema["workspaceGroupID"],
+    path: WorkspaceGroupStage["path"],
+    name: string,
+  ) {
+    return api.execute<Pick<WorkspaceGroupStage, "name" | "path">>(
+      `/stage/${id}/fs${encodeURIComponent(path)}/${encodeURIComponent(name)}/`,
+      { method: "PUT" },
+    );
   }
 
-  async delete() {
-    return WorkspaceGroupStage.delete(this._api, this._id, this.path);
+  async update(body: UpdateWorkspaceGroupStageBody, path: WorkspaceGroupStage["path"] = this.path) {
+    return WorkspaceGroupStage.update(this._api, this._id, path, body);
+  }
+
+  async delete(path: WorkspaceGroupStage["path"] = this.path) {
+    return WorkspaceGroupStage.delete(this._api, this._id, path);
+  }
+
+  async createFolder(name: string, path: WorkspaceGroupStage["path"] = this.path) {
+    return WorkspaceGroupStage.createFolder(this._api, this._id, path, name);
   }
 }
