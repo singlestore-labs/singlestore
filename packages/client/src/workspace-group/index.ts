@@ -6,6 +6,7 @@ import type { PrivateConnection, PrivateConnectionSchema } from "../private-conn
 
 import { APIManager } from "../api/manager";
 
+import { WorkspaceGroupStageManager } from "./stage/manager";
 import { WorkspaceGroupStorageManager } from "./storage/manager";
 
 export interface WorkspaceGroupUpdateWindowSchema {
@@ -50,6 +51,7 @@ export const updateWindowDaysMap: Record<number, WorkspaceGroupUpdateWindow["day
 
 export class WorkspaceGroup extends APIManager {
   protected _baseUrl: string;
+  stage: WorkspaceGroupStageManager;
   storage: WorkspaceGroupStorageManager;
 
   constructor(
@@ -69,6 +71,7 @@ export class WorkspaceGroup extends APIManager {
   ) {
     super(api);
     this._baseUrl = `/workspaceGroups/${this.id}`;
+    this.stage = new WorkspaceGroupStageManager(this._api, this.id);
     this.storage = new WorkspaceGroupStorageManager(this._api, this.id);
   }
 
