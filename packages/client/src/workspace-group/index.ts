@@ -1,6 +1,7 @@
 import { getKeyByValue } from "@repo/utils";
 
 import type { API } from "../api";
+import type { PrivateConnection, PrivateConnectionSchema } from "../private-connection";
 
 import { APIManager } from "../api/manager";
 
@@ -111,5 +112,16 @@ export class WorkspaceGroup extends APIManager {
 
   async delete(force?: boolean) {
     return WorkspaceGroup.delete(this._api, this.id, force);
+  }
+
+  async getPrivateConnections(): Promise<PrivateConnection[]> {
+    const response = await this._execute<PrivateConnectionSchema[]>(`/privateConnections`);
+    return response.map((data) => ({
+      ...data,
+      createdAt: new Date(data.createdAt),
+      deletedAt: new Date(data.deletedAt),
+      updatedAt: new Date(data.updatedAt),
+      activeAt: new Date(data.activeAt),
+    }));
   }
 }
