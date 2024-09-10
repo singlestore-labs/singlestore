@@ -63,9 +63,8 @@ export class WorkspaceGroupManager extends APIManager {
   }
 
   async create({ regionName, firewallRanges = [], ...body }: CreateWorkspaceGroupBody) {
-    const regions = await this._region.get();
-    const regionID = regions.find((region) => region.name === regionName)?.id;
-    if (!regionID) {
+    const region = await this._region.get({ name: regionName });
+    if (!region) {
       throw new Error("Region not found with the given name. Please provide a valid region name.");
     }
 
@@ -85,7 +84,7 @@ export class WorkspaceGroupManager extends APIManager {
       Pick<WorkspaceGroupSchema, "workspaceGroupID"> & { adminPassword: string | undefined }
     >("", {
       method: "POST",
-      body: JSON.stringify({ ...body, regionID, firewallRanges, updateWindow }),
+      body: JSON.stringify({ ...body, firewallRanges, updateWindow, regionID: region.id }),
     });
 
     const newWorkspaceGroup = await this._execute<WorkspaceGroupSchema>(`/${response.workspaceGroupID}`);
@@ -97,7 +96,9 @@ export class WorkspaceGroupManager extends APIManager {
   }
 
   async get<
-    T extends [where?: { id: WorkspaceGroupSchema["workspaceGroupID"] }] | [params?: { includeTerminated?: boolean }],
+    T extends
+      | [where?: { id: WorkspaceGroupSchema["workspaceGroupID"] } | { name: WorkspaceGroupSchema["name"] }]
+      | [params?: { includeTerminated?: boolean }],
     _ReturnType = T[0] extends { id: WorkspaceGroupSchema["workspaceGroupID"] } ? WorkspaceGroup | undefined : WorkspaceGroup[],
   >(...[arg]: T): Promise<_ReturnType> {
     let url = "";
@@ -105,6 +106,8 @@ export class WorkspaceGroupManager extends APIManager {
 
     if (arg && "id" in arg) {
       url = `${url}/${arg.id}`;
+    } else if (arg && "name" in arg) {
+      params.set("includeTerminated", String(true));
     } else if (arg && "includeTerminated" in arg) {
       params.set("includeTerminated", String(arg.includeTerminated));
     }
@@ -115,6 +118,10 @@ export class WorkspaceGroupManager extends APIManager {
     const response = await this._execute<Response>(`${url}?${params.toString()}`);
 
     if (Array.isArray(response)) {
+      if (arg && "name" in arg) {
+        return response.filter(({ name }) => name === arg.name).map((data) => this._create(data)) as _ReturnType;
+      }
+
       return response.map((data) => this._create(data)) as _ReturnType;
     }
 
