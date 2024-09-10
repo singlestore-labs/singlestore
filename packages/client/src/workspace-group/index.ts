@@ -1,6 +1,7 @@
 import { getKeyByValue } from "@repo/utils";
 
 import type { API } from "../api";
+import type { OrganizationManager } from "../organization/manager";
 import type { PrivateConnection, PrivateConnectionSchema } from "../private-connection";
 
 import { APIManager } from "../api/manager";
@@ -53,6 +54,7 @@ export class WorkspaceGroup extends APIManager {
 
   constructor(
     api: API,
+    private _organization: OrganizationManager,
     public id: WorkspaceGroupSchema["workspaceGroupID"],
     public name: WorkspaceGroupSchema["name"],
     public regionID: WorkspaceGroupSchema["regionID"],
@@ -127,5 +129,12 @@ export class WorkspaceGroup extends APIManager {
       updatedAt: new Date(data.updatedAt),
       activeAt: new Date(data.activeAt),
     }));
+  }
+
+  async getMetrics() {
+    const org = await this._organization.get();
+    return this._api.execute<string>(`/organizations/${org.id}/workspaceGroups/${this.id}/metrics`, {
+      version: 2,
+    });
   }
 }

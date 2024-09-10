@@ -1,3 +1,4 @@
+import type { OrganizationManager } from "../organization/manager";
 import type { RegionName } from "../region";
 import type { RegionManager } from "../region/manager";
 
@@ -23,6 +24,7 @@ export class WorkspaceGroupManager extends APIManager {
 
   constructor(
     protected readonly _api: API,
+    private _organization: OrganizationManager,
     private _region: RegionManager,
   ) {
     super(_api);
@@ -31,6 +33,7 @@ export class WorkspaceGroupManager extends APIManager {
   private _create(data: WorkspaceGroupSchema): WorkspaceGroup {
     return new WorkspaceGroup(
       this._api,
+      this._organization,
       data.workspaceGroupID,
       data.name,
       data.regionID,
