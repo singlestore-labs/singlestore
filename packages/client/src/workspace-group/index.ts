@@ -5,6 +5,8 @@ import type { PrivateConnection, PrivateConnectionSchema } from "../private-conn
 
 import { APIManager } from "../api/manager";
 
+import { WorkspaceGroupStorageManager } from "./storage/manager";
+
 export interface WorkspaceGroupUpdateWindowSchema {
   day: number;
   hour: number;
@@ -47,6 +49,7 @@ export const updateWindowDaysMap: Record<number, WorkspaceGroupUpdateWindow["day
 
 export class WorkspaceGroup extends APIManager {
   protected _baseUrl: string;
+  storage: WorkspaceGroupStorageManager;
 
   constructor(
     api: API,
@@ -64,6 +67,7 @@ export class WorkspaceGroup extends APIManager {
   ) {
     super(api);
     this._baseUrl = `/workspaceGroups/${this.id}`;
+    this.storage = new WorkspaceGroupStorageManager(this._api, this.id);
   }
 
   static serializeUpdateWindow(updateWindow: WorkspaceGroupUpdateWindow): WorkspaceGroupUpdateWindowSchema {
