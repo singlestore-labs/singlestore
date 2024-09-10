@@ -1,6 +1,13 @@
 import { APIManager } from "../api/manager";
 
-import { Team, TeamSchema } from ".";
+import { Team, type TeamMemberTeamSchema, type TeamMemberUserSchema, type TeamSchema } from ".";
+
+export interface CreateTeamBody {
+  name: TeamSchema["name"];
+  description?: TeamSchema["description"];
+  memberTeams?: TeamMemberTeamSchema["teamID"][];
+  memberUsers?: TeamMemberUserSchema["userID"][];
+}
 
 export class TeamManager extends APIManager {
   protected _baseUrl: string = "/teams";
@@ -15,6 +22,27 @@ export class TeamManager extends APIManager {
       data.memberUsers?.map(({ userID, ...user }) => ({ ...user, id: userID })),
       new Date(data.createdAt),
     );
+  }
+
+  async create({ memberTeams, memberUsers, ...body }: CreateTeamBody) {
+    let newTeam = await this._execute<TeamSchema>("", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+
+    if (memberTeams?.length || memberUsers?.length) {
+      await this._execute(`/${newTeam.teamID}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          addMemberTeamIDs: memberTeams,
+          addMemberUserIDs: memberUsers,
+        }),
+      });
+
+      newTeam = await this._execute(`/${newTeam.teamID}`);
+    }
+
+    return this._create(newTeam);
   }
 
   async get<
@@ -45,7 +73,27 @@ export class TeamManager extends APIManager {
     return this._create(response) as _TReturnType;
   }
 
+  async update(id: TeamSchema["teamID"], ...args: Parameters<Team["update"]>) {
+    return Team.update(this._api, id, ...args);
+  }
+
   async delete(id: TeamSchema["teamID"]) {
     return Team.delete(this._api, id);
+  }
+
+  async addMemberTeams(id: TeamSchema["teamID"], ...args: Parameters<Team["addMemberTeams"]>) {
+    return Team.addMemberTeams(this._api, id, ...args);
+  }
+
+  async removeMemberTeams(id: TeamSchema["teamID"], ...args: Parameters<Team["removeMemberTeams"]>) {
+    return Team.removeMemberTeams(this._api, id, ...args);
+  }
+
+  async addMemberUsers(id: TeamSchema["teamID"], ...args: Parameters<Team["addMemberUsers"]>) {
+    return Team.addMemberUsers(this._api, id, ...args);
+  }
+
+  async removeMemberUsers(id: TeamSchema["teamID"], ...args: Parameters<Team["removeMemberUsers"]>) {
+    return Team.removeMemberUsers(this._api, id, ...args);
   }
 }

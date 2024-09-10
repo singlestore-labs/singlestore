@@ -20,8 +20,13 @@ export type RegionName =
   | "Asia Pacific South 1 (Mumbai)"
   | "Europe North 1 (Stockholm)";
 
-export interface Region {
+export interface RegionSchema {
+  regionID: string;
+  region: RegionName;
+  provider: RegionProvider;
+}
+
+export interface Region extends Omit<RegionSchema, "regionID" | "region"> {
   id: string;
   name: RegionName;
-  provider: RegionProvider;
 }

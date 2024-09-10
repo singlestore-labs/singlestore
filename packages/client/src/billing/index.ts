@@ -1,30 +1,42 @@
 export type BillingMetric = "ComputeCredit" | "StorageAvgByte";
 
-export interface BillingUsage {
-  resourceId: string;
+export interface BillingUsageSchema {
+  resourceID: string;
   resourceName: string;
   resourceType: string;
-  startTime: Date;
-  endTime: Date;
+  startTime: string;
+  endTime: string;
   value: string;
 }
 
-export interface ComputeCreditBillingUsage extends BillingUsage {
-  ownerId: string | null | undefined;
+export interface StorageAvgByteBillingUsageSchema extends BillingUsageSchema {}
+
+export interface StorageAvgByteBillingUsage extends Omit<StorageAvgByteBillingUsageSchema, "startTime" | "endTime"> {
+  startTime: Date;
+  endTime: Date;
 }
 
-export interface StorageAvgByteBillingUsage extends BillingUsage {}
+export interface ComputeCreditBillingUsageSchema extends BillingUsageSchema {
+  ownerID: string | null | undefined;
+}
 
-export interface Billing<TMetric extends BillingMetric, TUsage extends ComputeCreditBillingUsage | StorageAvgByteBillingUsage> {
+export interface ComputeCreditBillingUsage extends Omit<ComputeCreditBillingUsageSchema, "startTime" | "endTime"> {
+  startTime: Date;
+  endTime: Date;
+}
+
+export interface BillingSchema<T extends BillingMetric> {
+  metric: T;
+  description: string;
+  Usage: (T extends "ComputeCredit" ? ComputeCreditBillingUsageSchema : StorageAvgByteBillingUsageSchema)[];
+}
+
+export interface Billing<TMetric extends BillingMetric, TUsage extends StorageAvgByteBillingUsage | ComputeCreditBillingUsage> {
   metric: TMetric;
   description: string;
   usage: TUsage[];
 }
 
-export interface ComputeCreditBilling extends Billing<"ComputeCredit", ComputeCreditBillingUsage> {}
-
 export interface StorageAvgByteBilling extends Billing<"StorageAvgByte", StorageAvgByteBillingUsage> {}
 
-export type BillingByMetric<T extends BillingMetric> = T extends "ComputeCredit"
-  ? ComputeCreditBilling[]
-  : StorageAvgByteBilling[];
+export interface ComputeCreditBilling extends Billing<"ComputeCredit", ComputeCreditBillingUsage> {}

@@ -1,7 +1,6 @@
 import type {
-  BillingByMetric,
   BillingMetric,
-  BillingUsage,
+  BillingSchema,
   ComputeCreditBilling,
   ComputeCreditBillingUsage,
   StorageAvgByteBilling,
@@ -20,7 +19,10 @@ export interface GetBillingParams {
 export class BillingManager extends APIManager {
   protected _baseUrl: string = "/billing";
 
-  async get<T extends GetBillingParams>({ metric, startTime, endTime, aggregateBy }: T): Promise<BillingByMetric<T["metric"]>> {
+  async get<
+    T extends GetBillingParams,
+    _TReturnType = T["metric"] extends "ComputeCredit" ? ComputeCreditBilling[] : StorageAvgByteBilling[],
+  >({ metric, startTime, endTime, aggregateBy }: T): Promise<_TReturnType> {
     const params = new URLSearchParams({ metric });
 
     Object.entries({ startTime, endTime }).forEach(([key, value]) => {
@@ -31,51 +33,30 @@ export class BillingManager extends APIManager {
       params.set("aggregateBy", aggregateBy);
     }
 
-    const response = await this._execute<{
-      billingUsage: {
-        metric: T["metric"];
-        description: string;
-        Usage: {
-          ownerID: T["metric"] extends "ComputeCredit" ? string : never;
-          resourceID: string;
-          resourceName: string;
-          resourceType: string;
-          startTime: string;
-          endTime: string;
-          value: string;
-        }[];
-      }[];
-    }>(`/usage?${params.toString()}`);
+    const response = await this._execute<{ billingUsage: BillingSchema<T["metric"]>[] }>(`/usage?${params.toString()}`);
 
     return response.billingUsage.map((data) => {
-      const usage = data.Usage.map(({ ownerID: ownerId, resourceID: resourceId, startTime, endTime, ...usage }) => {
-        const _usage = {
+      const usage = data.Usage.map((usage) => {
+        return {
           ...usage,
-          resourceId,
           startTime: new Date(startTime),
           endTime: new Date(endTime),
-        } satisfies BillingUsage;
-
-        if (metric === "ComputeCredit") {
-          return { ..._usage, ownerId } satisfies ComputeCreditBillingUsage;
-        }
-
-        return _usage satisfies StorageAvgByteBillingUsage;
+        };
       });
 
       if (metric === "ComputeCredit") {
         return {
           metric: "ComputeCredit",
           description: data.description,
-          usage: usage as ComputeCreditBillingUsage[],
+          usage: usage as unknown as ComputeCreditBillingUsage[],
         } satisfies ComputeCreditBilling;
       }
 
       return {
         metric: "StorageAvgByte",
         description: data.description,
-        usage: usage as StorageAvgByteBillingUsage[],
+        usage: usage as unknown as StorageAvgByteBillingUsage[],
       } satisfies StorageAvgByteBilling;
-    }) as BillingByMetric<T["metric"]>;
+    }) as _TReturnType;
   }
 }

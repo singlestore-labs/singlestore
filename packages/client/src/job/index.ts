@@ -8,46 +8,69 @@ export interface JobRuntime {
 }
 
 export interface JobMetadata {
-  avgDurationInSeconds: number | null;
   count: number;
+  avgDurationInSeconds: number | null;
   maxDurationInSeconds: number | null;
   status: "Unknown" | "Scheduled" | "Running" | "Completed" | "Failed" | "Error" | "Canceled";
 }
 
-export interface JobSchedule {
-  executionIntervalInMinutes: number | null;
+export interface JobScheduleSchema {
   mode: "Recurring" | "Once";
+  startAt: string | null;
+  executionIntervalInMinutes: number | null;
+}
+
+export interface JobSchedule extends Omit<JobScheduleSchema, "startAt"> {
   startAt: Date | null;
 }
 
 export interface JobTargetConfig {
-  databaseName: string;
-  resumeTarget: boolean;
   targetID: string;
   targetType: "Workspace" | "Cluster" | "VirtualWorkspace";
-}
-
-export interface JobParameter {
-  name: string;
-  type: "string" | "integer" | "float" | "boolean";
-  value: string;
-}
-
-export interface JobExecution {
-  id: string;
-  number: number;
-  jobId: string;
-  scheduledStartTime: Date;
-  startedAt: Date | null;
-  finishedAt: Date | null;
-  snapshotNotebookPath: string | null;
-  status: "Scheduled" | "Running" | "Completed" | "Failed";
+  resumeTarget: boolean;
+  databaseName: string;
 }
 
 export interface JobExecutionConfig {
+  notebookPath: string;
   createSnapshot: boolean;
   maxAllowedExecutionDurationInMinutes: number;
-  notebookPath: string;
+}
+
+export interface JobSchema {
+  jobID: string;
+  name: string;
+  description: string | null;
+  enqueuedBy: string;
+  jobMetadata: JobMetadata[];
+  schedule: JobScheduleSchema;
+  targetConfig: JobTargetConfig;
+  executionConfig: JobExecutionConfig;
+  completedExecutionsCount: number;
+  createdAt: string;
+  terminatedAt: string | null;
+}
+
+export interface JobParameter {
+  type: "string" | "integer" | "float" | "boolean";
+  name: string;
+  value: string;
+}
+
+export interface JobExecutionSchema {
+  id: string;
+  number: number;
+  jobID: string;
+  scheduledStartTime: string;
+  startedAt: string | null;
+  finishedAt: string | null;
+  snapshotNotebookPath: string | null;
+  status: "Scheduled" | "Running" | "Completed" | "Failed";
+}
+export interface JobExecution extends Omit<JobExecutionSchema, "scheduledStartTime" | "startedAt" | "finishedAt"> {
+  scheduledStartTime: Date;
+  startedAt: Date | null;
+  finishedAt: Date | null;
 }
 
 export class Job extends APIManager {
@@ -55,14 +78,14 @@ export class Job extends APIManager {
 
   constructor(
     _api: API,
-    public id: string,
-    public name: string | null,
-    public description: string | null,
-    public enqueuedBy: string,
-    public executionConfig: JobExecutionConfig,
-    public metadata: JobMetadata[],
-    public targetConfig: JobTargetConfig,
-    public completedExecutionsCount: number,
+    public id: JobSchema["jobID"],
+    public name: JobSchema["name"],
+    public description: JobSchema["description"],
+    public enqueuedBy: JobSchema["enqueuedBy"],
+    public executionConfig: JobSchema["executionConfig"],
+    public metadata: JobSchema["jobMetadata"],
+    public targetConfig: JobSchema["targetConfig"],
+    public completedExecutionsCount: JobSchema["completedExecutionsCount"],
     public schedule: JobSchedule,
     public createdAt: Date,
     public terminatedAt: Date | null,
@@ -71,18 +94,18 @@ export class Job extends APIManager {
     this._baseUrl = `/jobs/${this.id}`;
   }
 
-  static async delete(api: API, id: string): Promise<boolean> {
+  static async delete(api: API, id: JobSchema["jobID"]): Promise<boolean> {
     return api.execute<boolean>(`/jobs/${id}`, { method: "DELETE" });
   }
 
-  static async getExecutions(api: API, id: string, start: number, end: number): Promise<JobExecution[]> {
+  static async getExecutions(api: API, id: JobSchema["jobID"], start: number, end: number): Promise<JobExecution[]> {
     const params = new URLSearchParams({ start: start.toString(), end: end.toString() });
     const response = await api.execute(`/jobs/${id}/executions?${params.toString()}`);
     return response.executions.map((execution: any) => {
       return {
         id: execution.executionID,
         number: execution.executionNumber,
-        jobId: execution.jobID,
+        jobID: execution.jobID,
         scheduledStartTime: new Date(execution.scheduledStartTime),
         startedAt: new Date(execution.startedAt),
         finishedAt: new Date(execution.finishedAt),
@@ -92,7 +115,7 @@ export class Job extends APIManager {
     });
   }
 
-  static async getParameters(api: API, id: string): Promise<JobParameter[]> {
+  static async getParameters(api: API, id: JobSchema["jobID"]): Promise<JobParameter[]> {
     return api.execute<JobParameter[]>(`/jobs/${id}/parameters`);
   }
 

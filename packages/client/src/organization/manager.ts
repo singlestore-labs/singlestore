@@ -1,15 +1,12 @@
-import type { Organization } from ".";
+import type { Organization, OrganizationSchema } from ".";
 
 import { APIManager } from "../api/manager";
 
 export class OrganizationManager extends APIManager {
   protected _baseUrl: string = "/organizations";
 
-  async get<TName extends string>(): Promise<Organization<TName>> {
-    const respnose = await this._execute<{
-      orgID: string;
-      name: TName;
-    }>("/current");
+  async get(): Promise<Organization> {
+    const respnose = await this._execute<OrganizationSchema>("/current");
 
     return {
       id: respnose.orgID,

@@ -2,15 +2,15 @@ import type { Optional } from "@repo/utils";
 
 import { APIManager } from "../api/manager";
 
-import { Job, type JobParameter, type JobTargetConfig, type JobRuntime, type JobSchedule } from ".";
+import { Job, type JobParameter, type JobTargetConfig, type JobRuntime, type JobSchedule, JobSchema } from ".";
 
 export interface CreateJobBody {
-  name?: Job["name"];
-  description?: Job["description"];
+  name?: JobSchema["name"];
+  description?: JobSchema["description"];
   executionConfig: {
-    createSnapshot?: boolean;
-    notebookPath: string;
     runtimeName?: string;
+    notebookPath: string;
+    createSnapshot?: boolean;
   };
   parameters?: JobParameter[];
   schedule: Optional<JobSchedule, "executionIntervalInMinutes" | "startAt">;
@@ -20,7 +20,7 @@ export interface CreateJobBody {
 export class JobManager extends APIManager {
   protected _baseUrl: string = "/jobs";
 
-  private _create(data: any): Job {
+  private _create(data: JobSchema): Job {
     return new Job(
       this._api,
       data.jobID,
@@ -31,39 +31,35 @@ export class JobManager extends APIManager {
       data.jobMetadata,
       data.targetConfig,
       data.completedExecutionsCount,
-      { ...data.schedule, startAt: new Date(data.schedule.startAt) },
+      { ...data.schedule, startAt: data.schedule.startAt ? new Date(data.schedule.startAt) : null },
       new Date(data.createdAt),
-      new Date(data.terminatedAt),
+      data.terminatedAt ? new Date(data.terminatedAt) : null,
     );
   }
 
-  async create<TBody extends CreateJobBody>(body: TBody) {
-    const response = await this._execute("", { method: "POST", body: JSON.stringify(body) });
+  async create(body: CreateJobBody) {
+    const response = await this._execute<JobSchema>("", { method: "POST", body: JSON.stringify(body) });
     return this._create(response);
   }
 
-  async get(id: string) {
-    const response = await this._execute(`/${id}`);
+  async get(id: JobSchema["jobID"]) {
+    const response = await this._execute<JobSchema>(`/${id}`);
     return this._create(response);
   }
 
-  async delete(id: string) {
+  async delete(id: JobSchema["jobID"]) {
     return Job.delete(this._api, id);
   }
 
-  async getExecutions(id: string, ...args: Parameters<Job["getExecutions"]>) {
+  async getExecutions(id: JobSchema["jobID"], ...args: Parameters<Job["getExecutions"]>) {
     return Job.getExecutions(this._api, id, ...args);
   }
 
-  async getParameters(id: string) {
+  async getParameters(id: JobSchema["jobID"]) {
     return Job.getParameters(this._api, id);
   }
 
-  async getRuntimes(): Promise<JobRuntime[]> {
-    const response = await this._execute<{ name: JobRuntime["name"]; description: string }[]>("/runtimes");
-    return response.map((data) => ({
-      name: data.name,
-      description: data.description,
-    }));
+  async getRuntimes() {
+    return this._execute<JobRuntime[]>("/runtimes");
   }
 }

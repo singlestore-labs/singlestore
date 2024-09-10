@@ -72,8 +72,8 @@ export class SecretManager extends APIManager {
     return [] as unknown as _TReturnType;
   }
 
-  async update(id: SecretSchema["secretID"], value: Defined<SecretSchema["value"]>) {
-    return Secret.update(this._api, id, value);
+  async update(id: SecretSchema["secretID"], ...args: Parameters<Secret["update"]>) {
+    return Secret.update(this._api, id, ...args);
   }
 
   async delete(id: SecretSchema["secretID"]) {
