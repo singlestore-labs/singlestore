@@ -1,4 +1,4 @@
-import { AnyAI } from "@singlestore/ai";
+import type { AnyAI } from "@singlestore/ai";
 
 import { API } from "./api";
 import { BillingManager } from "./billing/manager";
@@ -8,6 +8,7 @@ import { RegionManager } from "./region/manager";
 import { SecretManager } from "./secret/manager";
 import { TeamManager } from "./team/manager";
 import { Workspace, type ConnectWorkspaceConfig, type WorkspaceType } from "./workspace";
+import { WorkspaceGroupManager } from "./workspace-group/manager";
 
 export type * from "./types";
 export { escape } from "mysql2";
@@ -26,22 +27,24 @@ export class SingleStoreClient<TAi extends AnyAI | undefined = undefined> {
   private _api: API;
 
   billing: BillingManager;
+  job: JobManager;
   organization: OrganizationManager;
   region: RegionManager;
-  job: JobManager;
   secret: SecretManager;
   team: TeamManager;
+  workspaceGroup: WorkspaceGroupManager;
 
   constructor(config?: SingleStoreClientConfig<TAi>) {
     this._ai = config?.ai as TAi;
     this._api = new API(config?.apiKey);
 
     this.billing = new BillingManager(this._api);
+    this.job = new JobManager(this._api);
     this.organization = new OrganizationManager(this._api);
     this.region = new RegionManager(this._api);
-    this.job = new JobManager(this._api);
     this.secret = new SecretManager(this._api);
     this.team = new TeamManager(this._api);
+    this.workspaceGroup = new WorkspaceGroupManager(this._api);
   }
 
   workspace<TWorkspaceType extends WorkspaceType = WorkspaceType>(
