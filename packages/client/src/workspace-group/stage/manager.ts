@@ -17,9 +17,11 @@ export class WorkspaceGroupStageManager extends APIManager {
   }
 
   async get(path?: WorkspaceGroupStageSchema["path"]) {
-    const { created, last_modified, ...respnose } = await this._execute<WorkspaceGroupStageSchema>(
-      path ? encodeURIComponent(path) : undefined,
-    );
+    const respnose = await this._execute<WorkspaceGroupStageSchema>(path ? WorkspaceGroupStage.serializePath(path) : undefined);
+
+    if (!respnose.path) {
+      throw new Error(`No stage found with the specified path: ${path}`);
+    }
 
     return new WorkspaceGroupStage(
       this._api,
@@ -32,8 +34,8 @@ export class WorkspaceGroupStageManager extends APIManager {
       respnose.mimetype,
       respnose.size,
       respnose.writable,
-      created ? new Date(created) : undefined,
-      last_modified ? new Date(last_modified) : undefined,
+      respnose.created ? new Date(respnose.created) : undefined,
+      respnose.last_modified ? new Date(respnose.last_modified) : undefined,
     );
   }
 

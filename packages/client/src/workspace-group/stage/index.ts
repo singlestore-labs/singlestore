@@ -40,7 +40,12 @@ export class WorkspaceGroupStage extends APIManager {
     public modifiedAt: Date | undefined,
   ) {
     super(api);
-    this._baseUrl = `/stage/${this._id}/fs${this.path}`;
+    this._baseUrl = `/stage/${this._id}/fs/${this.path}`;
+  }
+
+  static serializePath(path?: WorkspaceGroupStageSchema["path"]): string {
+    if (!path) return "";
+    return `/${encodeURIComponent(path.startsWith("/") ? path.substring(1) : path)}`;
   }
 
   static async update(
@@ -49,19 +54,23 @@ export class WorkspaceGroupStage extends APIManager {
     path: WorkspaceGroupStageSchema["path"],
     body: UpdateWorkspaceGroupStageBody,
   ) {
-    return api.execute<Pick<WorkspaceGroupStage, "name" | "path">>(`/stage/${id}/fs${encodeURIComponent(path)}`, {
-      method: "PATCH",
-      body: JSON.stringify({
-        ...body,
-        newPath: body.newPath ? encodeURIComponent(body.newPath) : undefined,
-      }),
-    });
+    return api.execute<Pick<WorkspaceGroupStage, "name" | "path">>(
+      `/stage/${id}/fs${WorkspaceGroupStage.serializePath(path)}`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({
+          ...body,
+          newPath: body.newPath ? encodeURIComponent(body.newPath) : undefined,
+        }),
+      },
+    );
   }
 
   static async delete(api: API, id: WorkspaceGroupSchema["workspaceGroupID"], path: WorkspaceGroupStage["path"]) {
-    return api.execute<Pick<WorkspaceGroupStage, "name" | "path">>(`/stage/${id}/fs${encodeURIComponent(path)}`, {
-      method: "DELETE",
-    });
+    return api.execute<Pick<WorkspaceGroupStage, "name" | "path">>(
+      `/stage/${id}/fs${WorkspaceGroupStage.serializePath(path)}`,
+      { method: "DELETE" },
+    );
   }
 
   static async createFolder(
@@ -71,10 +80,12 @@ export class WorkspaceGroupStage extends APIManager {
     name: string,
   ) {
     return api.execute<Pick<WorkspaceGroupStage, "name" | "path">>(
-      `/stage/${id}/fs${encodeURIComponent(path)}/${encodeURIComponent(name)}/`,
+      `/stage/${id}/fs${WorkspaceGroupStage.serializePath(path)}/${encodeURIComponent(name)}/`,
       { method: "PUT" },
     );
   }
+
+  static async uploadFile() {}
 
   async update(body: UpdateWorkspaceGroupStageBody, path: WorkspaceGroupStage["path"] = this.path) {
     return WorkspaceGroupStage.update(this._api, this._id, path, body);
