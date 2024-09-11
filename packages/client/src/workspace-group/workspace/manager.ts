@@ -3,7 +3,17 @@ import type { API } from "../../api";
 
 import { APIManager } from "../../api/manager";
 
-import { Workspace, type WorkspaceSchema } from ".";
+import { Workspace, type WorkspaceAutoSuspendSchema, type WorkspaceSchema } from ".";
+
+interface CreateWorkspaceBody
+  extends Pick<WorkspaceSchema, "name">,
+    Partial<Pick<WorkspaceSchema, "cacheConfig" | "scaleFactor" | "size">> {
+  enableKai?: WorkspaceSchema["kaiEnabled"];
+  autoSuspend?: {
+    suspendType?: WorkspaceAutoSuspendSchema["suspendType"] | "DISABLED";
+    suspendAfterSeconds?: number;
+  };
+}
 
 export type GetWorkspaceSelectParam = (keyof WorkspaceSchema)[] | undefined;
 
@@ -62,6 +72,19 @@ export class WorkspaceManager extends APIManager {
         : undefined,
       data.resumeAttachments?.map(({ attachment: type, ...attachment }) => ({ ...attachment, type })),
     );
+  }
+
+  async create(body: CreateWorkspaceBody) {
+    const response = await this._execute<Pick<WorkspaceSchema, "workspaceID">>("", {
+      method: "POST",
+      body: JSON.stringify({ ...body, workspaceGroupID: this._workspaceGroupID }),
+    });
+
+    if (typeof response === "string") {
+      throw new Error(response);
+    }
+
+    return this.get({ where: { id: response.workspaceID } });
   }
 
   async get<
