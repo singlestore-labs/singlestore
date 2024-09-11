@@ -10,25 +10,25 @@ export class WorkspaceGroupStageManager extends APIManager {
 
   constructor(
     api: API,
-    private _id: WorkspaceGroupSchema["workspaceGroupID"],
+    private _workspaceGroupID: WorkspaceGroupSchema["workspaceGroupID"],
   ) {
     super(api);
-    this._baseUrl = `/stage/${this._id}/fs`;
+    this._baseUrl = `/stage/${this._workspaceGroupID}/fs`;
   }
 
   async get(path?: WorkspaceGroupStageSchema["path"]) {
-    return WorkspaceGroupStage.get(this._api, this._id, path);
+    return WorkspaceGroupStage.get(this._api, this._workspaceGroupID, path);
   }
 
   async update(path: WorkspaceGroupStageSchema["path"], body: UpdateWorkspaceGroupStageBody) {
-    return WorkspaceGroupStage.update(this._api, this._id, path, body);
+    return WorkspaceGroupStage.update(this._api, this._workspaceGroupID, path, body);
   }
 
   async delete(path: WorkspaceGroupStageSchema["path"]) {
-    return WorkspaceGroupStage.delete(this._api, this._id, path);
+    return WorkspaceGroupStage.delete(this._api, this._workspaceGroupID, path);
   }
 
   async createFolder(path: WorkspaceGroupStage["path"], name: string) {
-    return WorkspaceGroupStage.createFolder(this._api, this._id, path, name);
+    return WorkspaceGroupStage.createFolder(this._api, this._workspaceGroupID, path, name);
   }
 }

@@ -8,6 +8,7 @@ import { APIManager } from "../api/manager";
 
 import { WorkspaceGroupStageManager } from "./stage/manager";
 import { WorkspaceGroupStorageManager } from "./storage/manager";
+import { WorkspaceManager } from "./workspace/manager";
 
 export interface WorkspaceGroupUpdateWindowSchema {
   day: number;
@@ -53,6 +54,7 @@ export class WorkspaceGroup extends APIManager {
   protected _baseUrl: string;
   stage: WorkspaceGroupStageManager;
   storage: WorkspaceGroupStorageManager;
+  workspace: WorkspaceManager;
 
   constructor(
     api: API,
@@ -73,6 +75,7 @@ export class WorkspaceGroup extends APIManager {
     this._baseUrl = `/workspaceGroups/${this.id}`;
     this.stage = new WorkspaceGroupStageManager(this._api, this.id);
     this.storage = new WorkspaceGroupStorageManager(this._api, this.id);
+    this.workspace = new WorkspaceManager(this._api, this.id);
   }
 
   static serializeUpdateWindow(updateWindow: WorkspaceGroupUpdateWindow): WorkspaceGroupUpdateWindowSchema {

@@ -27,7 +27,7 @@ export class WorkspaceGroupStage extends APIManager {
 
   constructor(
     api: API,
-    private _id: WorkspaceGroupSchema["workspaceGroupID"],
+    private _workspaceGroupID: WorkspaceGroupSchema["workspaceGroupID"],
     public name: WorkspaceGroupStageSchema["name"],
     public content: WorkspaceGroupStageSchema["content"],
     public type: WorkspaceGroupStageSchema["type"],
@@ -40,7 +40,7 @@ export class WorkspaceGroupStage extends APIManager {
     public modifiedAt: Date | undefined,
   ) {
     super(api);
-    this._baseUrl = `/stage/${this._id}/fs/${this.path}`;
+    this._baseUrl = `/stage/${this._workspaceGroupID}/fs/${this.path}`;
   }
 
   static serializePath(path?: WorkspaceGroupStageSchema["path"]): string {
@@ -150,26 +150,26 @@ export class WorkspaceGroupStage extends APIManager {
 
   async get(path?: WorkspaceGroupStage["path"]) {
     const _path = WorkspaceGroupStage.mergePaths(this.path, path);
-    return WorkspaceGroupStage.get(this._api, this._id, _path);
+    return WorkspaceGroupStage.get(this._api, this._workspaceGroupID, _path);
   }
 
   async update(body: UpdateWorkspaceGroupStageBody, path?: WorkspaceGroupStage["path"]) {
     const _path = WorkspaceGroupStage.mergePaths(this.path, path);
-    return WorkspaceGroupStage.update(this._api, this._id, _path, body);
+    return WorkspaceGroupStage.update(this._api, this._workspaceGroupID, _path, body);
   }
 
   async delete(path?: WorkspaceGroupStage["path"]) {
     const _path = WorkspaceGroupStage.mergePaths(this.path, path);
-    return WorkspaceGroupStage.delete(this._api, this._id, _path);
+    return WorkspaceGroupStage.delete(this._api, this._workspaceGroupID, _path);
   }
 
   async createFolder(name: string, path?: WorkspaceGroupStage["path"]) {
     const _path = WorkspaceGroupStage.mergePaths(this.path, path);
-    return WorkspaceGroupStage.createFolder(this._api, this._id, _path, name);
+    return WorkspaceGroupStage.createFolder(this._api, this._workspaceGroupID, _path, name);
   }
 
   async uploadFile(file: File, path?: WorkspaceGroupStage["path"]) {
     const _path = WorkspaceGroupStage.mergePaths(this.path, path);
-    return WorkspaceGroupStage.uploadFile(this._api, this._id, _path, file);
+    return WorkspaceGroupStage.uploadFile(this._api, this._workspaceGroupID, _path, file);
   }
 }
