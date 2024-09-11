@@ -104,4 +104,8 @@ export class WorkspaceManager extends APIManager {
 
     return this._create(response) as _TReturnType;
   }
+
+  async delete(id: WorkspaceSchema["workspaceID"]) {
+    return Workspace.delete(this._api, id);
+  }
 }

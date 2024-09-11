@@ -78,4 +78,16 @@ export class Workspace extends APIManager {
     super(api);
     this._baseUrl = `/workspaces/${this.id}`;
   }
+
+  static async delete(api: API, id: WorkspaceSchema["workspaceID"]): Promise<WorkspaceSchema["workspaceID"]> {
+    const response = await api.execute<Pick<WorkspaceSchema, "workspaceID">>(`/workspaces/${id}`, {
+      method: "DELETE",
+    });
+
+    return response.workspaceID;
+  }
+
+  async delete() {
+    return Workspace.delete(this._api, this.id);
+  }
 }
