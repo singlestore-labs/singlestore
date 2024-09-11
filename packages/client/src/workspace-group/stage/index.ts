@@ -136,8 +136,16 @@ export class WorkspaceGroupStage extends APIManager {
     path: WorkspaceGroupStage["path"],
     file: File,
   ) {
-    console.dir({ file });
-    // const response = await api.execute(`${this.formatPath(id, path)}/${file.name}`);
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await api.execute(`${this.formatPath(id, path)}/${this.serializePath(file.name)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "multipart/form-data" },
+      body: formData,
+    });
+
+    console.log(response);
   }
 
   async get(path?: WorkspaceGroupStage["path"]) {
@@ -158,5 +166,10 @@ export class WorkspaceGroupStage extends APIManager {
   async createFolder(name: string, path?: WorkspaceGroupStage["path"]) {
     const _path = WorkspaceGroupStage.mergePaths(this.path, path);
     return WorkspaceGroupStage.createFolder(this._api, this._id, _path, name);
+  }
+
+  async uploadFile(file: File, path?: WorkspaceGroupStage["path"]) {
+    const _path = WorkspaceGroupStage.mergePaths(this.path, path);
+    return WorkspaceGroupStage.uploadFile(this._api, this._id, _path, file);
   }
 }
