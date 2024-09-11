@@ -48,29 +48,68 @@ export class WorkspaceGroupStage extends APIManager {
     return `/${encodeURIComponent(path.startsWith("/") ? path.substring(1) : path)}`;
   }
 
+  static formatPath(id: WorkspaceGroupSchema["workspaceGroupID"], path?: WorkspaceGroupStageSchema["path"]) {
+    return `/stage/${id}/fs${this.serializePath(path)}`;
+  }
+
+  static mergePaths(...paths: (string | undefined)[]): string {
+    return paths.filter(Boolean).join("").replaceAll("//", "/");
+  }
+
+  static async get(api: API, id: WorkspaceGroupSchema["workspaceGroupID"], path?: WorkspaceGroupStageSchema["path"]) {
+    const response = await api.execute<WorkspaceGroupStageSchema>(this.formatPath(id, path));
+
+    if (!response.path) {
+      throw new Error(`No stage found with the specified path: ${path}`);
+    }
+
+    return new WorkspaceGroupStage(
+      api,
+      id,
+      response.name,
+      response.content,
+      response.type,
+      response.path,
+      response.format,
+      response.mimetype,
+      response.size,
+      response.writable,
+      response.created ? new Date(response.created) : undefined,
+      response.last_modified ? new Date(response.last_modified) : undefined,
+    );
+  }
+
   static async update(
     api: API,
     id: WorkspaceGroupSchema["workspaceGroupID"],
     path: WorkspaceGroupStageSchema["path"],
     body: UpdateWorkspaceGroupStageBody,
   ) {
-    return api.execute<Pick<WorkspaceGroupStage, "name" | "path">>(
-      `/stage/${id}/fs${WorkspaceGroupStage.serializePath(path)}`,
-      {
-        method: "PATCH",
-        body: JSON.stringify({
-          ...body,
-          newPath: body.newPath ? encodeURIComponent(body.newPath) : undefined,
-        }),
-      },
-    );
+    const response = await api.execute<Pick<WorkspaceGroupStage, "name" | "path">>(this.formatPath(id, path), {
+      method: "PATCH",
+      body: JSON.stringify({
+        ...body,
+        newPath: body.newPath || undefined,
+      }),
+    });
+
+    if (typeof response === "string") {
+      throw new Error(response);
+    }
+
+    return response;
   }
 
   static async delete(api: API, id: WorkspaceGroupSchema["workspaceGroupID"], path: WorkspaceGroupStage["path"]) {
-    return api.execute<Pick<WorkspaceGroupStage, "name" | "path">>(
-      `/stage/${id}/fs${WorkspaceGroupStage.serializePath(path)}`,
-      { method: "DELETE" },
-    );
+    const response = await api.execute<Pick<WorkspaceGroupStage, "name" | "path">>(this.formatPath(id, path), {
+      method: "DELETE",
+    });
+
+    if (typeof response === "string") {
+      throw new Error(response);
+    }
+
+    return response;
   }
 
   static async createFolder(
@@ -79,23 +118,45 @@ export class WorkspaceGroupStage extends APIManager {
     path: WorkspaceGroupStage["path"],
     name: string,
   ) {
-    return api.execute<Pick<WorkspaceGroupStage, "name" | "path">>(
-      `/stage/${id}/fs${WorkspaceGroupStage.serializePath(path)}/${encodeURIComponent(name)}/`,
+    const response = await api.execute<Pick<WorkspaceGroupStage, "name" | "path">>(
+      `${this.formatPath(id, path)}${encodeURIComponent(name)}/`,
       { method: "PUT" },
     );
+
+    if (typeof response === "string") {
+      throw new Error(response);
+    }
+
+    return this.get(api, id, response.path);
   }
 
-  static async uploadFile() {}
-
-  async update(body: UpdateWorkspaceGroupStageBody, path: WorkspaceGroupStage["path"] = this.path) {
-    return WorkspaceGroupStage.update(this._api, this._id, path, body);
+  static async uploadFile(
+    api: API,
+    id: WorkspaceGroupSchema["workspaceGroupID"],
+    path: WorkspaceGroupStage["path"],
+    file: File,
+  ) {
+    console.dir({ file });
+    // const response = await api.execute(`${this.formatPath(id, path)}/${file.name}`);
   }
 
-  async delete(path: WorkspaceGroupStage["path"] = this.path) {
-    return WorkspaceGroupStage.delete(this._api, this._id, path);
+  async get(path?: WorkspaceGroupStage["path"]) {
+    const _path = WorkspaceGroupStage.mergePaths(this.path, path);
+    return WorkspaceGroupStage.get(this._api, this._id, _path);
   }
 
-  async createFolder(name: string, path: WorkspaceGroupStage["path"] = this.path) {
-    return WorkspaceGroupStage.createFolder(this._api, this._id, path, name);
+  async update(body: UpdateWorkspaceGroupStageBody, path?: WorkspaceGroupStage["path"]) {
+    const _path = WorkspaceGroupStage.mergePaths(this.path, path);
+    return WorkspaceGroupStage.update(this._api, this._id, _path, body);
+  }
+
+  async delete(path?: WorkspaceGroupStage["path"]) {
+    const _path = WorkspaceGroupStage.mergePaths(this.path, path);
+    return WorkspaceGroupStage.delete(this._api, this._id, _path);
+  }
+
+  async createFolder(name: string, path?: WorkspaceGroupStage["path"]) {
+    const _path = WorkspaceGroupStage.mergePaths(this.path, path);
+    return WorkspaceGroupStage.createFolder(this._api, this._id, _path, name);
   }
 }

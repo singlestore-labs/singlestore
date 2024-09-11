@@ -3,7 +3,7 @@ import type { API } from "../../api";
 
 import { APIManager } from "../../api/manager";
 
-import { type UpdateWorkspaceGroupStageBody, WorkspaceGroupStage, type WorkspaceGroupStageSchema } from ".";
+import { type UpdateWorkspaceGroupStageBody, type WorkspaceGroupStageSchema, WorkspaceGroupStage } from ".";
 
 export class WorkspaceGroupStageManager extends APIManager {
   protected _baseUrl: string;
@@ -17,29 +17,10 @@ export class WorkspaceGroupStageManager extends APIManager {
   }
 
   async get(path?: WorkspaceGroupStageSchema["path"]) {
-    const respnose = await this._execute<WorkspaceGroupStageSchema>(path ? WorkspaceGroupStage.serializePath(path) : undefined);
-
-    if (!respnose.path) {
-      throw new Error(`No stage found with the specified path: ${path}`);
-    }
-
-    return new WorkspaceGroupStage(
-      this._api,
-      this._id,
-      respnose.name,
-      respnose.content,
-      respnose.type,
-      respnose.path,
-      respnose.format,
-      respnose.mimetype,
-      respnose.size,
-      respnose.writable,
-      respnose.created ? new Date(respnose.created) : undefined,
-      respnose.last_modified ? new Date(respnose.last_modified) : undefined,
-    );
+    return WorkspaceGroupStage.get(this._api, this._id, path);
   }
 
-  async update(body: UpdateWorkspaceGroupStageBody, path: WorkspaceGroupStageSchema["path"]) {
+  async update(path: WorkspaceGroupStageSchema["path"], body: UpdateWorkspaceGroupStageBody) {
     return WorkspaceGroupStage.update(this._api, this._id, path, body);
   }
 
@@ -47,7 +28,7 @@ export class WorkspaceGroupStageManager extends APIManager {
     return WorkspaceGroupStage.delete(this._api, this._id, path);
   }
 
-  async createFolder(name: string, path: WorkspaceGroupStage["path"]) {
+  async createFolder(path: WorkspaceGroupStage["path"], name: string) {
     return WorkspaceGroupStage.createFolder(this._api, this._id, path, name);
   }
 }
