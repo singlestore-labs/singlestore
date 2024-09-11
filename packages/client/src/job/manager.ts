@@ -18,7 +18,7 @@ export interface CreateJobBody {
 }
 
 export class JobManager extends APIManager {
-  protected _baseUrl: string = "/jobs";
+  protected _baseURL: string = "/jobs";
 
   private _create(data: JobSchema): Job {
     return new Job(

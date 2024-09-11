@@ -14,7 +14,7 @@ export interface SecretSchema {
 }
 
 export class Secret extends APIManager {
-  protected _baseUrl: string;
+  protected _baseURL: string;
 
   constructor(
     api: API,
@@ -27,11 +27,15 @@ export class Secret extends APIManager {
     public createdAt: Date,
   ) {
     super(api);
-    this._baseUrl = `/secrets/${this.id}`;
+    this._baseURL = Secret.getBaseURL(this.id);
+  }
+
+  static getBaseURL(id: SecretSchema["secretID"]) {
+    return `/secrets/${id}`;
   }
 
   static async update(api: API, id: SecretSchema["secretID"], value: Defined<SecretSchema["value"]>): Promise<Secret> {
-    const response = await api.execute<SecretSchema>(`/secrets/${id}`, {
+    const response = await api.execute<SecretSchema>(this.getBaseURL(id), {
       method: "PATCH",
       body: JSON.stringify({ value }),
     });
@@ -49,7 +53,7 @@ export class Secret extends APIManager {
   }
 
   static async delete(api: API, id: SecretSchema["secretID"]): Promise<SecretSchema["secretID"]> {
-    const response = await api.execute<Pick<SecretSchema, "secretID">>(`/secrets/${id}`, { method: "DELETE" });
+    const response = await api.execute<Pick<SecretSchema, "secretID">>(this.getBaseURL(id), { method: "DELETE" });
     return response.secretID;
   }
 

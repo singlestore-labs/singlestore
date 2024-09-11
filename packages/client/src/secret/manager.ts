@@ -10,7 +10,7 @@ export interface CreateSecretBody {
 }
 
 export class SecretManager extends APIManager {
-  protected _baseUrl: string = "/secrets";
+  protected _baseURL: string = "/secrets";
 
   private _create(data: SecretSchema): Secret {
     return new Secret(

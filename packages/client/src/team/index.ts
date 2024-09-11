@@ -35,7 +35,7 @@ export interface TeamSchema {
 export interface UpdateTeamBody extends Partial<Pick<TeamSchema, "name" | "description">> {}
 
 export class Team extends APIManager {
-  protected _baseUrl: string;
+  protected _baseURL: string;
 
   constructor(
     api: API,
@@ -47,11 +47,15 @@ export class Team extends APIManager {
     public createdAt: Date,
   ) {
     super(api);
-    this._baseUrl = `/teams/${this.id}`;
+    this._baseURL = Team.getBaseURL(this.id);
+  }
+
+  static getBaseURL(id: TeamSchema["teamID"]) {
+    return `/teams/${id}`;
   }
 
   static async update(api: API, id: TeamSchema["teamID"], body: UpdateTeamBody): Promise<TeamSchema["teamID"]> {
-    const response = await api.execute<Pick<TeamSchema, "teamID">>(`/teams/${id}`, {
+    const response = await api.execute<Pick<TeamSchema, "teamID">>(this.getBaseURL(id), {
       method: "PATCH",
       body: JSON.stringify(body),
     });
@@ -60,7 +64,7 @@ export class Team extends APIManager {
   }
 
   static async delete(api: API, id: TeamSchema["teamID"]): Promise<TeamSchema["teamID"]> {
-    const response = await api.execute<Pick<TeamSchema, "teamID">>(`/teams/${id}`, { method: "DELETE" });
+    const response = await api.execute<Pick<TeamSchema, "teamID">>(this.getBaseURL(id), { method: "DELETE" });
     return response.teamID;
   }
 
@@ -69,7 +73,7 @@ export class Team extends APIManager {
     id: TeamSchema["teamID"],
     teamIDs: TeamMemberTeamSchema["teamID"][],
   ): Promise<TeamSchema["teamID"]> {
-    const response = await api.execute<Pick<TeamSchema, "teamID">>(`/teams/${id}`, {
+    const response = await api.execute<Pick<TeamSchema, "teamID">>(this.getBaseURL(id), {
       method: "PATCH",
       body: JSON.stringify({ addMemberTeamIDs: teamIDs }),
     });
@@ -82,7 +86,7 @@ export class Team extends APIManager {
     id: TeamSchema["teamID"],
     teamIDs: TeamMemberTeamSchema["teamID"][],
   ): Promise<TeamSchema["teamID"]> {
-    const response = await api.execute<Pick<TeamSchema, "teamID">>(`/teams/${id}`, {
+    const response = await api.execute<Pick<TeamSchema, "teamID">>(this.getBaseURL(id), {
       method: "PATCH",
       body: JSON.stringify({ removeMemberTeamIDs: teamIDs }),
     });
@@ -95,7 +99,7 @@ export class Team extends APIManager {
     id: TeamSchema["teamID"],
     userIDs: TeamMemberUserSchema["userID"][],
   ): Promise<TeamSchema["teamID"]> {
-    const response = await api.execute<Pick<TeamSchema, "teamID">>(`/teams/${id}`, {
+    const response = await api.execute<Pick<TeamSchema, "teamID">>(this.getBaseURL(id), {
       method: "PATCH",
       body: JSON.stringify({ addMemberUserIDs: userIDs }),
     });
@@ -108,7 +112,7 @@ export class Team extends APIManager {
     id: TeamSchema["teamID"],
     userIDs: TeamMemberUserSchema["userID"][],
   ): Promise<TeamSchema["teamID"]> {
-    const response = await api.execute<Pick<TeamSchema, "teamID">>(`/teams/${id}`, {
+    const response = await api.execute<Pick<TeamSchema, "teamID">>(this.getBaseURL(id), {
       method: "PATCH",
       body: JSON.stringify({ removeMemberUserIDs: userIDs }),
     });

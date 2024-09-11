@@ -17,7 +17,7 @@ export interface GetBillingParams {
 }
 
 export class BillingManager extends APIManager {
-  protected _baseUrl: string = "/billing";
+  protected _baseURL: string = "/billing";
 
   async get<
     T extends GetBillingParams,

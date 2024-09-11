@@ -53,8 +53,10 @@ export interface WorkspaceSchema {
   resumeAttachments: WorkspaceResumeAttachmentSchema[];
 }
 
+interface UpdateWorkspaceBody {}
+
 export class Workspace extends APIManager {
-  protected _baseUrl: string;
+  protected _baseURL: string;
 
   constructor(
     api: API,
@@ -76,11 +78,19 @@ export class Workspace extends APIManager {
     public resumeAttachments: WorkspaceResumeAttachment[] | undefined,
   ) {
     super(api);
-    this._baseUrl = `/workspaces/${this.id}`;
+    this._baseURL = Workspace.getBaseURL(this.id);
+  }
+
+  static getBaseURL(id: WorkspaceSchema["workspaceID"]) {
+    return `/workspaces/${id}`;
+  }
+
+  static async update(api: API, id: WorkspaceSchema["workspaceID"], body: UpdateWorkspaceBody) {
+    const response = await api.execute<Pick<WorkspaceSchema, "workspaceID">>(this.getBaseURL(id));
   }
 
   static async delete(api: API, id: WorkspaceSchema["workspaceID"]): Promise<WorkspaceSchema["workspaceID"]> {
-    const response = await api.execute<Pick<WorkspaceSchema, "workspaceID">>(`/workspaces/${id}`, {
+    const response = await api.execute<Pick<WorkspaceSchema, "workspaceID">>(this.getBaseURL(id), {
       method: "DELETE",
     });
 

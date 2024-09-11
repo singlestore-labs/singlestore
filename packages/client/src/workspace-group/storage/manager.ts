@@ -23,14 +23,18 @@ export interface StorageDRStatusSchema {
 }
 
 export class WorkspaceGroupStorageManager extends APIManager {
-  protected _baseUrl: string;
+  protected _baseURL: string;
 
   constructor(
     api: API,
     private _workspaceGroupID: WorkspaceGroupSchema["workspaceGroupID"],
   ) {
     super(api);
-    this._baseUrl = `/workspaceGroups/${this._workspaceGroupID}/storage`;
+    this._baseURL = WorkspaceGroupStorageManager.getBaseURL(this._workspaceGroupID);
+  }
+
+  static getBaseURL(workspaceGroupID: WorkspaceGroupSchema["workspaceGroupID"]) {
+    return `/workspaceGroups/${workspaceGroupID}/storage`;
   }
 
   async getStatus() {

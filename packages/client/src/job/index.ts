@@ -74,7 +74,7 @@ export interface JobExecution extends Omit<JobExecutionSchema, "scheduledStartTi
 }
 
 export class Job extends APIManager {
-  protected _baseUrl: string;
+  protected _baseURL: string;
 
   constructor(
     _api: API,
@@ -91,16 +91,20 @@ export class Job extends APIManager {
     public terminatedAt: Date | null,
   ) {
     super(_api);
-    this._baseUrl = `/jobs/${this.id}`;
+    this._baseURL = Job.getBaseURL(this.id);
+  }
+
+  static getBaseURL(id: JobSchema["jobID"]) {
+    return `/jobs/${id}`;
   }
 
   static async delete(api: API, id: JobSchema["jobID"]): Promise<boolean> {
-    return api.execute<boolean>(`/jobs/${id}`, { method: "DELETE" });
+    return api.execute<boolean>(this.getBaseURL(id), { method: "DELETE" });
   }
 
   static async getExecutions(api: API, id: JobSchema["jobID"], start: number, end: number): Promise<JobExecution[]> {
     const params = new URLSearchParams({ start: start.toString(), end: end.toString() });
-    const response = await api.execute(`/jobs/${id}/executions?${params.toString()}`);
+    const response = await api.execute(`${this.getBaseURL(id)}/executions?${params.toString()}`);
     return response.executions.map((execution: any) => {
       return {
         id: execution.executionID,
@@ -116,7 +120,7 @@ export class Job extends APIManager {
   }
 
   static async getParameters(api: API, id: JobSchema["jobID"]): Promise<JobParameter[]> {
-    return api.execute<JobParameter[]>(`/jobs/${id}/parameters`);
+    return api.execute<JobParameter[]>(`${this.getBaseURL(id)}/parameters`);
   }
 
   async delete() {

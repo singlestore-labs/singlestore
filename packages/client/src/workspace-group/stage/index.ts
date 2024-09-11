@@ -23,7 +23,7 @@ export interface UpdateWorkspaceGroupStageBody {
 }
 
 export class WorkspaceGroupStage extends APIManager {
-  protected _baseUrl: string;
+  protected _baseURL: string;
 
   constructor(
     api: API,
@@ -40,7 +40,11 @@ export class WorkspaceGroupStage extends APIManager {
     public modifiedAt: Date | undefined,
   ) {
     super(api);
-    this._baseUrl = `/stage/${this._workspaceGroupID}/fs/${this.path}`;
+    this._baseURL = WorkspaceGroupStage.getBaseURL(this._workspaceGroupID, this.path);
+  }
+
+  static getBaseURL(workspaceGroupID: WorkspaceGroupSchema["workspaceGroupID"], path: WorkspaceGroupStageSchema["path"]) {
+    return `/stage/${workspaceGroupID}/fs/${path}`;
   }
 
   static serializePath(path?: WorkspaceGroupStageSchema["path"]): string {
@@ -49,7 +53,7 @@ export class WorkspaceGroupStage extends APIManager {
   }
 
   static formatPath(id: WorkspaceGroupSchema["workspaceGroupID"], path?: WorkspaceGroupStageSchema["path"]) {
-    return `/stage/${id}/fs${this.serializePath(path)}`;
+    return this.getBaseURL(id, this.serializePath(path));
   }
 
   static mergePaths(...paths: (string | undefined)[]): string {
@@ -130,6 +134,7 @@ export class WorkspaceGroupStage extends APIManager {
     return this.get(api, id, response.path);
   }
 
+  // TODO: Complete this method
   static async uploadFile(
     api: API,
     id: WorkspaceGroupSchema["workspaceGroupID"],

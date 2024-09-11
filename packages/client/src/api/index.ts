@@ -1,13 +1,13 @@
 export type APIVersion = 1 | 2;
 
 export class API {
-  private readonly _baseUrl: string;
+  private readonly _baseURL: string;
 
   constructor(
     private readonly _apiKey?: string,
     private readonly _version: APIVersion = 1,
   ) {
-    this._baseUrl = `https://api.singlestore.com`;
+    this._baseURL = `https://api.singlestore.com`;
   }
 
   async execute<T = any>(
@@ -20,7 +20,7 @@ export class API {
       );
     }
 
-    const response = await fetch(`${this._baseUrl}/v${version}${url}`, {
+    const response = await fetch(`${this._baseURL}/v${version}${url}`, {
       method: "GET",
       ...params,
       headers: {

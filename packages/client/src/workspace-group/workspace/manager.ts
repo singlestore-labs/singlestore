@@ -33,7 +33,7 @@ type WorkspaceBySelect<TSelect extends GetWorkspaceSelectParam> = TSelect extend
   : Workspace;
 
 export class WorkspaceManager extends APIManager {
-  protected _baseUrl: string = "/workspaces";
+  protected _baseURL: string = "/workspaces";
 
   constructor(
     api: API,

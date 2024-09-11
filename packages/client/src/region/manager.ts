@@ -3,7 +3,7 @@ import type { Region, RegionSchema } from ".";
 import { APIManager } from "../api/manager";
 
 export class RegionManager extends APIManager {
-  protected _baseUrl: string = "/regions";
+  protected _baseURL: string = "/regions";
 
   async get<
     T extends { id: RegionSchema["regionID"] } | { name: RegionSchema["region"] } | undefined = undefined,

@@ -20,7 +20,7 @@ export interface CreateWorkspaceGroupBody {
 }
 
 export class WorkspaceGroupManager extends APIManager {
-  protected _baseUrl: string = "/workspaceGroups";
+  protected _baseURL: string = "/workspaceGroups";
 
   constructor(
     protected readonly _api: API,

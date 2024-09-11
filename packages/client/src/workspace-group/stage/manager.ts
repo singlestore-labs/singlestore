@@ -6,14 +6,18 @@ import { APIManager } from "../../api/manager";
 import { type UpdateWorkspaceGroupStageBody, type WorkspaceGroupStageSchema, WorkspaceGroupStage } from ".";
 
 export class WorkspaceGroupStageManager extends APIManager {
-  protected _baseUrl: string;
+  protected _baseURL: string;
 
   constructor(
     api: API,
     private _workspaceGroupID: WorkspaceGroupSchema["workspaceGroupID"],
   ) {
     super(api);
-    this._baseUrl = `/stage/${this._workspaceGroupID}/fs`;
+    this._baseURL = WorkspaceGroupStageManager.getBaseURL(this._workspaceGroupID);
+  }
+
+  static getBaseURL(workspaceGroupID: WorkspaceGroupSchema["workspaceGroupID"]) {
+    return `/stage/${workspaceGroupID}/fs`;
   }
 
   async get(path?: WorkspaceGroupStageSchema["path"]) {

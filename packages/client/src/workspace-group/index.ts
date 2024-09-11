@@ -51,7 +51,7 @@ export const updateWindowDaysMap: Record<number, WorkspaceGroupUpdateWindow["day
 };
 
 export class WorkspaceGroup extends APIManager {
-  protected _baseUrl: string;
+  protected _baseURL: string;
   stage: WorkspaceGroupStageManager;
   storage: WorkspaceGroupStorageManager;
   workspace: WorkspaceManager;
@@ -72,10 +72,14 @@ export class WorkspaceGroup extends APIManager {
     public terminatedAt: Date | undefined,
   ) {
     super(api);
-    this._baseUrl = `/workspaceGroups/${this.id}`;
+    this._baseURL = WorkspaceGroup.getBaseURL(this.id);
     this.stage = new WorkspaceGroupStageManager(this._api, this.id);
     this.storage = new WorkspaceGroupStorageManager(this._api, this.id);
     this.workspace = new WorkspaceManager(this._api, this.id);
+  }
+
+  static getBaseURL(id: WorkspaceGroupSchema["workspaceGroupID"]) {
+    return `/workspaceGroups/${id}`;
   }
 
   static serializeUpdateWindow(updateWindow: WorkspaceGroupUpdateWindow): WorkspaceGroupUpdateWindowSchema {
@@ -96,7 +100,7 @@ export class WorkspaceGroup extends APIManager {
   ): Promise<WorkspaceGroupSchema["workspaceGroupID"]> {
     const expiresAt = body.expiresAt ? body.expiresAt.toISOString().split(".")[0] + "Z" : undefined;
     const updateWindow = body.updateWindow ? WorkspaceGroup.serializeUpdateWindow(body.updateWindow) : undefined;
-    const response = await api.execute<Pick<WorkspaceGroupSchema, "workspaceGroupID">>(`/workspaceGroups/${id}`, {
+    const response = await api.execute<Pick<WorkspaceGroupSchema, "workspaceGroupID">>(this.getBaseURL(id), {
       method: "PATCH",
       body: JSON.stringify({ ...body, expiresAt, updateWindow }),
     });
@@ -111,7 +115,7 @@ export class WorkspaceGroup extends APIManager {
   ): Promise<WorkspaceGroupSchema["workspaceGroupID"]> {
     const params = new URLSearchParams({ force: force ? String(force) : String(false) });
     const response = await api.execute<Pick<WorkspaceGroupSchema, "workspaceGroupID">>(
-      `/workspaceGroups/${id}?${params.toString()}`,
+      `${this.getBaseURL(id)}?${params.toString()}`,
       { method: "DELETE" },
     );
 
@@ -139,7 +143,7 @@ export class WorkspaceGroup extends APIManager {
 
   async getMetrics() {
     const org = await this._organization.get();
-    return this._api.execute<string>(`/organizations/${org.id}/workspaceGroups/${this.id}/metrics`, {
+    return this._api.execute<string>(`/organizations/${org.id}${WorkspaceGroup.getBaseURL(this.id)}/metrics`, {
       version: 2,
     });
   }

@@ -10,7 +10,7 @@ export interface CreateTeamBody {
 }
 
 export class TeamManager extends APIManager {
-  protected _baseUrl: string = "/teams";
+  protected _baseURL: string = "/teams";
 
   private _create(data: TeamSchema): Team {
     return new Team(
