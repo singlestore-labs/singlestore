@@ -66,7 +66,7 @@ export class WorkspaceGroup extends APIManager {
     public smartDRStatus: WorkspaceGroupSchema["smartDRStatus"],
     public allowAllTraffic: WorkspaceGroupSchema["allowAllTraffic"],
     public firewallRanges: WorkspaceGroupSchema["firewallRanges"],
-    public updateWindow: WorkspaceGroupUpdateWindow,
+    public updateWindow: WorkspaceGroupUpdateWindow | undefined,
     public createdAt: Date,
     public expiresAt: Date | undefined,
     public terminatedAt: Date | undefined,

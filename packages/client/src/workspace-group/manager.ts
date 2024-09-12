@@ -19,6 +19,26 @@ export interface CreateWorkspaceGroupBody {
   expiresAt?: Date;
 }
 
+export type GetWorkspaceGroupSelectParam = (keyof WorkspaceGroupSchema)[] | undefined;
+
+export type GetWorkspaceGroupWhereParam =
+  | { id: WorkspaceGroupSchema["workspaceGroupID"] }
+  | { name: WorkspaceGroupSchema["name"] }
+  | undefined;
+
+export interface GetWorkspaceGroupParams<
+  TSelect extends GetWorkspaceGroupSelectParam = undefined,
+  TWhere extends GetWorkspaceGroupWhereParam = undefined,
+> {
+  select?: TSelect;
+  where?: TWhere;
+  includeTerminated?: boolean;
+}
+
+type WorkspaceGroupBySelect<TSelect extends GetWorkspaceGroupSelectParam> = TSelect extends (keyof WorkspaceGroup)[]
+  ? Pick<WorkspaceGroup, TSelect[number]>
+  : WorkspaceGroup;
+
 export class WorkspaceGroupManager extends APIManager {
   protected _baseURL: string = "/workspaceGroups";
 
@@ -41,7 +61,7 @@ export class WorkspaceGroupManager extends APIManager {
       data.smartDRStatus,
       data.allowAllTraffic,
       data.firewallRanges,
-      { ...data.updateWindow, day: updateWindowDaysMap[data.updateWindow.day]! },
+      data.updateWindow ? { ...data.updateWindow, day: updateWindowDaysMap[data.updateWindow.day]! } : undefined,
       new Date(data.createdAt),
       data.expiresAt ? new Date(data.expiresAt) : undefined,
       data.terminatedAt ? new Date(data.terminatedAt) : undefined,
@@ -72,36 +92,39 @@ export class WorkspaceGroupManager extends APIManager {
   }
 
   async get<
-    T extends
-      | [where?: { id: WorkspaceGroupSchema["workspaceGroupID"] } | { name: WorkspaceGroupSchema["name"] }]
-      | [params?: { includeTerminated?: boolean }],
-    _ReturnType = T[0] extends { id: WorkspaceGroupSchema["workspaceGroupID"] } ? WorkspaceGroup | undefined : WorkspaceGroup[],
-  >(...[arg]: T): Promise<_ReturnType> {
+    TSelect extends GetWorkspaceGroupSelectParam = undefined,
+    TWhere extends GetWorkspaceGroupWhereParam = undefined,
+    _TReturnType = TWhere extends { id: WorkspaceGroupSchema["workspaceGroupID"] }
+      ? WorkspaceGroupBySelect<TSelect> | undefined
+      : WorkspaceGroupBySelect<TSelect>[],
+  >({ where, select, includeTerminated }: GetWorkspaceGroupParams<TSelect, TWhere> = {}): Promise<_TReturnType> {
     let url = "";
-    const params = new URLSearchParams();
 
-    if (arg && "id" in arg) {
-      url = `${url}/${arg.id}`;
-    } else if (arg && "name" in arg) {
-      params.set("includeTerminated", String(true));
-    } else if (arg && "includeTerminated" in arg) {
-      params.set("includeTerminated", String(arg.includeTerminated));
+    const searchParams = new URLSearchParams({
+      includeTerminated: includeTerminated ? String(includeTerminated) : String(false),
+    });
+
+    if (where) {
+      if ("id" in where) {
+        url = `${url}/${where.id}`;
+      }
     }
 
-    type Response = T[0] extends { id: WorkspaceGroupSchema["workspaceGroupID"] }
-      ? WorkspaceGroupSchema
-      : WorkspaceGroupSchema[];
-    const response = await this._execute<Response>(`${url}?${params.toString()}`);
+    if (select?.length) {
+      searchParams.set("fields", select.join(","));
+    }
+
+    const response = await this._execute<TWhere extends undefined ? WorkspaceGroupSchema[] : WorkspaceGroupSchema>(
+      `${url}?${searchParams.toString()}`,
+    );
 
     if (Array.isArray(response)) {
-      if (arg && "name" in arg) {
-        return response.filter(({ name }) => name === arg.name).map((data) => this._create(data)) as _ReturnType;
-      }
-
-      return response.map((data) => this._create(data)) as _ReturnType;
+      return response
+        .filter((data) => (where && "name" in where ? data.name === where.name : true))
+        .map((data) => this._create(data)) as _TReturnType;
     }
 
-    return this._create(response) as _ReturnType;
+    return this._create(response) as _TReturnType;
   }
 
   async update(id: WorkspaceGroupSchema["workspaceGroupID"], ...args: Parameters<WorkspaceGroup["update"]>) {
