@@ -93,7 +93,7 @@ export class Workspace extends APIManager {
   ) {
     super(api);
     this._baseURL = Workspace.getBaseURL(this.id);
-    this.privateConnection = new WorkspacePrivateConnectionsManager(this._api, this.id);
+    this.privateConnection = new WorkspacePrivateConnectionsManager(this._api, this.id, this.groupID);
   }
 
   static getBaseURL(id: WorkspaceSchema["workspaceID"]) {

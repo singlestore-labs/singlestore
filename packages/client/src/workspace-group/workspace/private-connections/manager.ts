@@ -1,3 +1,5 @@
+import { URLSearchParams } from "url";
+
 import type { WorkspaceSchema } from "..";
 import type { API } from "../../../api";
 import type { PrivateConnectionSchema } from "../../../private-connection";
@@ -14,6 +16,7 @@ export class WorkspacePrivateConnectionsManager extends APIManager {
   constructor(
     api: API,
     private _workspaceID: WorkspaceSchema["workspaceID"],
+    private _groupID: WorkspaceSchema["workspaceGroupID"],
   ) {
     super(api);
     this._baseURL = WorkspacePrivateConnectionsManager.getBaseURL(this._workspaceID);
@@ -23,10 +26,10 @@ export class WorkspacePrivateConnectionsManager extends APIManager {
     return `/workspaces/${workspaceID}/privateConnections`;
   }
 
-  // TODO: Fix `query parameter (workspaceGroupID) should be specified\n`
   async get<TIsKai extends boolean | undefined = undefined>(params?: GetWorkspacePrivateConnectionParams<TIsKai>) {
+    const searchParams = new URLSearchParams({ workspaceGroupID: this._groupID });
     return this._execute<TIsKai extends undefined ? PrivateConnectionSchema[] : { serviceName: string }>(
-      params?.isKai ? "/kai" : "",
+      `${params?.isKai ? "/kai" : ""}?${searchParams.toString()}`,
     );
   }
 
