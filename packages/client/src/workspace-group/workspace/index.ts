@@ -62,6 +62,10 @@ export interface UpdateWorkspaceBody
   };
 }
 
+export interface ResumeWorkspaceBody {
+  disableAutoSuspend?: boolean;
+}
+
 export class Workspace extends APIManager {
   protected _baseURL: string;
 
@@ -113,11 +117,50 @@ export class Workspace extends APIManager {
     return response.workspaceID;
   }
 
+  static async resume(
+    api: API,
+    id: WorkspaceSchema["workspaceID"],
+    body: ResumeWorkspaceBody = {},
+  ): Promise<WorkspaceSchema["workspaceID"]> {
+    const response = await api.execute<Pick<WorkspaceSchema, "workspaceID">>(`${this.getBaseURL(id)}/resume`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+
+    return response.workspaceID;
+  }
+
+  static async suspend(api: API, id: WorkspaceSchema["workspaceID"]): Promise<WorkspaceSchema["workspaceID"]> {
+    const response = await api.execute<Pick<WorkspaceSchema, "workspaceID">>(`${this.getBaseURL(id)}/suspend`, {
+      method: "POST",
+    });
+
+    return response.workspaceID;
+  }
+
+  static async getState(api: API, id: WorkspaceSchema["workspaceID"]): Promise<WorkspaceSchema["state"]> {
+    const searchParams = new URLSearchParams({ fields: "state" });
+    const respone = await api.execute<Pick<WorkspaceSchema, "state">>(`${this.getBaseURL(id)}?${searchParams.toString()}`);
+    return respone.state;
+  }
+
   async update(body: UpdateWorkspaceBody) {
     return Workspace.update(this._api, this.id, body);
   }
 
   async delete() {
     return Workspace.delete(this._api, this.id);
+  }
+
+  async resume(body?: ResumeWorkspaceBody) {
+    return Workspace.resume(this._api, this.id, body);
+  }
+
+  async suspend() {
+    return Workspace.suspend(this._api, this.id);
+  }
+
+  async getState() {
+    return Workspace.getState(this._api, this.id);
   }
 }

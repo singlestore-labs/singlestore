@@ -3,7 +3,7 @@ import type { API } from "../../api";
 
 import { APIManager } from "../../api/manager";
 
-import { type UpdateWorkspaceBody, Workspace, type WorkspaceSchema } from ".";
+import { type ResumeWorkspaceBody, type UpdateWorkspaceBody, Workspace, type WorkspaceSchema } from ".";
 
 interface CreateWorkspaceBody
   extends Pick<WorkspaceSchema, "name">,
@@ -125,5 +125,17 @@ export class WorkspaceManager extends APIManager {
 
   async delete(id: WorkspaceSchema["workspaceID"]) {
     return Workspace.delete(this._api, id);
+  }
+
+  async resume(id: WorkspaceSchema["workspaceID"], body?: ResumeWorkspaceBody) {
+    return Workspace.resume(this._api, id, body);
+  }
+
+  async suspend(id: WorkspaceSchema["workspaceID"]) {
+    return Workspace.suspend(this._api, id);
+  }
+
+  async getState(id: WorkspaceSchema["workspaceID"]) {
+    return Workspace.getState(this._api, id);
   }
 }
