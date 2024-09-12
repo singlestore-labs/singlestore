@@ -3,17 +3,12 @@ import type { API } from "../../api";
 
 import { APIManager } from "../../api/manager";
 
-import { Workspace, type WorkspaceAutoSuspendSchema, type WorkspaceSchema } from ".";
+import { type UpdateWorkspaceBody, Workspace, type WorkspaceSchema } from ".";
 
 interface CreateWorkspaceBody
   extends Pick<WorkspaceSchema, "name">,
-    Partial<Pick<WorkspaceSchema, "cacheConfig" | "scaleFactor" | "size">> {
-  enableKai?: WorkspaceSchema["kaiEnabled"];
-  autoSuspend?: {
-    suspendType?: WorkspaceAutoSuspendSchema["suspendType"] | "DISABLED";
-    suspendAfterSeconds?: number;
-  };
-}
+    Partial<Pick<WorkspaceSchema, "cacheConfig" | "scaleFactor" | "size">>,
+    Pick<UpdateWorkspaceBody, "enableKai" | "autoSuspend"> {}
 
 export type GetWorkspaceSelectParam = (keyof WorkspaceSchema)[] | undefined;
 
@@ -90,7 +85,9 @@ export class WorkspaceManager extends APIManager {
   async get<
     TSelect extends GetWorkspaceSelectParam = undefined,
     TWhere extends GetWorkspaceWhereParam = undefined,
-    _TReturnType = TWhere extends undefined ? WorkspaceBySelect<TSelect>[] : WorkspaceBySelect<TSelect> | undefined,
+    _TReturnType = TWhere extends { id: WorkspaceSchema["workspaceID"] }
+      ? WorkspaceBySelect<TSelect> | undefined
+      : WorkspaceBySelect<TSelect>[],
   >({ where, select, includeTerminated }: GetWorkspaceParams<TSelect, TWhere> = {}): Promise<_TReturnType> {
     let url = "";
 
@@ -102,8 +99,6 @@ export class WorkspaceManager extends APIManager {
     if (where) {
       if ("id" in where) {
         url = `${url}/${where.id}`;
-      } else if ("name" in where) {
-        searchParams.set("includeTerminated", String(true));
       }
     }
 
@@ -116,16 +111,16 @@ export class WorkspaceManager extends APIManager {
     );
 
     if (Array.isArray(response)) {
-      if (where && "name" in where) {
-        const data = response.find((data) => data.name === where.name);
-        if (!data) return undefined as _TReturnType;
-        return this._create(data) as _TReturnType;
-      }
-
-      return response.map((data) => this._create(data)) as _TReturnType;
+      return response
+        .filter((data) => (where && "name" in where ? data.name === where.name : true))
+        .map((data) => this._create(data)) as _TReturnType;
     }
 
     return this._create(response) as _TReturnType;
+  }
+
+  async update(id: WorkspaceSchema["workspaceID"], body: UpdateWorkspaceBody) {
+    return Workspace.update(this._api, id, body);
   }
 
   async delete(id: WorkspaceSchema["workspaceID"]) {

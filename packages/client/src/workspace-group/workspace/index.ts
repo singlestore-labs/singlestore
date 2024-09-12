@@ -53,7 +53,14 @@ export interface WorkspaceSchema {
   resumeAttachments: WorkspaceResumeAttachmentSchema[];
 }
 
-interface UpdateWorkspaceBody {}
+export interface UpdateWorkspaceBody
+  extends Partial<Pick<WorkspaceSchema, "size" | "deploymentType" | "cacheConfig" | "scaleFactor">> {
+  enableKai?: boolean;
+  autoSuspend?: {
+    suspendType?: WorkspaceAutoSuspendSchema["suspendType"] | "DISABLED";
+    suspendAfterSeconds?: number;
+  };
+}
 
 export class Workspace extends APIManager {
   protected _baseURL: string;
@@ -85,8 +92,17 @@ export class Workspace extends APIManager {
     return `/workspaces/${id}`;
   }
 
-  static async update(api: API, id: WorkspaceSchema["workspaceID"], body: UpdateWorkspaceBody) {
-    const response = await api.execute<Pick<WorkspaceSchema, "workspaceID">>(this.getBaseURL(id));
+  static async update(
+    api: API,
+    id: WorkspaceSchema["workspaceID"],
+    body: UpdateWorkspaceBody,
+  ): Promise<WorkspaceSchema["workspaceID"]> {
+    const response = await api.execute<Pick<WorkspaceSchema, "workspaceID">>(this.getBaseURL(id), {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    });
+
+    return response.workspaceID;
   }
 
   static async delete(api: API, id: WorkspaceSchema["workspaceID"]): Promise<WorkspaceSchema["workspaceID"]> {
@@ -95,6 +111,10 @@ export class Workspace extends APIManager {
     });
 
     return response.workspaceID;
+  }
+
+  async update(body: UpdateWorkspaceBody) {
+    return Workspace.update(this._api, this.id, body);
   }
 
   async delete() {
