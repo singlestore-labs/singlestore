@@ -20,7 +20,9 @@ export class API {
       );
     }
 
-    const response = await fetch(`${this._baseURL}/v${version}${url}`, {
+    const _url = `${this._baseURL}/v${version}${url}`;
+
+    const response = await fetch(_url, {
       method: "GET",
       ...params,
       headers: {

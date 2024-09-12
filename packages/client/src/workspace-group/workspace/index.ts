@@ -1,6 +1,8 @@
 import { API } from "../../api";
 import { APIManager } from "../../api/manager";
 
+import { WorkspacePrivateConnectionsManager } from "./private-connections/manager";
+
 export type WorkspaceSize = "S-00";
 
 export interface WorkspaceResumeAttachmentSchema {
@@ -68,6 +70,7 @@ export interface ResumeWorkspaceBody {
 
 export class Workspace extends APIManager {
   protected _baseURL: string;
+  privateConnection: WorkspacePrivateConnectionsManager;
 
   constructor(
     api: API,
@@ -90,6 +93,7 @@ export class Workspace extends APIManager {
   ) {
     super(api);
     this._baseURL = Workspace.getBaseURL(this.id);
+    this.privateConnection = new WorkspacePrivateConnectionsManager(this._api, this.id);
   }
 
   static getBaseURL(id: WorkspaceSchema["workspaceID"]) {
