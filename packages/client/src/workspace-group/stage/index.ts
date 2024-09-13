@@ -149,8 +149,6 @@ export class WorkspaceGroupStage extends APIManager {
       headers: { "Content-Type": "multipart/form-data" },
       body: formData,
     });
-
-    console.log(response);
   }
 
   async get(path?: WorkspaceGroupStage["path"]) {

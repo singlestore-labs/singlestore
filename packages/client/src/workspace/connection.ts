@@ -1,8 +1,9 @@
 import type { AnyAI } from "@singlestore/ai";
 
-import { WorkspaceSchema } from "..";
-import { Connection, ConnectionConfig } from "../../connection";
-import { DatabaseManager } from "../../database/manager";
+import { Connection, ConnectionConfig } from "../connection";
+import { DatabaseManager } from "../database/manager";
+
+import { WorkspaceSchema } from ".";
 
 export interface CreateWorkspaceConnectionConfig<
   TName extends WorkspaceSchema["name"] | undefined,

@@ -1,7 +1,7 @@
 import { escape } from "mysql2";
 
 import type { DatabaseType } from "../database";
-import type { TableType } from "../table-1";
+import type { TableType } from "../table";
 
 type MergeUnion<T> = (T extends any ? (i: T) => void : never) extends (i: infer U) => void ? { [K in keyof U]: U[K] } : never;
 
@@ -13,11 +13,7 @@ export type JoinClause<TTableType extends TableType, TDatabaseType extends Datab
     type?: JoinType;
     table: K;
     as: TAs;
-    on: [
-      (string & {}) | keyof TTableType["columns"],
-      JoinOperator,
-      (string & {}) | keyof TDatabaseType["tables"][K]["columns"],
-    ];
+    on: [(string & {}) | keyof TTableType, JoinOperator, (string & {}) | keyof TDatabaseType["tables"][K]["columns"]];
   };
 }[keyof TDatabaseType["tables"]];
 
@@ -37,7 +33,7 @@ export type SelectClause<
   TJoinClauses extends JoinClause<TTableType, TDatabaseType, TJoinClauseAs>[],
 > = (
   | "*"
-  | keyof TTableType["columns"]
+  | keyof TTableType
   | ExtractJoinClauseColumns<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses>
   | `${TJoinClauseAs}.*`
   | `${string} AS ${string}`
@@ -70,7 +66,7 @@ export type WhereClause<
   TJoinClauseAs extends string,
   TJoinClauses extends JoinClause<TTableType, TDatabaseType, TJoinClauseAs>[],
 > = ({
-  [K in keyof TTableType["columns"]]?: WhereOperator<TTableType["columns"][K]> | TTableType["columns"][K];
+  [K in keyof TTableType]?: WhereOperator<TTableType[K]> | TTableType[K];
 } & {
   [K in TJoinClauses[number] as K["as"]]: {
     [C in keyof TDatabaseType["tables"][K["table"]]["columns"] as `${K["as"]}.${Extract<C, string>}`]?:
@@ -87,11 +83,7 @@ export type GroupByClause<
   TDatabaseType extends DatabaseType,
   TJoinClauseAs extends string,
   TJoinClauses extends JoinClause<TTableType, TDatabaseType, TJoinClauseAs>[],
-> = (
-  | (string & {})
-  | keyof TTableType["columns"]
-  | ExtractJoinClauseColumns<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses>
-)[];
+> = ((string & {}) | keyof TTableType | ExtractJoinClauseColumns<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses>)[];
 
 export type OrderByDirection = "asc" | "desc";
 
@@ -103,7 +95,7 @@ export type OrderByClause<
 > = {
   [K in
     | (string & {})
-    | keyof TTableType["columns"]
+    | keyof TTableType
     | Extract<ExtractJoinClauseColumns<TTableType, TDatabaseType, TJoinClauseAs, TJoinClauses>, string>]?: OrderByDirection;
 };
 
@@ -134,9 +126,9 @@ export type ExtractSelectedQueryColumns<
 > = TSelectClause extends (infer TColumn)[]
   ? MergeUnion<
       TColumn extends "*"
-        ? TTableType["columns"]
-        : TColumn extends keyof TTableType["columns"]
-          ? { [K in TColumn]: TTableType["columns"][K] }
+        ? TTableType
+        : TColumn extends keyof TTableType
+          ? { [K in TColumn]: TTableType[K] }
           : TColumn extends `${infer TJoinAs}.${infer TJoinColumn}`
             ? TJoinAs extends TJoinClauseAs
               ? TJoinColumn extends keyof TDatabaseType["tables"][Extract<

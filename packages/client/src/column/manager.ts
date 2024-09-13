@@ -1,23 +1,24 @@
 import { ResultSetHeader } from "mysql2/promise";
 
 import type { ConnectionClient } from "../connection";
-import type { TableColumnName, TableSchema } from "../table";
+import type { DatabaseName } from "../database";
+import type { TableColumnName, TableName, TableType } from "../table";
 
-import { Column, type ColumnSchema } from ".";
+import { Column, type ColumnName, type ColumnSchema } from ".";
 
-export class ColumnManager<TTableSchema extends TableSchema, TDatabaseName extends string> {
+export class ColumnManager<TTableName extends TableName, TTableType extends TableType, TDatabaseName extends DatabaseName> {
   private _path: string;
 
   constructor(
     private _client: ConnectionClient,
-    public tableName: TTableSchema["name"],
+    public tableName: TTableName,
     public databaseName: TDatabaseName,
   ) {
     this._path = [databaseName, tableName].join(".");
   }
 
-  use<TName extends TableColumnName<TTableSchema> | (ColumnSchema["name"] & {})>(name: TName) {
-    return new Column(this._client, this._path, this.databaseName, this.tableName, name);
+  use<TName extends TableColumnName<TTableType> | (ColumnName & {})>(name: TName) {
+    return new Column(this._client, this._path, name, this.tableName, this.databaseName);
   }
 
   async add<TSchema extends ColumnSchema>(schema: TSchema) {
@@ -27,31 +28,31 @@ export class ColumnManager<TTableSchema extends TableSchema, TDatabaseName exten
       ALTER TABLE ${this.databaseName}.${this.tableName} ADD COLUMN ${clauses}
     `);
 
-    return new Column(this._client, this._path, schema.name as TSchema["name"], this.tableName, this.databaseName);
+    return new Column(this._client, this._path, schema.name, this.tableName, this.databaseName);
   }
 
-  async drop(name: TableColumnName<TTableSchema> | (ColumnSchema["name"] & {})) {
+  async drop(name: TableColumnName<TTableType> | (ColumnName & {})) {
     return Column.drop(this._client, this.databaseName, this.tableName, name);
   }
 
   async modify(
-    name: TableColumnName<TTableSchema> | (ColumnSchema["name"] & {}),
+    name: TableColumnName<TTableType> | (ColumnName & {}),
     ...args: Parameters<typeof Column.modify> extends [any, any, any, ...infer Rest] ? Rest : never
   ) {
     return Column.modify(this._client, this._path, name, ...args);
   }
 
   async rename(
-    name: TableColumnName<TTableSchema> | (ColumnSchema["name"] & {}),
+    name: TableColumnName<TTableType> | (ColumnName & {}),
     ...args: Parameters<typeof Column.rename> extends [any, any, any, ...infer Rest] ? Rest : never
   ) {
     return Column.rename(this._client, this._path, name, ...args);
   }
 
-  async showInfo<TSchema extends ColumnSchema>(
-    name: TableColumnName<TTableSchema> | (ColumnSchema["name"] & {}),
+  async showInfo<TName extends TableColumnName<TTableType> | (ColumnName & {})>(
+    name: TName,
     ...args: Parameters<typeof Column.showInfo> extends [any, any, any, any, ...infer Rest] ? Rest : never
   ) {
-    return Column.showInfo<TSchema>(this._client, this.tableName, this.databaseName, name, ...args);
+    return Column.showInfo<TName, TTableName, TDatabaseName>(this._client, this.databaseName, this.tableName, name, ...args);
   }
 }

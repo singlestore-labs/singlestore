@@ -8,7 +8,7 @@ import { OrganizationManager } from "./organization/manager";
 import { RegionManager } from "./region/manager";
 import { SecretManager } from "./secret/manager";
 import { TeamManager } from "./team/manager";
-import { CreateWorkspaceConnectionConfig, WorkspaceConnection } from "./workspace/connection";
+import { type CreateWorkspaceConnectionConfig, WorkspaceConnection } from "./workspace/connection";
 import { WorkspaceGroupManager } from "./workspace-group/manager";
 
 export type * from "./types";
@@ -52,6 +52,3 @@ export class SingleStoreClient<TAI extends AnyAI | undefined = undefined> {
     return WorkspaceConnection.create({ ...config, ai: this._ai });
   }
 }
-
-const x = new SingleStoreClient();
-const xx = x.connect({ name: "Test" });

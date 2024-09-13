@@ -1,21 +1,31 @@
-import { Tail } from "@repo/utils";
 import { ResultSetHeader } from "mysql2/promise";
 
 import type { ConnectionClient } from "../connection";
+import type { WorkspaceSchema } from "../workspace";
 import type { AnyAI } from "@singlestore/ai";
 
-import { WorkspaceSchema } from "../workspace";
+import { Table, type TableSchema, type TableType } from "../table";
+import { TableManager } from "../table/manager";
 
-export interface DatabaseSchema {
-  name: string;
-  tables: { [K in string]: any };
+export type DatabaseName = string;
+
+export interface DatabaseType {
+  name: DatabaseName;
+  tables: Record<PropertyKey, TableType>;
 }
 
-export interface DatabaseInfo<T extends DatabaseSchema["name"]> {
-  name: T;
+export interface DatabaseSchema<TType extends DatabaseType> {
+  name: TType["name"];
+  tables?: {
+    [K in keyof TType["tables"]]: Omit<TableSchema<Extract<K, string>, TType["tables"][K]>, "name">;
+  };
 }
 
-export interface DatabaseInfoExtended<T extends DatabaseSchema["name"]> extends DatabaseInfo<T> {
+export interface DatabaseInfo<TType extends DatabaseType> {
+  name: TType["name"];
+}
+
+export interface DatabaseInfoExtended<TType extends DatabaseType> extends DatabaseInfo<TType> {
   commits: number;
   role: string;
   state: string;
@@ -34,32 +44,38 @@ export interface DatabaseInfoExtended<T extends DatabaseSchema["name"]> extends 
   pendingBlobFSyncs: number;
 }
 
-// export type InferDatabaseSchema<T> = T extends Database<infer U, any> ? U : never;
+export type DatabaseTableName<TType extends DatabaseType> = Extract<keyof TType["tables"], string>;
 
-export type DatabaseTableName<TSchema extends DatabaseSchema> = Extract<keyof TSchema["tables"], string>;
+export type InferDatabaseSchema<T> = T extends Database<infer TType, any, any> ? TType : never;
 
+export type AnyDatabase = Database<any, any, any>;
 export class Database<
-  TSchema extends DatabaseSchema,
+  TType extends DatabaseType,
   TWorkspaceName extends WorkspaceSchema["name"] | undefined,
   TAI extends AnyAI | undefined,
 > {
+  table: TableManager<TType, TAI>;
+
   constructor(
     private _client: ConnectionClient,
     private _ai: TAI,
-    public name: TSchema["name"],
+    public name: TType["name"],
     public workspaceName: TWorkspaceName,
-  ) {}
+  ) {
+    this.table = new TableManager(this._client, this._ai, this.name);
+  }
 
-  static async drop(client: ConnectionClient, name: DatabaseSchema["name"]) {
+  static async drop<TName extends DatabaseName>(client: ConnectionClient, name: TName) {
     return client.execute<ResultSetHeader>(`DROP DATABASE IF EXISTS ${name}`);
   }
 
-  static normalizeInfo<TName extends string, TExtended extends boolean>(
-    info: any,
-    extended?: TExtended,
-  ): TExtended extends true ? DatabaseInfoExtended<TName> : DatabaseInfo<TName> {
+  static normalizeInfo<
+    TType extends DatabaseType,
+    TExtended extends boolean,
+    _ReturnType = TExtended extends true ? DatabaseInfoExtended<TType> : DatabaseInfo<TType>,
+  >(info: any, extended?: TExtended): _ReturnType {
     const name = info[Object.keys(info).find((key) => key.startsWith("Database")) as string];
-    if (!extended) return { name } as TExtended extends true ? DatabaseInfoExtended<TName> : DatabaseInfo<TName>;
+    if (!extended) return { name } as _ReturnType;
 
     return {
       name,
@@ -79,37 +95,47 @@ export class Database<
       memoryMBs: info["Memory (MBs)"],
       pendingIOs: info["Pending IOs"],
       pendingBlobFSyncs: info["Pending blob fsyncs"],
-    } as TExtended extends true ? DatabaseInfoExtended<TName> : DatabaseInfo<TName>;
+    } as _ReturnType;
   }
 
-  async drop(...args: Tail<Parameters<typeof Database.drop>>) {
-    return Database.drop(this._client, ...args);
+  async drop(...args: Parameters<typeof Database.drop> extends [any, any, ...infer Rest] ? Rest : never) {
+    return Database.drop(this._client, this.name, ...args);
   }
 
-  async showInfo<TExtended extends boolean = false>(
-    extended?: TExtended,
-  ): Promise<TExtended extends true ? DatabaseInfoExtended<TSchema["name"]> : DatabaseInfo<TSchema["name"]>> {
+  async showInfo<TExtended extends boolean = false>(extended?: TExtended) {
     const clauses = ["SHOW DATABASES"];
     if (extended) clauses.push("EXTENDED");
     clauses.push(`LIKE '${this.name}'`);
     const [rows] = await this._client.query<any[]>(clauses.join(" "));
-    return Database.normalizeInfo<TSchema["name"], TExtended>(rows[0], extended);
+    return Database.normalizeInfo<TType, TExtended>(rows[0], extended);
   }
 
-  // async describe() {
-  //   const [info, tablesInfo] = await Promise.all([this.showInfo(true), this.showTablesInfo(true)]);
+  async showTablesInfo<TExtended extends boolean = false>(extended?: TExtended) {
+    const clauses = [`SHOW TABLES IN ${this.name}`];
+    if (extended) clauses.push("EXTENDED");
+    const [rows] = await this._client.query<any[]>(clauses.join(" "));
+    return rows.map((row) => {
+      return Table.normalizeInfo<Extract<keyof TType["tables"], string>, TExtended>(row, extended);
+    });
+  }
 
-  //   return {
-  //     ...info,
-  //     tables: await Promise.all(
-  //       tablesInfo.map(async (table) => ({ ...table, columns: await this.table(table.name).showColumnsInfo() })),
-  //     ),
-  //   };
-  // }
+  async describe() {
+    const [info, tablesInfo] = await Promise.all([this.showInfo(true), this.showTablesInfo(true)]);
 
-  async query<T extends any[]>(statement: string): Promise<T[]> {
+    return {
+      ...info,
+      tables: await Promise.all(
+        tablesInfo.map(async (tableInfo) => {
+          const table = this.table.use(tableInfo.name);
+          return { ...tableInfo, columns: await table.showColumnsInfo() };
+        }),
+      ),
+    };
+  }
+
+  async query<TReturnType extends any[]>(statement: string) {
     const statements = [`USE ${this.name}`, statement].join(";\n");
-    const [rows] = await this._client.execute<T>(statements);
-    return rows.slice(1) as T[];
+    const [rows] = await this._client.execute<TReturnType>(statements);
+    return rows.slice(1) as TReturnType[];
   }
 }
