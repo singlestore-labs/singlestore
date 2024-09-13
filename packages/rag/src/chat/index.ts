@@ -1,5 +1,5 @@
 import type { AnyAI, AnyChatCompletionTool } from "@singlestore/ai";
-import type { AnyDatabase, FieldPacket, InferDatabaseType, ResultSetHeader, Table, TableType } from "@singlestore/client";
+import type { AnyDatabase, FieldPacket, InferDatabaseType, ResultSetHeader, Table, TableName } from "@singlestore/client";
 
 import { ChatMessage } from "./message";
 import { ChatSession, type ChatSessionsTable } from "./session";
@@ -9,24 +9,21 @@ export interface ChatConfig
   tools: AnyChatCompletionTool[];
 }
 
-export interface ChatsTable<TName extends string = string> extends TableType {
-  name: TName;
-  columns: Pick<Chat, "id" | "createdAt"> & Omit<ChatConfig, "tools">;
-}
+export interface ChatsTable extends Pick<Chat, "id" | "createdAt">, Omit<ChatConfig, "tools"> {}
 
 export type CreateChatConfig = Partial<ChatConfig>;
 
 export class Chat<
   TDatabase extends AnyDatabase = AnyDatabase,
-  TAi extends AnyAI = AnyAI,
+  TAI extends AnyAI = AnyAI,
   TChatCompletionTool extends AnyChatCompletionTool[] | undefined = undefined,
-  TTableName extends string = string,
-  TSessionsTableName extends string = string,
-  TMessagesTableName extends string = string,
+  TTableName extends TableName = TableName,
+  TSessionsTableName extends TableName = TableName,
+  TMessagesTableName extends TableName = TableName,
 > {
   constructor(
     private _database: TDatabase,
-    private _ai: TAi,
+    private _ai: TAI,
     private _tools: TChatCompletionTool,
     public id: number | undefined,
     public createdAt: string | undefined,
@@ -41,8 +38,8 @@ export class Chat<
   private static _createTable<TDatabase extends AnyDatabase, TName extends Chat["tableName"]>(
     database: TDatabase,
     name: TName,
-  ): Promise<Table<ChatsTable<TName>, InferDatabaseType<TDatabase>>> {
-    return database.createTable<ChatsTable<TName>>({
+  ): Promise<Table<TName, ChatsTable, InferDatabaseType<TDatabase>, AnyAI>> {
+    return database.table.create<TName, ChatsTable>({
       name,
       columns: {
         id: { type: "bigint", autoIncrement: true, primaryKey: true },
@@ -57,18 +54,18 @@ export class Chat<
     });
   }
 
-  static async create<TDatabase extends AnyDatabase, TAi extends AnyAI, TConfig extends CreateChatConfig>(
+  static async create<TDatabase extends AnyDatabase, TAI extends AnyAI, TConfig extends CreateChatConfig>(
     database: TDatabase,
-    ai: TAi,
+    ai: TAI,
     config?: TConfig,
   ): Promise<
     Chat<
       TDatabase,
-      TAi,
+      TAI,
       TConfig["tools"],
-      TConfig["tableName"] extends string ? TConfig["tableName"] : string,
-      TConfig["sessionsTableName"] extends string ? TConfig["sessionsTableName"] : string,
-      TConfig["messagesTableName"] extends string ? TConfig["messagesTableName"] : string
+      TConfig["tableName"] extends TableName ? TConfig["tableName"] : TableName,
+      TConfig["sessionsTableName"] extends TableName ? TConfig["sessionsTableName"] : TableName,
+      TConfig["messagesTableName"] extends TableName ? TConfig["messagesTableName"] : TableName
     >
   > {
     const createdAt: Chat["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 23);
@@ -125,9 +122,9 @@ export class Chat<
     tableName: Chat["tableName"],
     sessionsTable: Chat["sessionsTableName"],
     messagesTableName: Chat["messagesTableName"],
-    where?: Parameters<Table<ChatsTable>["delete"]>[0],
+    where?: Parameters<Table<Chat["tableName"], ChatsTable, InferDatabaseType<AnyDatabase>, AnyAI>["delete"]>[0],
   ): Promise<[[ResultSetHeader, FieldPacket[]], [ResultSetHeader, FieldPacket[]][]]> {
-    const table = database.table<ChatsTable>(tableName);
+    const table = database.table.use<Chat["tableName"], ChatsTable>(tableName);
     const deletedRowIds = await table.find({ select: ["id"], where });
 
     return Promise.all([
@@ -136,8 +133,10 @@ export class Chat<
     ]);
   }
 
-  async update(values: Parameters<Table<ChatsTable<TTableName>>["update"]>[0]): Promise<[ResultSetHeader, FieldPacket[]]> {
-    const result = await this._database.table<ChatsTable, TTableName>(this.tableName).update(values, { id: this.id });
+  async update(
+    values: Parameters<Table<TTableName, ChatsTable, InferDatabaseType<TDatabase>, TAI>["update"]>[0],
+  ): Promise<[ResultSetHeader, FieldPacket[]]> {
+    const result = await this._database.table.use<TTableName, ChatsTable>(this.tableName).update(values, { id: this.id });
 
     for (const [key, value] of Object.entries(values)) {
       if (key in this) {
@@ -157,10 +156,10 @@ export class Chat<
   ): Promise<
     ChatSession<
       TDatabase,
-      TAi,
+      TAI,
       TChatCompletionTool,
-      TSessionsTableName extends string ? TSessionsTableName : string,
-      TMessagesTableName extends string ? TMessagesTableName : string
+      TSessionsTableName extends TableName ? TSessionsTableName : TableName,
+      TMessagesTableName extends TableName ? TMessagesTableName : TableName
     >
   > {
     return ChatSession.create(this._database, this._ai, {
@@ -175,9 +174,11 @@ export class Chat<
   }
 
   async findSessions(
-    params?: Parameters<Table<ChatSessionsTable<TSessionsTableName>>["find"]>[0],
-  ): Promise<ChatSession<TDatabase, TAi, TChatCompletionTool, TSessionsTableName, TMessagesTableName>[]> {
-    const rows = await this._database.table(this.sessionsTableName).find(params);
+    params?: Parameters<Table<TSessionsTableName, ChatSessionsTable, InferDatabaseType<TDatabase>, TAI>["find"]>[0],
+  ): Promise<ChatSession<TDatabase, TAI, TChatCompletionTool, TSessionsTableName, TMessagesTableName>[]> {
+    const rows = await this._database.table
+      .use<TSessionsTableName, ChatSessionsTable>(this.sessionsTableName)
+      .find(params as any);
 
     return rows.map(
       (row) =>

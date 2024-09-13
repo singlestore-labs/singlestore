@@ -11,21 +11,15 @@ interface Database {
   name: "estore_example";
   tables: {
     users: {
-      name: "users";
-      columns: {
-        id: number;
-        name: string;
-      };
+      id: number;
+      name: string;
     };
     products: {
-      name: "products";
-      columns: {
-        id: number;
-        name: string;
-        description: string;
-        price: number;
-        description_v: string;
-      };
+      id: number;
+      name: string;
+      description: string;
+      price: number;
+      description_v: string;
     };
   };
 }
@@ -47,7 +41,7 @@ async function main() {
     console.log("SingleStore client initialized.");
 
     console.log("Connecting to workspace...");
-    const workspace = client.workspace({
+    const connection = client.connect({
       host: process.env.DB_HOST,
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
@@ -55,7 +49,7 @@ async function main() {
     console.log("Connected to workspace.");
 
     console.log("Accessing the 'estore_example' database...");
-    const database = workspace.database<Database>("estore_example");
+    const database = connection.database.use<Database>("estore_example");
     console.log("Database accessed.");
 
     console.log("Initializing RAG system...");

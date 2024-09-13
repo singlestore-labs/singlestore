@@ -16,7 +16,7 @@ async function main() {
     console.log("SingleStore client initialized.");
 
     console.log("Connecting to workspace...");
-    const workspace = client.workspace({
+    const connection = client.connect({
       host: process.env.DB_HOST,
       user: process.env.DB_USER,
       password: process.env.DB_PASSWORD,
@@ -28,31 +28,25 @@ async function main() {
       name: "estore_example";
       tables: {
         users: {
-          name: "users";
-          columns: {
-            id: number;
-            name: string;
-          };
+          id: number;
+          name: string;
         };
         products: {
-          name: "products";
-          columns: {
-            id: number;
-            name: string;
-            description: string;
-            price: number;
-            description_v: string;
-          };
+          id: number;
+          name: string;
+          description: string;
+          price: number;
+          description_v: string;
         };
       };
     }
 
     console.log("Dropping existing database if it exists...");
-    await workspace.dropDatabase("estore_example");
+    await connection.database.drop("estore_example");
     console.log("Database dropped.");
 
     console.log("Creating new database...");
-    const db = await workspace.createDatabase<Database>({
+    const db = await connection.database.create<Database>({
       name: "estore_example",
       tables: {
         users: {
@@ -101,41 +95,41 @@ async function main() {
     console.log("Product embeddings created.");
 
     console.log("Inserting dataset into the database...");
-    await Promise.all([db.table("users").insert(dataset.users), db.table("products").insert(dataset.products)]);
+    await Promise.all([db.table.use("users").insert(dataset.users), db.table.use("products").insert(dataset.products)]);
     console.log("Dataset inserted.");
 
     console.log('Finding user with name "Alice"...');
-    console.log(await db.table("users").find({ where: { name: "Alice" } }));
+    console.log(await db.table.use("users").find({ where: { name: "Alice" } }));
 
     console.log("Finding products priced under 300...");
     console.log(
-      await db.table("products").find({ select: ["id", "name", "description", "price"], where: { price: { lte: 300 } } }),
+      await db.table.use("products").find({ select: ["id", "name", "description", "price"], where: { price: { lte: 300 } } }),
     );
 
     console.log('Finding products with name "Smartphone" priced at 800...');
     console.log(
-      await db
-        .table("products")
+      await db.table
+        .use("products")
         .find({ select: ["id", "name", "description", "price"], where: { name: "Smartphone", price: { lte: 800 } } }),
     );
 
     console.log("Executing custom query to select all users...");
-    console.log(await db.query<[Database["tables"]["users"]["columns"][]]>("SELECT * FROM users"));
+    console.log(await db.query<[Database["tables"]["users"][]]>("SELECT * FROM users"));
 
-    const usersTable = db.table("users");
+    const usersTable = db.table.use("users");
 
     console.log("Creating chat completion...\nPrompt: 'What is 4+4?'");
     console.log(await ai.chatCompletions.create({ prompt: "What is 4+4?" }));
 
     console.log("Executing column methods...");
     console.log('Adding a new column "age_new" to the users table...');
-    await usersTable.addColumn({ name: "age_new", type: "int" });
+    await usersTable.column.add({ name: "age_new", type: "int" });
 
     console.log('Renaming column "age_new" to "age"...');
-    console.log(await usersTable.column("age_new").rename("age"));
+    console.log(await usersTable.column.use("age_new").rename("age"));
 
     console.log('Dropping column "age"...');
-    console.log(await usersTable.column("age").drop());
+    console.log(await usersTable.column.use("age").drop());
 
     console.log("Executing table methods...");
     console.log("Inserting a new user named John into the users table...");
@@ -158,7 +152,7 @@ async function main() {
 
     console.log("Executing database methods...");
     console.log('Creating "users" table...');
-    const newUsersTable = await db.createTable<Database["tables"]["users"]>({
+    const newUsersTable = await db.table.create<"users", Database["tables"]["users"]>({
       name: "users",
       columns: {
         id: { type: "bigint", autoIncrement: true, primaryKey: true },
@@ -169,22 +163,22 @@ async function main() {
     await newUsersTable.insert(dataset.users);
 
     console.log('Using the "users" table...');
-    db.table("users");
+    db.table.use("users");
 
     console.log("Executing table AI methods...");
     const prompt_19_1 = "This product can suppress surrounding noise.";
     console.log(`Finding noise-cancelling headphone name and description using vector search.\nPrompt: ${prompt_19_1}`);
     console.log(
-      await db
-        .table("products")
+      await db.table
+        .use("products")
         .vectorSearch({ prompt: prompt_19_1, vectorColumn: "description_v" }, { select: ["name", "description"], limit: 1 }),
     );
 
     const prompt_19_2 = "What monitor do I have in my store?";
     console.log(`Creating chat completion based on vector search results and prompt.\nPrompt: ${prompt_19_2}`);
     console.log(
-      await db
-        .table("products")
+      await db.table
+        .use("products")
         .createChatCompletion(
           { prompt: prompt_19_2, vectorColumn: "description_v" },
           { select: ["name", "description", "price"], limit: 1 },

@@ -1,14 +1,11 @@
-import type { ChatCompletionMessage } from "@singlestore/ai";
-import type { AnyDatabase, FieldPacket, InferDatabaseType, ResultSetHeader, Table } from "@singlestore/client";
+import type { AnyAI, ChatCompletionMessage } from "@singlestore/ai";
+import type { AnyDatabase, FieldPacket, InferDatabaseType, ResultSetHeader, Table, TableName } from "@singlestore/client";
 
 export interface ChatMessageConfig extends Pick<ChatMessage, "sessionId" | "role" | "content" | "store" | "tableName"> {}
 
-export interface ChatMessagesTable<TName extends string = string> {
-  name: TName;
-  columns: Pick<ChatMessage, "id" | "createdAt" | "sessionId" | "role" | "content">;
-}
+export interface ChatMessagesTable extends Pick<ChatMessage, "id" | "createdAt" | "sessionId" | "role" | "content"> {}
 
-export class ChatMessage<TDatabase extends AnyDatabase = AnyDatabase, TTableName extends string = string> {
+export class ChatMessage<TDatabase extends AnyDatabase = AnyDatabase, TTableName extends TableName = TableName> {
   constructor(
     private _database: TDatabase,
     public id: number | undefined,
@@ -20,11 +17,11 @@ export class ChatMessage<TDatabase extends AnyDatabase = AnyDatabase, TTableName
     public tableName: TTableName,
   ) {}
 
-  static createTable<TDatabase extends AnyDatabase, TName extends string>(
+  static createTable<TDatabase extends AnyDatabase, TName extends TableName>(
     database: TDatabase,
     name: TName,
-  ): Promise<Table<ChatMessagesTable<TName>, InferDatabaseType<TDatabase>>> {
-    return database.createTable<ChatMessagesTable<TName>>({
+  ): Promise<Table<TName, ChatMessagesTable, InferDatabaseType<TDatabase>, AnyAI>> {
+    return database.table.create<TName, ChatMessagesTable>({
       name,
       columns: {
         id: { type: "bigint", autoIncrement: true, primaryKey: true },
@@ -45,7 +42,9 @@ export class ChatMessage<TDatabase extends AnyDatabase = AnyDatabase, TTableName
     let id: ChatMessage["id"];
 
     if (store) {
-      const [rows] = await database.table<ChatMessagesTable>(tableName).insert({ createdAt, sessionId, role, content });
+      const [rows] = await database.table
+        .use<TConfig["tableName"], ChatMessagesTable>(tableName)
+        .insert({ createdAt, sessionId, role, content });
       id = rows?.[0].insertId;
     }
 
@@ -55,15 +54,17 @@ export class ChatMessage<TDatabase extends AnyDatabase = AnyDatabase, TTableName
   static delete(
     database: AnyDatabase,
     tableName: ChatMessage["tableName"],
-    where?: Parameters<Table<ChatMessagesTable>["delete"]>[0],
+    where?: Parameters<Table<ChatMessage["tableName"], ChatMessagesTable, InferDatabaseType<AnyDatabase>, AnyAI>["delete"]>[0],
   ): Promise<[ResultSetHeader, FieldPacket[]]> {
-    return database.table<ChatMessagesTable>(tableName).delete(where);
+    return database.table.use<ChatMessage["tableName"], ChatMessagesTable>(tableName).delete(where);
   }
 
   async update(
-    values: Parameters<Table<ChatMessagesTable<TTableName>>["update"]>[0],
+    values: Parameters<Table<TTableName, ChatMessagesTable, InferDatabaseType<TDatabase>, AnyAI>["update"]>[0],
   ): Promise<[ResultSetHeader, FieldPacket[]]> {
-    const result = await this._database.table<ChatMessagesTable, TTableName>(this.tableName).update(values, { id: this.id });
+    const result = await this._database.table
+      .use<TTableName, ChatMessagesTable>(this.tableName)
+      .update(values, { id: this.id });
 
     for (const [key, value] of Object.entries(values)) {
       if (key in this) {
