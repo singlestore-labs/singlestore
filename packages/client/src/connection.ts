@@ -2,8 +2,10 @@ import { createPool, type Pool, type PoolOptions } from "mysql2/promise";
 
 export interface ConnectionConfig extends Partial<Omit<PoolOptions, "name" | "database">> {}
 
+export type ConnectionClient = Pool;
+
 export class Connection {
-  client: Pool;
+  client: ConnectionClient;
 
   constructor(public config: ConnectionConfig) {
     this.client = createPool({ multipleStatements: true, ...this.config });

@@ -2,13 +2,14 @@ import type { AnyAI } from "@singlestore/ai";
 
 import { WorkspaceSchema } from "..";
 import { Connection, ConnectionConfig } from "../../connection";
+import { DatabaseManager } from "../../database/manager";
 
 export interface CreateWorkspaceConnectionConfig<
   TName extends WorkspaceSchema["name"] | undefined,
   TAI extends AnyAI | undefined,
 > extends ConnectionConfig {
-  name: TName;
-  ai: TAI;
+  name?: TName;
+  ai?: TAI;
 }
 
 export class WorkspaceConnection<
@@ -17,11 +18,13 @@ export class WorkspaceConnection<
 > extends Connection {
   public name: TName;
   private _ai: TAI;
+  database: DatabaseManager<TName, TAI>;
 
   constructor({ name, ai, ...config }: CreateWorkspaceConnectionConfig<TName, TAI>) {
     super(config);
-    this.name = name;
-    this._ai = ai;
+    this.name = name as TName;
+    this._ai = ai as TAI;
+    this.database = new DatabaseManager(this.client, this._ai, this.name);
   }
 
   static create<TName extends WorkspaceSchema["name"] | undefined, TAI extends AnyAI | undefined>(

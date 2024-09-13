@@ -1,7 +1,7 @@
 import { escape } from "mysql2";
 
 import type { DatabaseType } from "../database";
-import type { TableType } from "../table";
+import type { TableType } from "../table-1";
 
 type MergeUnion<T> = (T extends any ? (i: T) => void : never) extends (i: infer U) => void ? { [K in keyof U]: U[K] } : never;
 

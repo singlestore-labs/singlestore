@@ -2,7 +2,7 @@ import type { AnyAI } from "@singlestore/ai";
 import type { FieldPacket, ResultSetHeader } from "mysql2/promise";
 
 import { Connection, type ConnectionConfig } from "./connection";
-import { type DatabaseType, Database, type DatabaseSchema, DatabaseInfoExtended, DatabaseInfo } from "./database";
+import { type DatabaseType, Database, type DatabaseSchema, DatabaseInfoExtended, DatabaseInfo } from "./database-1";
 
 export interface WorkspaceType {
   databases: Record<string, DatabaseType>;
@@ -21,7 +21,7 @@ export interface ConnectWorkspaceConfig<TWorkspaceType extends WorkspaceType, TA
 
 export type WorkspaceDatabaseName<TWorkspaceType extends WorkspaceType> = Extract<keyof TWorkspaceType["databases"], string>;
 
-export class WorkspaceConnection2<
+export class WorkspaceConnection<
   TWorkspaceType extends WorkspaceType = WorkspaceType,
   TAi extends AnyAI | undefined = undefined,
 > {

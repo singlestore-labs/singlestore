@@ -13,7 +13,7 @@ export type * from "./region";
 export type * from "./region/manager";
 export type * from "./secret";
 export type * from "./secret/manager";
-export type * from "./table";
+export type * from "./table-1";
 export type * from "./team";
 export type * from "./team/manager";
 export type * from "./workspace";

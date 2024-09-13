@@ -2,7 +2,7 @@ import type { AnyAI } from "@singlestore/ai";
 import type { FieldPacket, ResultSetHeader } from "mysql2/promise";
 
 import { Connection } from "./connection";
-import { Table, type TableSchema, type TableType } from "./table";
+import { Table, type TableSchema, type TableType } from "./table-1";
 
 export interface DatabaseType {
   name: string;
