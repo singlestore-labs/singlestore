@@ -3,7 +3,7 @@ import type { API } from "../../api";
 
 import { APIManager } from "../../api/manager";
 
-import { type UpdateWorkspaceGroupStageBody, type WorkspaceGroupStageSchema, WorkspaceGroupStage } from ".";
+import { WorkspaceGroupStage } from ".";
 
 export class WorkspaceGroupStageManager extends APIManager {
   protected _baseURL: string;
@@ -20,19 +20,21 @@ export class WorkspaceGroupStageManager extends APIManager {
     return `/stage/${workspaceGroupID}/fs`;
   }
 
-  async get(path?: WorkspaceGroupStageSchema["path"]) {
-    return WorkspaceGroupStage.get(this._api, this._workspaceGroupID, path);
+  async get(...args: Parameters<typeof WorkspaceGroupStage.get> extends [any, any, ...infer Rest] ? Rest : never) {
+    return WorkspaceGroupStage.get(this._api, this._workspaceGroupID, ...args);
   }
 
-  async update(path: WorkspaceGroupStageSchema["path"], body: UpdateWorkspaceGroupStageBody) {
-    return WorkspaceGroupStage.update(this._api, this._workspaceGroupID, path, body);
+  async update(...args: Parameters<typeof WorkspaceGroupStage.update> extends [any, any, ...infer Rest] ? Rest : never) {
+    return WorkspaceGroupStage.update(this._api, this._workspaceGroupID, ...args);
   }
 
-  async delete(path: WorkspaceGroupStageSchema["path"]) {
-    return WorkspaceGroupStage.delete(this._api, this._workspaceGroupID, path);
+  async delete(...args: Parameters<typeof WorkspaceGroupStage.delete> extends [any, any, ...infer Rest] ? Rest : never) {
+    return WorkspaceGroupStage.delete(this._api, this._workspaceGroupID, ...args);
   }
 
-  async createFolder(path: WorkspaceGroupStage["path"], name: string) {
-    return WorkspaceGroupStage.createFolder(this._api, this._workspaceGroupID, path, name);
+  async createFolder(
+    ...args: Parameters<typeof WorkspaceGroupStage.createFolder> extends [any, any, ...infer Rest] ? Rest : never
+  ) {
+    return WorkspaceGroupStage.createFolder(this._api, this._workspaceGroupID, ...args);
   }
 }

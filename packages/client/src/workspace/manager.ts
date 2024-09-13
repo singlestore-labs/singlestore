@@ -1,10 +1,11 @@
 import type { API } from "../api";
 import type { WorkspaceGroupSchema } from "../workspace-group";
+import type { Tail } from "@repo/utils";
 import type { AnyAI } from "@singlestore/ai";
 
 import { APIManager } from "../api/manager";
 
-import { type ResumeWorkspaceBody, type UpdateWorkspaceBody, Workspace, type WorkspaceSchema } from ".";
+import { type UpdateWorkspaceBody, Workspace, type WorkspaceSchema } from ".";
 
 interface CreateWorkspaceBody
   extends Pick<WorkspaceSchema, "name">,
@@ -122,23 +123,23 @@ export class WorkspaceManager<TAI extends AnyAI | undefined> extends APIManager 
     return this._create(response) as _TReturnType;
   }
 
-  async update(id: WorkspaceSchema["workspaceID"], body: UpdateWorkspaceBody) {
-    return Workspace.update(this._api, id, body);
+  async update(...args: Tail<Parameters<typeof Workspace.update>>) {
+    return Workspace.update(this._api, ...args);
   }
 
-  async delete(id: WorkspaceSchema["workspaceID"]) {
-    return Workspace.delete(this._api, id);
+  async delete(...args: Tail<Parameters<typeof Workspace.delete>>) {
+    return Workspace.delete(this._api, ...args);
   }
 
-  async resume(id: WorkspaceSchema["workspaceID"], body?: ResumeWorkspaceBody) {
-    return Workspace.resume(this._api, id, body);
+  async resume(...args: Tail<Parameters<typeof Workspace.resume>>) {
+    return Workspace.resume(this._api, ...args);
   }
 
-  async suspend(id: WorkspaceSchema["workspaceID"]) {
-    return Workspace.suspend(this._api, id);
+  async suspend(...args: Tail<Parameters<typeof Workspace.suspend>>) {
+    return Workspace.suspend(this._api, ...args);
   }
 
-  async getState(id: WorkspaceSchema["workspaceID"]) {
-    return Workspace.getState(this._api, id);
+  async getState(...args: Tail<Parameters<typeof Workspace.getState>>) {
+    return Workspace.getState(this._api, ...args);
   }
 }

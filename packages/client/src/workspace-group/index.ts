@@ -124,12 +124,12 @@ export class WorkspaceGroup<TAI extends AnyAI | undefined> extends APIManager {
     return response.workspaceGroupID;
   }
 
-  async update(body: UpdateWorkspaceGroupBody) {
-    return WorkspaceGroup.update(this._api, this.id, body);
+  async update(...args: Parameters<typeof WorkspaceGroup.update> extends [any, any, ...infer Rest] ? Rest : never) {
+    return WorkspaceGroup.update(this._api, this.id, ...args);
   }
 
-  async delete(force?: boolean) {
-    return WorkspaceGroup.delete(this._api, this.id, force);
+  async delete(...args: Parameters<typeof WorkspaceGroup.delete> extends [any, any, ...infer Rest] ? Rest : never) {
+    return WorkspaceGroup.delete(this._api, this.id, ...args);
   }
 
   async getPrivateConnections(): Promise<PrivateConnection[]> {

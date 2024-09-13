@@ -1,4 +1,4 @@
-import type { Optional } from "@repo/utils";
+import type { Optional, Tail } from "@repo/utils";
 
 import { APIManager } from "../api/manager";
 
@@ -47,16 +47,16 @@ export class JobManager extends APIManager {
     return this._create(response);
   }
 
-  async delete(id: JobSchema["jobID"]) {
-    return Job.delete(this._api, id);
+  async delete(...args: Tail<Parameters<typeof Job.delete>>) {
+    return Job.delete(this._api, ...args);
   }
 
-  async getExecutions(id: JobSchema["jobID"], ...args: Parameters<Job["getExecutions"]>) {
-    return Job.getExecutions(this._api, id, ...args);
+  async getExecutions(...args: Tail<Parameters<typeof Job.getExecutions>>) {
+    return Job.getExecutions(this._api, ...args);
   }
 
-  async getParameters(id: JobSchema["jobID"]) {
-    return Job.getParameters(this._api, id);
+  async getParameters(...args: Tail<Parameters<typeof Job.getParameters>>) {
+    return Job.getParameters(this._api, ...args);
   }
 
   async getRuntimes() {

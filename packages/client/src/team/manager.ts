@@ -1,3 +1,5 @@
+import type { Tail } from "@repo/utils";
+
 import { APIManager } from "../api/manager";
 
 import { Team, type TeamMemberTeamSchema, type TeamMemberUserSchema, type TeamSchema } from ".";
@@ -73,27 +75,27 @@ export class TeamManager extends APIManager {
     return this._create(response) as _TReturnType;
   }
 
-  async update(id: TeamSchema["teamID"], ...args: Parameters<Team["update"]>) {
-    return Team.update(this._api, id, ...args);
+  async update(...args: Parameters<typeof Team.update> extends [any, ...infer Rest] ? Rest : never) {
+    return Team.update(this._api, ...args);
   }
 
-  async delete(id: TeamSchema["teamID"]) {
-    return Team.delete(this._api, id);
+  async delete(...args: Tail<Parameters<typeof Team.delete>>) {
+    return Team.delete(this._api, ...args);
   }
 
-  async addMemberTeams(id: TeamSchema["teamID"], ...args: Parameters<Team["addMemberTeams"]>) {
-    return Team.addMemberTeams(this._api, id, ...args);
+  async addMemberTeams(...args: Tail<Parameters<typeof Team.addMemberTeams>>) {
+    return Team.addMemberTeams(this._api, ...args);
   }
 
-  async removeMemberTeams(id: TeamSchema["teamID"], ...args: Parameters<Team["removeMemberTeams"]>) {
-    return Team.removeMemberTeams(this._api, id, ...args);
+  async removeMemberTeams(...args: Tail<Parameters<typeof Team.removeMemberTeams>>) {
+    return Team.removeMemberTeams(this._api, ...args);
   }
 
-  async addMemberUsers(id: TeamSchema["teamID"], ...args: Parameters<Team["addMemberUsers"]>) {
-    return Team.addMemberUsers(this._api, id, ...args);
+  async addMemberUsers(...args: Tail<Parameters<typeof Team.addMemberUsers>>) {
+    return Team.addMemberUsers(this._api, ...args);
   }
 
-  async removeMemberUsers(id: TeamSchema["teamID"], ...args: Parameters<Team["removeMemberUsers"]>) {
-    return Team.removeMemberUsers(this._api, id, ...args);
+  async removeMemberUsers(...args: Tail<Parameters<typeof Team.removeMemberUsers>>) {
+    return Team.removeMemberUsers(this._api, ...args);
   }
 }

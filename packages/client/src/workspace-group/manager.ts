@@ -1,6 +1,7 @@
 import type { OrganizationManager } from "../organization/manager";
 import type { RegionName } from "../region";
 import type { RegionManager } from "../region/manager";
+import type { Tail } from "@repo/utils";
 import type { AnyAI } from "@singlestore/ai";
 
 import { type API } from "../api";
@@ -130,11 +131,11 @@ export class WorkspaceGroupManager<TAI extends AnyAI | undefined> extends APIMan
     return this._create(response) as _TReturnType;
   }
 
-  async update(id: WorkspaceGroupSchema["workspaceGroupID"], ...args: Parameters<WorkspaceGroup<TAI>["update"]>) {
-    return WorkspaceGroup.update(this._api, id, ...args);
+  async update(...args: Tail<Parameters<typeof WorkspaceGroup.update>>) {
+    return WorkspaceGroup.update(this._api, ...args);
   }
 
-  async delete(id: WorkspaceGroupSchema["workspaceGroupID"], ...args: Parameters<WorkspaceGroup<TAI>["delete"]>) {
-    return WorkspaceGroup.delete(this._api, id, ...args);
+  async delete(...args: Tail<Parameters<typeof WorkspaceGroup.delete>>) {
+    return WorkspaceGroup.delete(this._api, ...args);
   }
 }

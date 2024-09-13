@@ -1,4 +1,4 @@
-import type { Defined } from "@repo/utils";
+import type { Defined, Tail } from "@repo/utils";
 
 import { APIManager } from "../api/manager";
 
@@ -72,11 +72,11 @@ export class SecretManager extends APIManager {
     return [] as unknown as _TReturnType;
   }
 
-  async update(id: SecretSchema["secretID"], ...args: Parameters<Secret["update"]>) {
-    return Secret.update(this._api, id, ...args);
+  async update(...args: Tail<Parameters<typeof Secret.update>>) {
+    return Secret.update(this._api, ...args);
   }
 
-  async delete(id: SecretSchema["secretID"]) {
-    return Secret.delete(this._api, id);
+  async delete(...args: Tail<Parameters<typeof Secret.delete>>) {
+    return Secret.delete(this._api, ...args);
   }
 }
