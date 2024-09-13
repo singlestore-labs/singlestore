@@ -18,7 +18,7 @@ export class ColumnManager<TTableName extends TableName, TTableType extends Tabl
   }
 
   use<TName extends TableColumnName<TTableType> | (ColumnName & {})>(name: TName) {
-    return new Column(this._client, this._path, name, this.tableName, this.databaseName);
+    return new Column<TName, TTableName, TDatabaseName>(this._client, this._path, name, this.tableName, this.databaseName);
   }
 
   async add<TSchema extends ColumnSchema>(schema: TSchema) {
@@ -28,7 +28,13 @@ export class ColumnManager<TTableName extends TableName, TTableType extends Tabl
       ALTER TABLE ${this.databaseName}.${this.tableName} ADD COLUMN ${clauses}
     `);
 
-    return new Column(this._client, this._path, schema.name, this.tableName, this.databaseName);
+    return new Column<TSchema["name"], TTableName, TDatabaseName>(
+      this._client,
+      this._path,
+      schema.name,
+      this.tableName,
+      this.databaseName,
+    );
   }
 
   async drop(name: TableColumnName<TTableType> | (ColumnName & {})) {

@@ -1,5 +1,6 @@
 import type { ConnectionClient } from "../connection";
 import type { DatabaseName, DatabaseType } from "../database";
+import type { Optional } from "@repo/utils";
 import type { AnyAI, CreateChatCompletionResult } from "@singlestore/ai";
 import type { FieldPacket, ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
@@ -20,7 +21,12 @@ export interface TableType extends Record<TableName, ColumnType> {}
 
 export interface TableSchema<TName extends TableName, TType extends TableType> {
   name: TName;
-  columns: { [K in keyof TType]: Omit<ColumnSchema, "name"> };
+  columns: {
+    [K in keyof TType]: Optional<
+      Omit<ColumnSchema, "name">,
+      "nullable" | "primaryKey" | "autoIncrement" | "default" | "clauses"
+    >;
+  };
   primaryKeys: string[];
   fulltextKeys: string[];
   clauses: string[];

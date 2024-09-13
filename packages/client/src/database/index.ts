@@ -2,6 +2,7 @@ import { ResultSetHeader } from "mysql2/promise";
 
 import type { ConnectionClient } from "../connection";
 import type { WorkspaceSchema } from "../workspace";
+import type { Optional } from "@repo/utils";
 import type { AnyAI } from "@singlestore/ai";
 
 import { Table, type TableSchema, type TableType } from "../table";
@@ -17,7 +18,10 @@ export interface DatabaseType {
 export interface DatabaseSchema<TType extends DatabaseType> {
   name: TType["name"];
   tables?: {
-    [K in keyof TType["tables"]]: Omit<TableSchema<Extract<K, string>, TType["tables"][K]>, "name">;
+    [K in keyof TType["tables"]]: Optional<
+      Omit<TableSchema<Extract<K, string>, TType["tables"][K]>, "name">,
+      "primaryKeys" | "fulltextKeys" | "clauses"
+    >;
   };
 }
 

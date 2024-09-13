@@ -29,7 +29,12 @@ export class TableManager<TDatabaseType extends DatabaseType, TAI extends AnyAI 
   }
 
   use<TName extends DatabaseTableName<TDatabaseType> | (TableName & {})>(name: TName) {
-    return new Table(this._client, this.databaseName, name as TName, this._ai);
+    return new Table<
+      TName,
+      TName extends DatabaseTableName<TDatabaseType> ? TDatabaseType["tables"][TName] : TableType,
+      TDatabaseType,
+      TAI
+    >(this._client, name as TName, this.databaseName, this._ai);
   }
 
   async create<TName extends TableName, TType extends TableType>(schema: TableSchema<TName, TType>) {
