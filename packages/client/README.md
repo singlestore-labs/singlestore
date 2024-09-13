@@ -45,7 +45,7 @@ const client = new SingleStoreClient();
 Connect to a specific workspace using your workspace credentials.
 
 ```ts
-const workspace = client.workspace({
+const connection = client.connect({
   host: "<DATABASE_HOST>",
   user: "<DATABASE_USER>",
   password: "<DATABASE_PASSWORD>",
@@ -57,7 +57,7 @@ const workspace = client.workspace({
 Create a new database within the connected workspace.
 
 ```ts
-const database = await workspace.createDatabase({ name: "my_database" });
+const database = await connection.database.create({ name: "my_database" });
 ```
 
 ### Use a Database
@@ -65,7 +65,7 @@ const database = await workspace.createDatabase({ name: "my_database" });
 Select and use an existing database.
 
 ```ts
-const database = await workspace.database("my_database");
+const database = await connection.database.use("my_database");
 ```
 
 ### Create a Table
@@ -73,7 +73,7 @@ const database = await workspace.database("my_database");
 Create a table within the selected database with specified columns and attributes.
 
 ```ts
-const usersTable = await database.createTable({
+const usersTable = await database.table.create({
   name: "users",
   columns: {
     id: { type: "BIGINT", autoIncrement: true, primaryKey: true },
@@ -166,39 +166,31 @@ interface StoreDatabase {
   name: "store_database";
   tables: {
     products: {
-      name: "products";
-      columns: {
-        id: number;
-        name: string;
-        description: string;
-        price: number;
-        category_id: number;
-        description_v: string;
-      };
+      id: number;
+      name: string;
+      description: string;
+      price: number;
+      category_id: number;
+      description_v: string;
     };
     categories: {
-      name: "categories";
-      columns: {
-        id: number;
-        name: string;
-      };
+      id: number;
+      name: string;
     };
   };
 }
 
 const client = new SingleStoreClient({ ai });
 
-const workspace = client.workspace<{
-  databases: { store_database: StoreDatabase };
-}>({
+const connection = client.connect({
   host: "<DATABASE_HOST>",
   user: "<DATABASE_USER>",
   password: "<DATABASE_PASSWORD>",
 });
 
-const database = workspace.database("store_database");
+const database = connection.database.use<StoreDatabase>("store_database");
 
-const products = await database.table("products").find({
+const products = await database.table.use("products").find({
   select: ["id", "name", "description", "price", "category.name"],
   join: [
     {

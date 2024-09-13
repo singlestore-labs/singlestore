@@ -31,13 +31,13 @@ import { RAG } from "@singlestore/rag";
 const ai = new AI({ openAIApiKey: "<OPENAI_API_KEY>" });
 const client = new SingleStoreClient({ ai });
 
-const workspace = client.workspace({
+const connection = client.connect({
   host: "<DATABASE_HOST>",
   user: "<DATABASE_USER>",
   password: "<DATABASE_PASSWORD>",
 });
 
-const database = workspace.database("<DATABASE_NAME>");
+const database = connection.database("<DATABASE_NAME>");
 const rag = new RAG({ database, ai });
 const chat = await rag.createChat();
 const session = await chat.createSession();
@@ -59,14 +59,11 @@ interface StoreDatabase {
   name: "store_database";
   tables: {
     products: {
-      name: "products";
-      columns: {
-        id: number;
-        name: string;
-        description: string;
-        price: number;
-        description_v: string;
-      };
+      id: number;
+      name: string;
+      description: string;
+      price: number;
+      description_v: string;
     };
   };
 }
@@ -91,7 +88,7 @@ const findProductTool = new ChatCompletionTool({
   description: "Useful for finding and displaying information about a product.",
   params: z.object({ query: z.string().describe("Query for product search") }),
   call: async (params) => {
-    const product = await database.table("products").vectorSearch(
+    const product = await database.table.use("products").vectorSearch(
       {
         prompt: params.query,
         vectorColumn: "description_v",
