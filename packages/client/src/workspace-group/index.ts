@@ -3,12 +3,13 @@ import { getKeyByValue } from "@repo/utils";
 import type { API } from "../api";
 import type { OrganizationManager } from "../organization/manager";
 import type { PrivateConnection, PrivateConnectionSchema } from "../private-connection";
+import type { AnyAI } from "@singlestore/ai";
 
 import { APIManager } from "../api/manager";
+import { WorkspaceManager } from "../workspace/manager";
 
 import { WorkspaceGroupStageManager } from "./stage/manager";
 import { WorkspaceGroupStorageManager } from "./storage/manager";
-import { WorkspaceManager } from "./workspace/manager";
 
 export interface WorkspaceGroupUpdateWindowSchema {
   day: number;
@@ -50,14 +51,15 @@ export const updateWindowDaysMap: Record<number, WorkspaceGroupUpdateWindow["day
   6: "sa",
 };
 
-export class WorkspaceGroup extends APIManager {
+export class WorkspaceGroup<TAI extends AnyAI | undefined> extends APIManager {
   protected _baseURL: string;
   stage: WorkspaceGroupStageManager;
   storage: WorkspaceGroupStorageManager;
-  workspace: WorkspaceManager;
+  workspace: WorkspaceManager<TAI>;
 
   constructor(
     api: API,
+    private _ai: TAI,
     private _organization: OrganizationManager,
     public id: WorkspaceGroupSchema["workspaceGroupID"],
     public name: WorkspaceGroupSchema["name"],
@@ -75,7 +77,7 @@ export class WorkspaceGroup extends APIManager {
     this._baseURL = WorkspaceGroup.getBaseURL(this.id);
     this.stage = new WorkspaceGroupStageManager(this._api, this.id);
     this.storage = new WorkspaceGroupStorageManager(this._api, this.id);
-    this.workspace = new WorkspaceManager(this._api, this.id);
+    this.workspace = new WorkspaceManager(this._api, this._ai, this.id);
   }
 
   static getBaseURL(id: WorkspaceGroupSchema["workspaceGroupID"]) {

@@ -1,7 +1,10 @@
-import { API } from "../../api";
-import { APIManager } from "../../api/manager";
+import type { AnyAI } from "@singlestore/ai";
 
-import { WorkspacePrivateConnectionsManager } from "./private-connections/manager";
+import { API } from "../api";
+import { APIManager } from "../api/manager";
+
+import { type CreateWorkspaceConnectionConfig, WorkspaceConnection } from "./connection";
+import { WorkspacePrivateConnectionManager } from "./private-connection/manager";
 
 export type WorkspaceSize = "S-00";
 
@@ -68,15 +71,19 @@ export interface ResumeWorkspaceBody {
   disableAutoSuspend?: boolean;
 }
 
-export class Workspace extends APIManager {
+export interface ConnectWorkspaceConfig<TName extends WorkspaceSchema["name"] | undefined, TAI extends AnyAI | undefined>
+  extends Omit<CreateWorkspaceConnectionConfig<TName, TAI>, "name" | "host" | "ai"> {}
+
+export class Workspace<TName extends WorkspaceSchema["name"], TAI extends AnyAI | undefined> extends APIManager {
   protected _baseURL: string;
-  privateConnection: WorkspacePrivateConnectionsManager;
+  privateConnection: WorkspacePrivateConnectionManager;
 
   constructor(
     api: API,
+    private _ai: TAI,
     public id: WorkspaceSchema["workspaceID"],
     public groupID: WorkspaceSchema["workspaceGroupID"],
-    public name: WorkspaceSchema["name"],
+    public name: TName,
     public endpoint: WorkspaceSchema["endpoint"],
     public size: WorkspaceSchema["size"],
     public state: WorkspaceSchema["state"],
@@ -93,7 +100,7 @@ export class Workspace extends APIManager {
   ) {
     super(api);
     this._baseURL = Workspace.getBaseURL(this.id);
-    this.privateConnection = new WorkspacePrivateConnectionsManager(this._api, this.id, this.groupID);
+    this.privateConnection = new WorkspacePrivateConnectionManager(this._api, this.id, this.groupID);
   }
 
   static getBaseURL(id: WorkspaceSchema["workspaceID"]) {
@@ -146,6 +153,10 @@ export class Workspace extends APIManager {
     const searchParams = new URLSearchParams({ fields: "state" });
     const respone = await api.execute<Pick<WorkspaceSchema, "state">>(`${this.getBaseURL(id)}?${searchParams.toString()}`);
     return respone.state;
+  }
+
+  connect(config: ConnectWorkspaceConfig<TName, TAI>) {
+    return WorkspaceConnection.create({ ...config, name: this.name, ai: this._ai, host: this.endpoint });
   }
 
   async update(body: UpdateWorkspaceBody) {

@@ -1,3 +1,4 @@
+import type { WorkspaceSchema } from "./workspace";
 import type { AnyAI } from "@singlestore/ai";
 
 import { API } from "./api";
@@ -7,7 +8,7 @@ import { OrganizationManager } from "./organization/manager";
 import { RegionManager } from "./region/manager";
 import { SecretManager } from "./secret/manager";
 import { TeamManager } from "./team/manager";
-import { Workspace, type ConnectWorkspaceConfig, type WorkspaceType } from "./workspace";
+import { CreateWorkspaceConnectionConfig, WorkspaceConnection } from "./workspace/connection";
 import { WorkspaceGroupManager } from "./workspace-group/manager";
 
 export type * from "./types";
@@ -19,11 +20,11 @@ export interface SingleStoreClientConfig<TAi extends AnyAI | undefined> {
   apiKey?: string;
 }
 
-export interface WorkspaceConfig<TWorkspaceType extends WorkspaceType, TAi extends AnyAI | undefined>
-  extends Omit<ConnectWorkspaceConfig<TWorkspaceType, TAi>, "ai"> {}
+export interface ConnectWorkspaceConfig<TName extends WorkspaceSchema["name"] | undefined, TAI extends AnyAI | undefined>
+  extends Omit<CreateWorkspaceConnectionConfig<TName, TAI>, "ai"> {}
 
-export class SingleStoreClient<TAi extends AnyAI | undefined = undefined> {
-  private _ai: TAi;
+export class SingleStoreClient<TAI extends AnyAI | undefined = undefined> {
+  private _ai: TAI;
   private _api: API;
 
   billing: BillingManager;
@@ -32,10 +33,10 @@ export class SingleStoreClient<TAi extends AnyAI | undefined = undefined> {
   region: RegionManager;
   secret: SecretManager;
   team: TeamManager;
-  workspaceGroup: WorkspaceGroupManager;
+  workspaceGroup: WorkspaceGroupManager<TAI>;
 
-  constructor(config?: SingleStoreClientConfig<TAi>) {
-    this._ai = config?.ai as TAi;
+  constructor(config?: SingleStoreClientConfig<TAI>) {
+    this._ai = config?.ai as TAI;
     this._api = new API(config?.apiKey);
 
     this.billing = new BillingManager(this._api);
@@ -44,12 +45,13 @@ export class SingleStoreClient<TAi extends AnyAI | undefined = undefined> {
     this.region = new RegionManager(this._api);
     this.secret = new SecretManager(this._api);
     this.team = new TeamManager(this._api);
-    this.workspaceGroup = new WorkspaceGroupManager(this._api, this.organization, this.region);
+    this.workspaceGroup = new WorkspaceGroupManager(this._api, this._ai, this.organization, this.region);
   }
 
-  workspace<TWorkspaceType extends WorkspaceType = WorkspaceType>(
-    config: WorkspaceConfig<TWorkspaceType, TAi>,
-  ): Workspace<TWorkspaceType, TAi> {
-    return Workspace.connect({ ...config, ai: this._ai });
+  connect<TName extends WorkspaceSchema["name"] | undefined = undefined>(config: ConnectWorkspaceConfig<TName, TAI>) {
+    return WorkspaceConnection.create({ ...config, ai: this._ai });
   }
 }
+
+const x = new SingleStoreClient();
+const xx = x.connect({ name: "Test" });

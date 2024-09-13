@@ -1,6 +1,7 @@
 import type { OrganizationManager } from "../organization/manager";
 import type { RegionName } from "../region";
 import type { RegionManager } from "../region/manager";
+import type { AnyAI } from "@singlestore/ai";
 
 import { type API } from "../api";
 import { APIManager } from "../api/manager";
@@ -35,24 +36,26 @@ export interface GetWorkspaceGroupParams<
   includeTerminated?: boolean;
 }
 
-type WorkspaceGroupBySelect<TSelect extends GetWorkspaceGroupSelectParam> = TSelect extends (keyof WorkspaceGroup)[]
-  ? Pick<WorkspaceGroup, TSelect[number]>
-  : WorkspaceGroup;
+type WorkspaceGroupBySelect<TSelect extends GetWorkspaceGroupSelectParam> = TSelect extends (keyof WorkspaceGroup<any>)[]
+  ? Pick<WorkspaceGroup<any>, TSelect[number]>
+  : WorkspaceGroup<any>;
 
-export class WorkspaceGroupManager extends APIManager {
+export class WorkspaceGroupManager<TAI extends AnyAI | undefined> extends APIManager {
   protected _baseURL: string = "/workspaceGroups";
 
   constructor(
-    protected readonly _api: API,
+    _api: API,
+    private _ai: TAI,
     private _organization: OrganizationManager,
     private _region: RegionManager,
   ) {
     super(_api);
   }
 
-  private _create(data: WorkspaceGroupSchema): WorkspaceGroup {
+  private _create(data: WorkspaceGroupSchema): WorkspaceGroup<TAI> {
     return new WorkspaceGroup(
       this._api,
+      this._ai,
       this._organization,
       data.workspaceGroupID,
       data.name,
@@ -127,11 +130,11 @@ export class WorkspaceGroupManager extends APIManager {
     return this._create(response) as _TReturnType;
   }
 
-  async update(id: WorkspaceGroupSchema["workspaceGroupID"], ...args: Parameters<WorkspaceGroup["update"]>) {
+  async update(id: WorkspaceGroupSchema["workspaceGroupID"], ...args: Parameters<WorkspaceGroup<TAI>["update"]>) {
     return WorkspaceGroup.update(this._api, id, ...args);
   }
 
-  async delete(id: WorkspaceGroupSchema["workspaceGroupID"], ...args: Parameters<WorkspaceGroup["delete"]>) {
+  async delete(id: WorkspaceGroupSchema["workspaceGroupID"], ...args: Parameters<WorkspaceGroup<TAI>["delete"]>) {
     return WorkspaceGroup.delete(this._api, id, ...args);
   }
 }

@@ -1,7 +1,8 @@
-import type { WorkspaceGroupSchema } from "..";
-import type { API } from "../../api";
+import type { API } from "../api";
+import type { WorkspaceGroupSchema } from "../workspace-group";
+import type { AnyAI } from "@singlestore/ai";
 
-import { APIManager } from "../../api/manager";
+import { APIManager } from "../api/manager";
 
 import { type ResumeWorkspaceBody, type UpdateWorkspaceBody, Workspace, type WorkspaceSchema } from ".";
 
@@ -23,15 +24,16 @@ export interface GetWorkspaceParams<
   includeTerminated?: boolean;
 }
 
-type WorkspaceBySelect<TSelect extends GetWorkspaceSelectParam> = TSelect extends (keyof Workspace)[]
-  ? Pick<Workspace, TSelect[number]>
-  : Workspace;
+type WorkspaceBySelect<TSelect extends GetWorkspaceSelectParam> = TSelect extends (keyof Workspace<any, any>)[]
+  ? Pick<Workspace<any, any>, TSelect[number]>
+  : Workspace<any, any>;
 
-export class WorkspaceManager extends APIManager {
+export class WorkspaceManager<TAI extends AnyAI | undefined> extends APIManager {
   protected _baseURL: string = "/workspaces";
 
   constructor(
     api: API,
+    private _ai: TAI,
     private _workspaceGroupID: WorkspaceGroupSchema["workspaceGroupID"],
   ) {
     super(api);
@@ -40,6 +42,7 @@ export class WorkspaceManager extends APIManager {
   private _create(data: WorkspaceSchema) {
     return new Workspace(
       this._api,
+      this._ai,
       data.workspaceID,
       data.workspaceGroupID,
       data.name,

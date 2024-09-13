@@ -1,16 +1,16 @@
 import { URLSearchParams } from "url";
 
 import type { WorkspaceSchema } from "..";
-import type { API } from "../../../api";
-import type { PrivateConnectionSchema } from "../../../private-connection";
+import type { API } from "../../api";
+import type { PrivateConnectionSchema } from "../../private-connection";
 
-import { APIManager } from "../../../api/manager";
+import { APIManager } from "../../api/manager";
 
 export interface GetWorkspacePrivateConnectionParams<TIsKai extends boolean | undefined> {
   isKai?: TIsKai;
 }
 
-export class WorkspacePrivateConnectionsManager extends APIManager {
+export class WorkspacePrivateConnectionManager extends APIManager {
   protected _baseURL: string;
 
   constructor(
@@ -19,7 +19,7 @@ export class WorkspacePrivateConnectionsManager extends APIManager {
     private _groupID: WorkspaceSchema["workspaceGroupID"],
   ) {
     super(api);
-    this._baseURL = WorkspacePrivateConnectionsManager.getBaseURL(this._workspaceID);
+    this._baseURL = WorkspacePrivateConnectionManager.getBaseURL(this._workspaceID);
   }
 
   static getBaseURL(workspaceID: WorkspaceSchema["workspaceID"]) {

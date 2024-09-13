@@ -21,7 +21,10 @@ export interface ConnectWorkspaceConfig<TWorkspaceType extends WorkspaceType, TA
 
 export type WorkspaceDatabaseName<TWorkspaceType extends WorkspaceType> = Extract<keyof TWorkspaceType["databases"], string>;
 
-export class Workspace<TWorkspaceType extends WorkspaceType = WorkspaceType, TAi extends AnyAI | undefined = undefined> {
+export class WorkspaceConnection2<
+  TWorkspaceType extends WorkspaceType = WorkspaceType,
+  TAi extends AnyAI | undefined = undefined,
+> {
   constructor(
     public connection: Connection,
     public name?: string,
@@ -32,9 +35,9 @@ export class Workspace<TWorkspaceType extends WorkspaceType = WorkspaceType, TAi
     ai,
     name,
     ...config
-  }: ConnectWorkspaceConfig<TWorkspaceType, TAi>): Workspace<TWorkspaceType, TAi> {
+  }: ConnectWorkspaceConfig<TWorkspaceType, TAi>): WorkspaceConnection<TWorkspaceType, TAi> {
     const connection = new Connection(config);
-    return new Workspace(connection, name, ai);
+    return new WorkspaceConnection(connection, name, ai);
   }
 
   database<

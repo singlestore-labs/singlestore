@@ -9,10 +9,6 @@ export class Connection {
     this.client = createPool({ multipleStatements: true, ...this.config });
   }
 
-  static create(config: ConnectionConfig): Connection {
-    return new Connection(config);
-  }
-
   async disconnect(): Promise<void> {
     await this.client.end();
   }
