@@ -13,10 +13,10 @@ export function describeDatabaseChatTool<TDatabase extends AnyDatabase>(database
   });
 }
 
-export function textToSQLChatTool<TDatabase extends AnyDatabase, TAi extends AnyAI>(
+export function textToSQLChatTool<TDatabase extends AnyDatabase, TAI extends AnyAI>(
   database: TDatabase,
-  ai: TAi,
-  options?: { model?: Awaited<ReturnType<TAi["chatCompletions"]["getModels"]>>[number] },
+  ai: TAI,
+  options?: { model?: Awaited<ReturnType<TAI["chatCompletions"]["getModels"]>>[number] },
 ) {
   return new ChatCompletionTool({
     name: "query_database",
@@ -73,8 +73,8 @@ export function vectorSearchChatTool<TDatabase extends AnyDatabase>(database: TD
         ),
     }),
     call: async (params) => {
-      const rows = await database
-        .table(params.tableName)
+      const rows = await database.table
+        .use(params.tableName)
         .vectorSearch({ prompt: params.prompt, vectorColumn: params.vectorColumn }, { limit: 1 });
 
       const value = rows[0];

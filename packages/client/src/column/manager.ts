@@ -4,7 +4,7 @@ import type { ConnectionClient } from "../connection";
 import type { DatabaseName } from "../database";
 import type { TableColumnName, TableName, TableType } from "../table";
 
-import { Column, type ColumnName, type ColumnSchema } from ".";
+import { type AddColumnSchema, Column, type ColumnName } from ".";
 
 export class ColumnManager<TTableName extends TableName, TTableType extends TableType, TDatabaseName extends DatabaseName> {
   private _path: string;
@@ -21,7 +21,7 @@ export class ColumnManager<TTableName extends TableName, TTableType extends Tabl
     return new Column<TName, TTableName, TDatabaseName>(this._client, this._path, name, this.tableName, this.databaseName);
   }
 
-  async add<TSchema extends ColumnSchema>(schema: TSchema) {
+  async add<TSchema extends AddColumnSchema>(schema: TSchema) {
     const clauses = Column.schemaToClauses(schema);
 
     await this._client.execute<ResultSetHeader>(`\

@@ -15,8 +15,8 @@ export type * from "./types";
 export { escape } from "mysql2";
 export { QueryBuilder } from "./query/builder";
 
-export interface SingleStoreClientConfig<TAi extends AnyAI | undefined> {
-  ai?: TAi;
+export interface SingleStoreClientConfig<TAI extends AnyAI | undefined> {
+  ai?: TAI;
   apiKey?: string;
 }
 

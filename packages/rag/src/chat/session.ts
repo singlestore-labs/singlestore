@@ -10,7 +10,7 @@ import {
   type MergeChatCompletionTools,
 } from "@singlestore/ai";
 
-import type { AnyDatabase, FieldPacket, InferDatabaseType, ResultSetHeader, Table } from "@singlestore/client";
+import type { AnyDatabase, FieldPacket, InferDatabaseType, ResultSetHeader, Table, TableName } from "@singlestore/client";
 
 import { ChatMessage, type ChatMessagesTable } from "./message";
 
@@ -19,23 +19,20 @@ export interface ChatSessionConfig
   tools: AnyChatCompletionTool[];
 }
 
-export interface ChatSessionsTable<TName extends string = string> {
-  name: TName;
-  columns: Pick<ChatSession, "id" | "createdAt" | "chatId" | "name">;
-}
+export interface ChatSessionsTable extends Pick<ChatSession, "id" | "createdAt" | "chatId" | "name"> {}
 
 type ExtractStreamParam<T> = T extends { stream: infer S } ? (S extends boolean | undefined ? S : undefined) : undefined;
 
 export class ChatSession<
   TDatabase extends AnyDatabase = AnyDatabase,
-  TAi extends AnyAI = AnyAI,
+  TAI extends AnyAI = AnyAI,
   TChatCompletionTool extends AnyChatCompletionTool[] | undefined = undefined,
-  TTableName extends string = string,
-  TMessagesTableName extends string = string,
+  TTableName extends TableName = TableName,
+  TMessagesTableName extends TableName = TableName,
 > {
   constructor(
     private _database: TDatabase,
-    private _ai: TAi,
+    private _ai: TAI,
     private _tools: TChatCompletionTool,
     public id: number | undefined,
     public createdAt: string | undefined,
@@ -50,8 +47,8 @@ export class ChatSession<
   static createTable<TDatabase extends AnyDatabase, TName extends ChatSession["tableName"]>(
     database: TDatabase,
     name: TName,
-  ): Promise<Table<ChatSessionsTable<TName>, InferDatabaseType<TDatabase>>> {
-    return database.createTable<ChatSessionsTable<TName>>({
+  ): Promise<Table<TName, ChatSessionsTable, InferDatabaseType<TDatabase>, AnyAI>> {
+    return database.table.create<TName, ChatSessionsTable>({
       name,
       columns: {
         id: { type: "bigint", autoIncrement: true, primaryKey: true },
@@ -62,17 +59,17 @@ export class ChatSession<
     });
   }
 
-  static async create<TDatabase extends AnyDatabase, TAi extends AnyAI, TConfig extends Partial<ChatSessionConfig>>(
+  static async create<TDatabase extends AnyDatabase, TAI extends AnyAI, TConfig extends Partial<ChatSessionConfig>>(
     database: TDatabase,
-    ai: TAi,
+    ai: TAI,
     config?: TConfig,
   ): Promise<
     ChatSession<
       TDatabase,
-      TAi,
+      TAI,
       TConfig["tools"],
-      TConfig["tableName"] extends string ? TConfig["tableName"] : string,
-      TConfig["messagesTableName"] extends string ? TConfig["messagesTableName"] : string
+      TConfig["tableName"] extends TableName ? TConfig["tableName"] : TableName,
+      TConfig["messagesTableName"] extends TableName ? TConfig["messagesTableName"] : TableName
     >
   > {
     const createdAt: ChatSession["createdAt"] = new Date().toISOString().replace("T", " ").substring(0, 23);
@@ -90,8 +87,8 @@ export class ChatSession<
     let id: ChatSession["id"];
 
     if (_config.store) {
-      const [rows] = await database
-        .table<ChatSessionsTable>(_config.tableName)
+      const [rows] = await database.table
+        .use<TConfig["tableName"] extends TableName ? TConfig["tableName"] : TableName, ChatSessionsTable>(_config.tableName)
         .insert({ createdAt, name: _config.name, chatId: _config.chatId });
       id = rows?.[0].insertId;
     }
@@ -115,9 +112,9 @@ export class ChatSession<
     database: AnyDatabase,
     tableName: ChatSession["tableName"],
     messagesTableName: ChatSession["messagesTableName"],
-    where?: Parameters<Table<ChatSessionsTable>["delete"]>[0],
+    where?: Parameters<Table<ChatSession["tableName"], ChatSessionsTable, InferDatabaseType<AnyDatabase>, AnyAI>["delete"]>[0],
   ): Promise<[ResultSetHeader, FieldPacket[]][]> {
-    const table = database.table<ChatSessionsTable>(tableName);
+    const table = database.table.use<ChatSession["tableName"], ChatSessionsTable>(tableName);
     const deletedRowIds = await table.find({ select: ["id"], where });
 
     return Promise.all([
@@ -127,9 +124,11 @@ export class ChatSession<
   }
 
   async update(
-    values: Parameters<Table<ChatSessionsTable<TTableName>>["update"]>[0],
+    values: Parameters<Table<TTableName, ChatSessionsTable, InferDatabaseType<TDatabase>, TAI>["update"]>[0],
   ): Promise<[ResultSetHeader, FieldPacket[]]> {
-    const result = await this._database.table<ChatSessionsTable, TTableName>(this.tableName).update(values, { id: this.id });
+    const result = await this._database.table
+      .use<TTableName, ChatSessionsTable>(this.tableName)
+      .update(values, { id: this.id });
 
     for (const [key, value] of Object.entries(values)) {
       if (key in this) {
@@ -158,9 +157,11 @@ export class ChatSession<
   }
 
   async findMessages(
-    params?: Parameters<Table<ChatMessagesTable<TMessagesTableName>>["find"]>[0],
+    params?: Parameters<Table<TMessagesTableName, ChatMessagesTable, InferDatabaseType<TDatabase>, TAI>["find"]>[0],
   ): Promise<ChatMessage<TDatabase, TMessagesTableName>[]> {
-    const rows = await this._database.table(this.messagesTableName).find(params);
+    const rows = await this._database.table
+      .use<TMessagesTableName, ChatMessagesTable>(this.messagesTableName)
+      .find(params as any);
 
     return rows.map((row) => {
       return new ChatMessage(
@@ -183,11 +184,11 @@ export class ChatSession<
   }
 
   async createChatCompletion<
-    TParams extends Omit<Parameters<TAi["chatCompletions"]["create"]>[0], "toolCallHandlers" | "toolCallResultHandlers"> &
+    TParams extends Omit<Parameters<TAI["chatCompletions"]["create"]>[0], "toolCallHandlers" | "toolCallResultHandlers"> &
       Pick<
         CreateChatCompletionParams<
           ExtractStreamParam<TParams>,
-          MergeChatCompletionTools<TChatCompletionTool, Parameters<TAi["chatCompletions"]["create"]>[0]["tools"]>
+          MergeChatCompletionTools<TChatCompletionTool, Parameters<TAI["chatCompletions"]["create"]>[0]["tools"]>
         >,
         "toolCallHandlers" | "toolCallResultHandlers"
       > & {

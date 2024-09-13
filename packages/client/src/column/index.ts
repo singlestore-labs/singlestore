@@ -1,6 +1,7 @@
 import type { ConnectionClient } from "../connection";
 import type { DatabaseName } from "../database";
 import type { TableName } from "../table";
+import type { Optional } from "@repo/utils";
 import type { FieldPacket, ResultSetHeader } from "mysql2/promise";
 
 export type ColumnName = string;
@@ -16,6 +17,9 @@ export interface ColumnSchema {
   default: any;
   clauses: string[];
 }
+
+export interface AddColumnSchema
+  extends Optional<ColumnSchema, "nullable" | "primaryKey" | "autoIncrement" | "default" | "clauses"> {}
 
 export interface ColumnInfo<TName extends ColumnName> {
   name: TName;

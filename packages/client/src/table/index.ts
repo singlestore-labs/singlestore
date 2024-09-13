@@ -4,7 +4,7 @@ import type { Optional } from "@repo/utils";
 import type { AnyAI, CreateChatCompletionResult } from "@singlestore/ai";
 import type { FieldPacket, ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
-import { Column, type ColumnType, type ColumnSchema } from "../column";
+import { Column, type ColumnType, type AddColumnSchema } from "../column";
 import { ColumnManager } from "../column/manager";
 import {
   type ExtractSelectedQueryColumns,
@@ -22,15 +22,15 @@ export interface TableType extends Record<TableName, ColumnType> {}
 export interface TableSchema<TName extends TableName, TType extends TableType> {
   name: TName;
   columns: {
-    [K in keyof TType]: Optional<
-      Omit<ColumnSchema, "name">,
-      "nullable" | "primaryKey" | "autoIncrement" | "default" | "clauses"
-    >;
+    [K in keyof TType]: Omit<AddColumnSchema, "name">;
   };
   primaryKeys: string[];
   fulltextKeys: string[];
   clauses: string[];
 }
+
+export interface CreateTableSchema<TName extends TableName, TType extends TableType>
+  extends Optional<TableSchema<TName, TType>, "primaryKeys" | "fulltextKeys" | "clauses"> {}
 
 export interface TableInfo<TName extends TableName> {
   name: TName;
@@ -74,7 +74,7 @@ export class Table<
     return this._ai;
   }
 
-  static schemaToClauses(schema: TableSchema<TableName, TableType>): string {
+  static schemaToClauses(schema: CreateTableSchema<TableName, TableType>): string {
     const clauses: string[] = [
       ...Object.entries(schema.columns).map(([name, schema]) => {
         return Column.schemaToClauses({ ...schema, name });
@@ -155,8 +155,10 @@ export class Table<
     return Table.truncate(this._client, this.databaseName, this.name);
   }
 
-  async rename(...args: Parameters<typeof Table.rename> extends [any, any, any, ...infer Rest] ? Rest : never) {
-    return Table.rename(this._client, this.databaseName, this.name, ...args);
+  async rename(...[newName, ...args]: Parameters<typeof Table.rename> extends [any, any, any, ...infer Rest] ? Rest : never) {
+    const result = await Table.rename(this._client, this.databaseName, this.name, newName, ...args);
+    this.name = newName as TName;
+    return result;
   }
 
   async insert(values: Partial<TType> | Partial<TType>[]) {

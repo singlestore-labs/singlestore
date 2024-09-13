@@ -1,21 +1,21 @@
 import type { AnyAI, AnyChatCompletionTool } from "@singlestore/ai";
-import type { AnyDatabase, FieldPacket, ResultSetHeader, Table } from "@singlestore/client";
+import type { AnyDatabase, FieldPacket, InferDatabaseType, ResultSetHeader, Table, TableName } from "@singlestore/client";
 
 import { Chat, type CreateChatConfig, type ChatsTable } from "./chat";
 
 export type * from "./types";
 export * from "./chat/tools";
 
-export interface RAGConfig<TDatabase extends AnyDatabase, TAi extends AnyAI> {
+export interface RAGConfig<TDatabase extends AnyDatabase, TAI extends AnyAI> {
   database: TDatabase;
-  ai: TAi;
+  ai: TAI;
 }
 
-export class RAG<TDatabase extends AnyDatabase = AnyDatabase, TAi extends AnyAI = AnyAI> {
+export class RAG<TDatabase extends AnyDatabase = AnyDatabase, TAI extends AnyAI = AnyAI> {
   private _database: TDatabase;
-  private _ai: TAi;
+  private _ai: TAI;
 
-  constructor(config: RAGConfig<TDatabase, TAi>) {
+  constructor(config: RAGConfig<TDatabase, TAI>) {
     this._database = config.database;
     this._ai = config.ai;
   }
@@ -29,11 +29,11 @@ export class RAG<TDatabase extends AnyDatabase = AnyDatabase, TAi extends AnyAI 
   ): Promise<
     Chat<
       TDatabase,
-      TAi,
+      TAI,
       TConfig["tools"],
-      TConfig["tableName"] extends string ? TConfig["tableName"] : string,
-      TConfig["sessionsTableName"] extends string ? TConfig["sessionsTableName"] : string,
-      TConfig["messagesTableName"] extends string ? TConfig["messagesTableName"] : string
+      TConfig["tableName"] extends TableName ? TConfig["tableName"] : TableName,
+      TConfig["sessionsTableName"] extends TableName ? TConfig["sessionsTableName"] : TableName,
+      TConfig["messagesTableName"] extends TableName ? TConfig["messagesTableName"] : TableName
     >
   > {
     return Chat.create(this._database, this._ai, config);
@@ -41,18 +41,25 @@ export class RAG<TDatabase extends AnyDatabase = AnyDatabase, TAi extends AnyAI 
 
   async findChats<TConfig extends { tableName?: string; tools?: AnyChatCompletionTool[] }>(
     config?: TConfig,
-    findParams?: Parameters<Table<ChatsTable<TConfig["tableName"] extends string ? TConfig["tableName"] : string>>["find"]>[0],
+    findParams?: Parameters<
+      Table<
+        TConfig["tableName"] extends TableName ? TConfig["tableName"] : TableName,
+        ChatsTable,
+        InferDatabaseType<TDatabase>,
+        TAI
+      >["find"]
+    >[0],
   ): Promise<
     Chat<
       TDatabase,
-      TAi,
+      TAI,
       TConfig["tools"],
-      TConfig["tableName"] extends string ? TConfig["tableName"] : string,
-      string,
-      string
+      TConfig["tableName"] extends TableName ? TConfig["tableName"] : TableName,
+      TableName,
+      TableName
     >[]
   > {
-    const rows = await this._database.table(config?.tableName || "chats").find(findParams);
+    const rows = await this._database.table.use(config?.tableName || "chats").find(findParams as any);
     return rows.map(
       (row) =>
         new Chat(

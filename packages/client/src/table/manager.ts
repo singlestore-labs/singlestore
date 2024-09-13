@@ -4,7 +4,7 @@ import type { ConnectionClient } from "../connection";
 import type { DatabaseTableName, DatabaseType } from "../database";
 import type { AnyAI } from "@singlestore/ai";
 
-import { Table, type TableName, type TableType, type TableSchema } from ".";
+import { Table, type TableName, type TableType, type CreateTableSchema } from ".";
 
 export class TableManager<TDatabaseType extends DatabaseType, TAI extends AnyAI | undefined> {
   constructor(
@@ -18,7 +18,7 @@ export class TableManager<TDatabaseType extends DatabaseType, TAI extends AnyAI 
     TType extends TableType,
     TDatabaseType extends DatabaseType,
     TAI extends AnyAI | undefined,
-  >(client: ConnectionClient, databaseName: TDatabaseType["name"], schema: TableSchema<TName, TType>, ai?: TAI) {
+  >(client: ConnectionClient, databaseName: TDatabaseType["name"], schema: CreateTableSchema<TName, TType>, ai?: TAI) {
     const clauses = Table.schemaToClauses(schema);
 
     await client.execute<ResultSetHeader>(`\
@@ -28,16 +28,20 @@ export class TableManager<TDatabaseType extends DatabaseType, TAI extends AnyAI 
     return new Table<TName, TType, TDatabaseType, TAI>(client, schema.name as TType["name"], databaseName, ai);
   }
 
-  use<TName extends DatabaseTableName<TDatabaseType> | (TableName & {})>(name: TName) {
+  use<TName extends DatabaseTableName<TDatabaseType> | (TableName & {}), TType>(name: TName) {
     return new Table<
       TName,
-      TName extends DatabaseTableName<TDatabaseType> ? TDatabaseType["tables"][TName] : TableType,
+      TType extends TableType
+        ? TType
+        : TName extends DatabaseTableName<TDatabaseType>
+          ? TDatabaseType["tables"][TName]
+          : TableType,
       TDatabaseType,
       TAI
     >(this._client, name as TName, this.databaseName, this._ai);
   }
 
-  async create<TName extends TableName, TType extends TableType>(schema: TableSchema<TName, TType>) {
+  async create<TName extends TableName, TType extends TableType>(schema: CreateTableSchema<TName, TType>) {
     return TableManager.create<TName, TType, TDatabaseType, TAI>(this._client, this.databaseName, schema, this._ai);
   }
 

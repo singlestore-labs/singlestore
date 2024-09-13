@@ -2,10 +2,9 @@ import { ResultSetHeader } from "mysql2/promise";
 
 import type { ConnectionClient } from "../connection";
 import type { WorkspaceSchema } from "../workspace";
-import type { Optional } from "@repo/utils";
 import type { AnyAI } from "@singlestore/ai";
 
-import { Table, type TableSchema, type TableType } from "../table";
+import { type CreateTableSchema, Table, type TableType } from "../table";
 import { TableManager } from "../table/manager";
 
 export type DatabaseName = string;
@@ -18,10 +17,7 @@ export interface DatabaseType {
 export interface DatabaseSchema<TType extends DatabaseType> {
   name: TType["name"];
   tables?: {
-    [K in keyof TType["tables"]]: Optional<
-      Omit<TableSchema<Extract<K, string>, TType["tables"][K]>, "name">,
-      "primaryKeys" | "fulltextKeys" | "clauses"
-    >;
+    [K in keyof TType["tables"]]: Omit<CreateTableSchema<Extract<K, string>, TType["tables"][K]>, "name">;
   };
 }
 
@@ -50,7 +46,9 @@ export interface DatabaseInfoExtended<TType extends DatabaseType> extends Databa
 
 export type DatabaseTableName<TType extends DatabaseType> = Extract<keyof TType["tables"], string>;
 
-export type InferDatabaseSchema<T> = T extends Database<infer TType, any, any> ? TType : never;
+export type InferDatabaseType<T> = T extends Database<infer TType, any, any> ? TType : never;
+
+export type DatabaseTablesToRecords<TTables extends DatabaseType["tables"]> = { [K in keyof TTables]: TTables[K][] };
 
 export type AnyDatabase = Database<any, any, any>;
 export class Database<
