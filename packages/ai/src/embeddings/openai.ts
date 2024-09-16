@@ -1,7 +1,8 @@
+import type { Embedding } from ".";
 import type { OpenAI } from "openai";
 import type { EmbeddingCreateParams } from "openai/resources/embeddings";
 
-import { Embeddings, type CreateEmbeddingsParams, type Embedding } from ".";
+import { type CreateEmbeddingsParams, EmbeddingsManager } from "./manager";
 
 type _OpenAICreateEmbeddingsParams = Omit<Partial<EmbeddingCreateParams>, "input" | keyof CreateEmbeddingsParams>;
 
@@ -11,7 +12,7 @@ export interface OpenAICreateEmbeddingsParams extends CreateEmbeddingsParams, _O
   model?: OpenAIEmbeddingModel;
 }
 
-export class OpenAIEmbeddings extends Embeddings {
+export class OpenAIEmbeddingsManager extends EmbeddingsManager {
   constructor(private _openai: OpenAI) {
     super();
   }

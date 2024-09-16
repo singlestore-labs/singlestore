@@ -114,7 +114,7 @@ Extend the ChatCompletions class to use a custom LLM for creating chat completio
 ```ts
 import { AI, type AnyChatCompletionTool, ChatCompletions } from "@singlestore/ai";
 
-class CustomChatCompletions<
+class CustomChatCompletionsManager<
   TChatCompletionTool extends AnyChatCompletionTool[] | undefined,
 > extends ChatCompletions<TChatCompletionTool> {
   constructor() {
@@ -136,7 +136,7 @@ class CustomChatCompletions<
 
 const ai = new AI({
   openAIApiKey: "<OPENAI_API_KEY>",
-  chatCompletions: new CustomChatCompletions(),
+  chatCompletions: new CustomChatCompletionsManager(),
 });
 ```
 
@@ -147,7 +147,7 @@ Create a custom embeddings class to use a custom LLM for creating embeddings.
 ```ts
 import { AI, Embeddings } from "@singlestore/ai";
 
-class CustomEmbeddings extends Embeddings {
+class CustomEmbeddingsManager extends Embeddings {
   constructor() {
     super();
   }
@@ -165,6 +165,6 @@ class CustomEmbeddings extends Embeddings {
 
 const ai = new AI({
   openAIApiKey: "<OPENAI_API_KEY>",
-  embeddings: new CustomEmbeddings(),
+  embeddings: new CustomEmbeddingsManager(),
 });
 ```
