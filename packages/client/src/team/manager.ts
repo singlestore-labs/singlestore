@@ -2,7 +2,7 @@ import type { Tail } from "@repo/utils";
 
 import { APIManager } from "../api/manager";
 
-import { Team, type TeamMemberTeamSchema, type TeamMemberUserSchema, type TeamSchema } from ".";
+import { Team, type TeamMemberTeamSchema, type TeamMemberUserSchema, type TeamSchema } from "./team";
 
 export interface CreateTeamBody {
   name: TeamSchema["name"];

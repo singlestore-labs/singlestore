@@ -1,10 +1,9 @@
 import { URLSearchParams } from "url";
 
-import type { WorkspaceSchema } from "..";
-import type { API } from "../../api";
 import type { PrivateConnectionSchema } from "../../private-connection";
+import type { WorkspaceSchema } from "../workspace";
 
-import { APIManager } from "../../api/manager";
+import { type API, APIManager } from "../../api";
 
 export interface GetWorkspacePrivateConnectionParams<TIsKai extends boolean | undefined> {
   isKai?: TIsKai;

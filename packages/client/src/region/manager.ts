@@ -1,4 +1,4 @@
-import type { Region, RegionSchema } from ".";
+import type { Region, RegionSchema } from "./region";
 
 import { APIManager } from "../api/manager";
 

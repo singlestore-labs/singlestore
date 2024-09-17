@@ -1,16 +1,17 @@
-import {
-  MessageLengthExceededError,
-  MessagesLengthExceededError,
-  type AnyAI,
-  type AnyChatCompletionTool,
-  type ChatCompletionMessage,
-  type ChatCompletionStream,
-  type CreateChatCompletionParams,
-  type CreateChatCompletionResult,
-  type MergeChatCompletionTools,
-} from "@singlestore/ai";
+import { MessageLengthExceededError, MessagesLengthExceededError } from "@singlestore/ai/chat-completions/errors";
 
-import type { AnyDatabase, FieldPacket, InferDatabaseType, ResultSetHeader, Table, TableName } from "@singlestore/client";
+import type { AnyAI } from "@singlestore/ai";
+import type {
+  AnyChatCompletionTool,
+  CreateChatCompletionParams,
+  MergeChatCompletionTools,
+  CreateChatCompletionResult,
+  ChatCompletionMessage,
+  ChatCompletionStream,
+} from "@singlestore/ai/chat-completions";
+import type { ResultSetHeader, FieldPacket } from "@singlestore/client";
+import type { AnyDatabase, InferDatabaseType } from "@singlestore/client/database";
+import type { TableName, Table } from "@singlestore/client/table";
 
 import { ChatMessage, type ChatMessagesTable } from "./message";
 

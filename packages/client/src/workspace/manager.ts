@@ -1,11 +1,10 @@
-import type { API } from "../api";
 import type { WorkspaceGroupSchema } from "../workspace-group";
 import type { Tail } from "@repo/utils";
 import type { AnyAI } from "@singlestore/ai";
 
-import { APIManager } from "../api/manager";
+import { APIManager, type API } from "../api";
 
-import { type UpdateWorkspaceBody, Workspace, type WorkspaceSchema } from ".";
+import { type WorkspaceSchema, type UpdateWorkspaceBody, Workspace } from "./workspace";
 
 interface CreateWorkspaceBody
   extends Pick<WorkspaceSchema, "name">,

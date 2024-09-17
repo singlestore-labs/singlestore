@@ -2,7 +2,7 @@ import type { Optional, Tail } from "@repo/utils";
 
 import { APIManager } from "../api/manager";
 
-import { Job, type JobParameter, type JobTargetConfig, type JobRuntime, type JobSchedule, JobSchema } from ".";
+import { Job, type JobParameter, type JobTargetConfig, type JobRuntime, type JobSchedule, type JobSchema } from "./job";
 
 export interface CreateJobBody {
   name?: JobSchema["name"];

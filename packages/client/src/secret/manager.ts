@@ -2,7 +2,7 @@ import type { Defined, Tail } from "@repo/utils";
 
 import { APIManager } from "../api/manager";
 
-import { Secret, type SecretSchema } from ".";
+import { Secret, type SecretSchema } from "./secret";
 
 export interface CreateSecretBody {
   name: SecretSchema["name"];

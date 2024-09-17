@@ -15,6 +15,26 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
+    },
+    "./chat": {
+      "types": "./dist/chat/index.d.ts",
+      "import": "./dist/chat/index.mjs",
+      "require": "./dist/chat/index.js"
+    },
+    "./chat/tools": {
+      "types": "./dist/chat/tools.d.ts",
+      "import": "./dist/chat/tools.mjs",
+      "require": "./dist/chat/tools.js"
+    },
+    "./session": {
+      "types": "./dist/session.d.ts",
+      "import": "./dist/session.mjs",
+      "require": "./dist/session.js"
+    },
+    "./message": {
+      "types": "./dist/message.d.ts",
+      "import": "./dist/message.mjs",
+      "require": "./dist/message.js"
     }
   },
   "scripts": {
@@ -26,7 +46,6 @@
   "dependencies": {
     "@singlestore/ai": "*",
     "@singlestore/client": "*",
-    "nanoid": "3.3.7",
     "zod": "^3.23.8"
   },
   "devDependencies": {

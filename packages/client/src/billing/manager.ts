@@ -5,7 +5,7 @@ import type {
   ComputeCreditBillingUsage,
   StorageAvgByteBilling,
   StorageAvgByteBillingUsage,
-} from ".";
+} from "./billing";
 
 import { APIManager } from "../api/manager";
 

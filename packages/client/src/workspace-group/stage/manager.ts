@@ -1,9 +1,8 @@
-import type { WorkspaceGroupSchema } from "..";
-import type { API } from "../../api";
+import type { WorkspaceGroupSchema } from "../workspace-group";
 
-import { APIManager } from "../../api/manager";
+import { type API, APIManager } from "../../api";
 
-import { WorkspaceGroupStage } from ".";
+import { WorkspaceGroupStage } from "./stage";
 
 export class WorkspaceGroupStageManager extends APIManager {
   protected _baseURL: string;

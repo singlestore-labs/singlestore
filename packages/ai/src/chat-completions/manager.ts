@@ -1,6 +1,6 @@
 import z from "zod";
 
-import type { ChatCompletion, ChatCompletionMessage, ChatCompletionStream, OnChatCompletionChunk } from ".";
+import type { ChatCompletion, ChatCompletionMessage, ChatCompletionStream, OnChatCompletionChunk } from "./chat-completion";
 import type { AnyChatCompletionTool } from "./tool";
 
 export interface CreateChatCompletionParams<

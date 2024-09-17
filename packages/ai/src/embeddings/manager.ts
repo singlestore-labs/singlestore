@@ -1,4 +1,4 @@
-import type { Embedding } from ".";
+import type { Embedding } from "./embedding";
 
 export interface CreateEmbeddingsParams {
   model?: string;
