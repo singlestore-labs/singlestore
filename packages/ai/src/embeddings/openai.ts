@@ -1,4 +1,4 @@
-import type { Embedding } from ".";
+import type { Embedding } from "./embedding";
 import type { OpenAI } from "openai";
 import type { EmbeddingCreateParams } from "openai/resources/embeddings";
 

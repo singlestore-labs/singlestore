@@ -1,6 +1,8 @@
-import { type AnyAI, ChatCompletionTool } from "@singlestore/ai";
-import { type AnyDatabase } from "@singlestore/client";
+import { ChatCompletionTool } from "@singlestore/ai/chat-completions";
 import z from "zod";
+
+import type { AnyAI } from "@singlestore/ai";
+import type { AnyDatabase } from "@singlestore/client/database";
 
 export function describeDatabaseChatTool<TDatabase extends AnyDatabase>(database: TDatabase) {
   return new ChatCompletionTool({

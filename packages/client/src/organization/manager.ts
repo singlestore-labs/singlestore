@@ -1,4 +1,4 @@
-import type { Organization, OrganizationSchema } from ".";
+import type { Organization, OrganizationSchema } from "./organization";
 
 import { APIManager } from "../api/manager";
 

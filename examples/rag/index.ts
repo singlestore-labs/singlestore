@@ -2,7 +2,8 @@ import { createInterface } from "readline/promises";
 
 import { AI } from "@singlestore/ai";
 import { SingleStoreClient } from "@singlestore/client";
-import { describeDatabaseChatTool, RAG, textToSQLChatTool, vectorSearchChatTool } from "@singlestore/rag";
+import { RAG } from "@singlestore/rag";
+import { describeDatabaseChatTool, textToSQLChatTool, vectorSearchChatTool } from "@singlestore/rag/chat/tools";
 
 /**
  * Interface for defining the database schema.

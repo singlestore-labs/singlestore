@@ -1,5 +1,8 @@
-import type { AnyAI, ChatCompletionMessage } from "@singlestore/ai";
-import type { AnyDatabase, FieldPacket, InferDatabaseType, ResultSetHeader, Table, TableName } from "@singlestore/client";
+import type { AnyAI } from "@singlestore/ai";
+import type { ChatCompletionMessage } from "@singlestore/ai/chat-completions";
+import type { ResultSetHeader, FieldPacket } from "@singlestore/client";
+import type { AnyDatabase, InferDatabaseType } from "@singlestore/client/database";
+import type { TableName, Table } from "@singlestore/client/table";
 
 export interface ChatMessageConfig extends Pick<ChatMessage, "sessionId" | "role" | "content" | "store" | "tableName"> {}
 

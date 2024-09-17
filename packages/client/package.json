@@ -15,6 +15,96 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
+    },
+    "./api": {
+      "types": "./dist/api.d.ts",
+      "import": "./dist/api.mjs",
+      "require": "./dist/api.js"
+    },
+    "./billing": {
+      "types": "./dist/billing.d.ts",
+      "import": "./dist/billing.mjs",
+      "require": "./dist/billing.js"
+    },
+    "./column": {
+      "types": "./dist/column.d.ts",
+      "import": "./dist/column.mjs",
+      "require": "./dist/column.js"
+    },
+    "./connection": {
+      "types": "./dist/connection.d.ts",
+      "import": "./dist/connection.mjs",
+      "require": "./dist/connection.js"
+    },
+    "./database": {
+      "types": "./dist/database.d.ts",
+      "import": "./dist/database.mjs",
+      "require": "./dist/database.js"
+    },
+    "./job": {
+      "types": "./dist/job.d.ts",
+      "import": "./dist/job.mjs",
+      "require": "./dist/job.js"
+    },
+    "./organization": {
+      "types": "./dist/organization.d.ts",
+      "import": "./dist/organization.mjs",
+      "require": "./dist/organization.js"
+    },
+    "./private-connection": {
+      "types": "./dist/private-connection.d.ts",
+      "import": "./dist/private-connection.mjs",
+      "require": "./dist/private-connection.js"
+    },
+    "./query": {
+      "types": "./dist/query.d.ts",
+      "import": "./dist/query.mjs",
+      "require": "./dist/query.js"
+    },
+    "./region": {
+      "types": "./dist/region.d.ts",
+      "import": "./dist/region.mjs",
+      "require": "./dist/region.js"
+    },
+    "./secret": {
+      "types": "./dist/secret.d.ts",
+      "import": "./dist/secret.mjs",
+      "require": "./dist/secret.js"
+    },
+    "./table": {
+      "types": "./dist/table.d.ts",
+      "import": "./dist/table.mjs",
+      "require": "./dist/table.js"
+    },
+    "./team": {
+      "types": "./dist/team.d.ts",
+      "import": "./dist/team.mjs",
+      "require": "./dist/team.js"
+    },
+    "./workspace": {
+      "types": "./dist/workspace/index.d.ts",
+      "import": "./dist/workspace/index.mjs",
+      "require": "./dist/workspace/index.js"
+    },
+    "./workspace/private-connection": {
+      "types": "./dist/workspace/private-connection.d.ts",
+      "import": "./dist/workspace/private-connection.mjs",
+      "require": "./dist/workspace/private-connection.js"
+    },
+    "./workspace-group": {
+      "types": "./dist/workspace-group/index.d.ts",
+      "import": "./dist/workspace-group/index.mjs",
+      "require": "./dist/workspace-group/index.js"
+    },
+    "./stage": {
+      "types": "./dist/workspace-group/stage.d.ts",
+      "import": "./dist/workspace-group/stage.mjs",
+      "require": "./dist/workspace-group/stage.js"
+    },
+    "./storage": {
+      "types": "./dist/workspace-group/storage.d.ts",
+      "import": "./dist/workspace-group/storage.mjs",
+      "require": "./dist/workspace-group/storage.js"
     }
   },
   "scripts": {

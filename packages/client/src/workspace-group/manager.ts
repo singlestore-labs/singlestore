@@ -1,13 +1,16 @@
-import type { OrganizationManager } from "../organization/manager";
-import type { RegionName } from "../region";
-import type { RegionManager } from "../region/manager";
 import type { Tail } from "@repo/utils";
 import type { AnyAI } from "@singlestore/ai";
 
-import { type API } from "../api";
-import { APIManager } from "../api/manager";
+import { type API, APIManager } from "../api";
+import { OrganizationManager } from "../organization";
+import { type RegionName, RegionManager } from "../region";
 
-import { WorkspaceGroup, type WorkspaceGroupUpdateWindow, type WorkspaceGroupSchema, updateWindowDaysMap } from ".";
+import {
+  WorkspaceGroup,
+  type WorkspaceGroupUpdateWindow,
+  type WorkspaceGroupSchema,
+  updateWindowDaysMap,
+} from "./workspace-group";
 
 export interface CreateWorkspaceGroupBody {
   name: WorkspaceGroupSchema["name"];

@@ -5,9 +5,9 @@ import type { WorkspaceSchema } from "../workspace";
 import type { Tail } from "@repo/utils";
 import type { ResultSetHeader } from "mysql2/promise";
 
-import { TableManager } from "../table/manager";
+import { TableManager } from "../table";
 
-import { Database, type DatabaseType, type DatabaseSchema } from ".";
+import { type DatabaseType, Database, type DatabaseSchema } from "./database";
 
 export class DatabaseManager<TWorkspaceName extends WorkspaceSchema["name"] | undefined, TAI extends AnyAI | undefined> {
   constructor(

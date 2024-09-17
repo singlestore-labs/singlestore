@@ -2,9 +2,9 @@ import { ResultSetHeader } from "mysql2/promise";
 
 import type { ConnectionClient } from "../connection";
 import type { DatabaseName } from "../database";
-import type { TableColumnName, TableName, TableType } from "../table";
+import type { TableName, TableType, TableColumnName } from "../table";
 
-import { type AddColumnSchema, Column, type ColumnName } from ".";
+import { type ColumnName, Column, type AddColumnSchema } from "./column";
 
 export class ColumnManager<TTableName extends TableName, TTableType extends TableType, TDatabaseName extends DatabaseName> {
   private _path: string;

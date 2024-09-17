@@ -1,10 +1,10 @@
 import { ResultSetHeader } from "mysql2/promise";
 
 import type { ConnectionClient } from "../connection";
-import type { DatabaseTableName, DatabaseType } from "../database";
+import type { DatabaseType, DatabaseTableName } from "../database";
 import type { AnyAI } from "@singlestore/ai";
 
-import { Table, type TableName, type TableType, type CreateTableSchema } from ".";
+import { type TableName, type TableType, type CreateTableSchema, Table } from "./table";
 
 export class TableManager<TDatabaseType extends DatabaseType, TAI extends AnyAI | undefined> {
   constructor(

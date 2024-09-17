@@ -1,8 +1,7 @@
 import { BadRequestError, type OpenAI } from "openai";
 import zodToJsonSchema from "zod-to-json-schema";
 
-import type { ChatCompletionMessage, ChatCompletionStream } from ".";
-import type { AnyChatCompletionTool, MergeChatCompletionTools } from "./tool";
+import type { ChatCompletionMessage, ChatCompletionStream } from "./chat-completion";
 import type {
   ChatCompletionChunk,
   ChatCompletionCreateParamsBase,
@@ -12,9 +11,9 @@ import type {
 } from "openai/resources/chat/completions.mjs";
 import type { Stream } from "openai/streaming.mjs";
 
-import { MessageLengthExceededError, MessagesLengthExceededError } from "./errors";
-import { parseLengthErrorMessage } from "./errors/lib/parse-length-error-message";
+import { MessageLengthExceededError, MessagesLengthExceededError, parseLengthErrorMessage } from "./errors";
 import { ChatCompletionsManager, type CreateChatCompletionParams, type CreateChatCompletionResult } from "./manager";
+import { type AnyChatCompletionTool, type MergeChatCompletionTools } from "./tool";
 
 export type OpenAIChatCompletionModel = ChatCompletionCreateParamsBase["model"];
 

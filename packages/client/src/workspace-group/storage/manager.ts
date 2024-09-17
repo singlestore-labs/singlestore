@@ -1,8 +1,7 @@
-import type { WorkspaceGroupSchema } from "..";
-import type { API } from "../../api";
 import type { Region, RegionName, RegionSchema } from "../../region";
+import type { WorkspaceGroupSchema } from "../workspace-group";
 
-import { APIManager } from "../../api/manager";
+import { type API, APIManager } from "../../api";
 
 export interface ReplicatedDatabaseSchema {
   region: RegionName;

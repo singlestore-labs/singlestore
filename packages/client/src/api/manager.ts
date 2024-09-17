@@ -1,4 +1,4 @@
-import type { API } from ".";
+import type { API } from "./api";
 
 export abstract class APIManager {
   protected abstract readonly _baseURL: string;
