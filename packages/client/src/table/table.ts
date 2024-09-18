@@ -5,7 +5,7 @@ import type { AnyAI } from "@singlestore/ai";
 import type { CreateChatCompletionResult } from "@singlestore/ai/chat-completions";
 import type { FieldPacket, ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
-import { type ColumnType, type AddColumnSchema, ColumnManager, Column } from "../column";
+import { type ColumnType, type AddColumnSchema, ColumnManager, Column, type ColumnName } from "../column";
 import {
   type JoinClause,
   type SelectClause,
@@ -17,7 +17,7 @@ import {
 
 export type TableName = string;
 
-export interface TableType extends Record<TableName, ColumnType> {}
+export interface TableType extends Record<ColumnName, ColumnType> {}
 
 export interface TableSchema<TName extends TableName, TType extends TableType> {
   name: TName;
