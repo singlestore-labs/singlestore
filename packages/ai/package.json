@@ -27,9 +27,9 @@
       "require": "./dist/chat-completions/errors.js"
     },
     "./embeddings": {
-      "types": "./dist/embeddings/index.d.ts",
-      "import": "./dist/embeddings/index.mjs",
-      "require": "./dist/embeddings/index.js"
+      "types": "./dist/embeddings.d.ts",
+      "import": "./dist/embeddings.mjs",
+      "require": "./dist/embeddings.js"
     }
   },
   "scripts": {

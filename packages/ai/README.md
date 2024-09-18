@@ -1,170 +1,236 @@
-# SingleStoreAI
+# SingleStore AI
 
-A module that enhances the `@singlestore/client` package with AI functionality, allowing you to integrate advanced AI features like embeddings and chat completions.
+A module that enhances the [`@singlestore/client`](https://github.com/singlestore-labs/singlestore/tree/main/packages/client) package with AI functionality, allowing you to integrate AI features like embeddings and chat completions.
+
+<details>
+<summary>
 
 ## Table of Contents
 
+</summary>
+
 - [Installation](#installation)
-- [Usage Examples](#usage-examples)
-  - [Create an Instance](#create-an-instance)
-  - [Generate Embeddings](#generate-embeddings)
-  - [Create a Chat Completion](#create-a-chat-completion)
-  - [Stream Chat Completions](#stream-chat-completions)
-  - [Develop a Chat Completion Tool](#develop-a-chat-completion-tool)
-  - [Custom Chat Completions](#custom-chat-completions)
-  - [Custom Embeddings](#custom-embeddings)
+- [Usage](#usage)
+  - [Initialization](#initialization)
+    - [Default](#default)
+    - [With Custom Embeddings Manager](#with-custom-embeddings-manager)
+    - [With Custom Chat Completions Manager](#with-custom-chat-completions-manager)
+    - [With Custom Chat Completion Tools](#with-custom-chat-completion-tools)
+    - [Additional Notes](#additional-notes)
+  - [Embeddings](#embeddings)
+    - [Get Embedding Models](#get-embedding-models)
+    - [Create Embeddings](#create-embeddings)
+      - [Create Single Embedding](#create-single-embedding)
+      - [Create Multiple Embeddings](#create-multiple-embeddings)
+      - [Additional Notes](#additional-notes)
+  - [Chat Completions](#chat-completions)
+    - [Get Chat Completion Models](#get-chat-completion-models)
+    - [Create Chat Completion](#create-chat-completion)
+      - [As String](#as-string)
+      - [As Stream](#as-stream)
+      - [Additional Notes](#additional-notes-1)
+
+</details>
 
 ## Installation
-
-To install the `@singlestore/ai` package, run the following command:
 
 ```bash
 npm install @singlestore/ai
 ```
 
-## Usage Examples
+## Usage
 
-### Create an Instance
+### Initialization
 
-First, create an instance of the `SingleStoreAI` class using your OpenAI API key.
+The `AI` class can be initialized in various ways depending on your requirements. You can start with the default setup, or extend it with custom managers for embeddings and chat completions, or even add custom tools.
+
+#### Default
+
+This is the simplest way to initialize the `AI` class, using an OpenAI API key.
 
 ```ts
 import { AI } from "@singlestore/ai";
 
-const ai = new SingleStoreAI({ openAIApiKey: "<OPENAI_API_KEY>" });
+const ai = new AI({ openAIApiKey: "<OPENAI_API_KEY>" });
 ```
 
-### Generate Embeddings
+#### With Custom Embeddings Manager
 
-Generate embeddings for a given input text using the `create` method.
-
-```ts
-const input = "Hi!";
-const embeddings = await ai.embeddings.create(input);
-console.log(embeddings);
-```
-
-### Create a Chat Completion
-
-Create a chat completion.
+You can define a custom embeddings manager by extending the `EmbeddingsManager` class to handle how embeddings are created and models are selected.
 
 ```ts
-const prompt = "Hi, how are you?";
-const chatCompletion = await ai.chatCompletions.create({
-  prompt,
-  model: "gpt-4o",
-  systemRole: "You are a helpful assistant",
+import { type CreateEmbeddingsParams, type Embedding, EmbeddingsManager } from "@singlestore/ai/embeddings";
+
+class CustomEmbeddingsManager extends EmbeddingsManager {
+  getModels(): string[] {
+    return ["<MODEL_NAME>"];
+  }
+
+  async create(input: string | string[], params?: CreateEmbeddingsParams): Promise<Embedding[]> {
+    const embeddings: Embedding[] = await customFnCall();
+    return embeddings;
+  }
+}
+
+const ai = new AI({
+  openAIApiKey: "<OPENAI_API_KEY>",
+  embeddingsManager: new CustomEmbeddingsManager(),
 });
-console.log(chatCompletion);
 ```
 
-### Stream Chat Completions
+#### With Custom Chat Completions Manager
 
-Stream chat completions to handle responses in real time.
+You can define a custom chat completions manager by extending the `ChatCompletionsManager` class. This allows you to modify how chat completions are handled, whether in a streaming or non-streaming fashion.
 
 ```ts
-const prompt = "Hi, how are you?";
+import {
+  type AnyChatCompletionTool,
+  ChatCompletionsManager,
+  type CreateChatCompletionParams,
+  type CreateChatCompletionResult,
+  type MergeChatCompletionTools,
+} from "@singlestore/ai/chat-completions";
 
-const stream = await ai.chatCompletions.create({
-  prompt,
-  model: "gpt-4o",
-  systemRole: "You are a helpful assistant",
-  stream: true,
+type ChatCompletionTools = undefined; // If an array of custom tools is created, use `typeof tools`.
+
+class CustomChatCompletionsManager extends ChatCompletionsManager<ChatCompletionTools> {
+  getModels(): Promise<string[]> | string[] {
+    return ["<MODEL_NAME>"];
+  }
+
+  create<TStream extends boolean, TTools extends AnyChatCompletionTool[] | undefined>(
+    params: CreateChatCompletionParams<TStream, MergeChatCompletionTools<ChatCompletionTools, TTools>>,
+  ): Promise<CreateChatCompletionResult<TStream>> {
+    if (params.stream) {
+      const stream = customFnCall();
+      return stream as Promise<CreateChatCompletionResult<TStream>>;
+    }
+
+    const chatCompletion = await customFnCall();
+
+    return chatCompletion as Promise<CreateChatCompletionResult<TStream>>;
+  }
+}
+
+const ai = new AI({
+  openAIApiKey: "<OPENAI_API_KEY>",
+  chatCompletionsManager: new CustomChatCompletionsManager(),
 });
-
-const onChunk: OnChatCompletionChunk = (chunk) => {
-  console.log("onChunk:", chunk);
-};
-
-const chatCompletion = await ai.chatCompletions.handleStream(stream, onChunk);
-console.log(chatCompletion);
 ```
 
-### Develop a Chat Completion Tool
+#### With Custom Chat Completion Tools
 
-Create a custom chat completion tool to handle specific tasks.
+You can also create custom tools to extend the functionality of the chat completions by defining them with the `ChatCompletionTool` class.
 
 ```ts
-import { AI, ChatCompletionTool } from "@singlestore/ai";
+import { ChatCompletionTool } from "@singlestore/ai/chat-completions";
 import { z } from "zod";
 
-const findCityInfoTool = new ChatCompletionTool({
-  name: "find_city_info",
-  description: "Useful for finding and displaying information about a city.",
-  params: z.object({ name: z.string().describe("The city name") }),
+const customTool = new ChatCompletionTool({
+  name: "<TOOL_NAME>",
+  description: "<TOOL_DESCRIPTION>",
+  params: z.object({ paramName: z.string().describe("<PARAM_DESCRIPTION>") }),
   call: async (params) => {
-    const info = `${params.name} is known as a great city!`;
-    return { name: "find_city_info", params, value: JSON.stringify(info) };
+    const value = await anyFnCall(params);
+    return { name: "<TOOL_NAME>", params, value: JSON.stringify(value) };
   },
 });
 
 const ai = new AI({
-  openAIApiKey: "<OPENAI_API_KEY>",
-  chatCompletionTools: [findCityInfoTool],
+  tools: [customTool],
+  ...
 });
-
-const chatCompletion = await ai.chatCompletions.create({ prompt: "Find info about Vancouver." });
-console.log(chatCompletion);
 ```
 
-### Custom Chat Completions
+#### Additional Notes
 
-Extend the ChatCompletions class to use a custom LLM for creating chat completions.
+- If you declare a custom embeddings manager and a custom chat completions manager, the `openAIApiKey` parameter is not required.
+- Custom managers and tools allow for extensive customization, giving you the flexibility to integrate AI functionality tailored to your specific needs.
+
+---
+
+### Embeddings
+
+#### Get Embedding Models
 
 ```ts
-import { AI, type AnyChatCompletionTool, ChatCompletions } from "@singlestore/ai";
-
-class CustomChatCompletionsManager<
-  TChatCompletionTool extends AnyChatCompletionTool[] | undefined,
-> extends ChatCompletions<TChatCompletionTool> {
-  constructor() {
-    super();
-  }
-
-  getModels(): Promise<string[]> | string[] {
-    // Your implementation
-    return [];
-  }
-
-  async create<TStream extends boolean | undefined>(
-    params: CreateChatCompletionParams<TStream, TChatCompletionTool>,
-  ): Promise<CreateChatCompletionResult<TStream>> {
-    // Your implementation
-    return {} as CreateChatCompletionResult<TStream>;
-  }
-}
-
-const ai = new AI({
-  openAIApiKey: "<OPENAI_API_KEY>",
-  chatCompletions: new CustomChatCompletionsManager(),
-});
+const models = ai.embeddings.getModels();
 ```
 
-### Custom Embeddings
+---
 
-Create a custom embeddings class to use a custom LLM for creating embeddings.
+#### Create Embeddings
+
+##### Create Single Embedding
 
 ```ts
-import { AI, Embeddings } from "@singlestore/ai";
-
-class CustomEmbeddingsManager extends Embeddings {
-  constructor() {
-    super();
-  }
-
-  getModels(): string[] {
-    // Your implementation
-    return [];
-  }
-
-  async create(input: string | string[], params?: CreateEmbeddingsParams): Promise<Embedding[]> {
-    // Your implementation
-    return [];
-  }
-}
-
-const ai = new AI({
-  openAIApiKey: "<OPENAI_API_KEY>",
-  embeddings: new CustomEmbeddingsManager(),
+const embeddings = await ai.embeddings.create("<INPUT>", {
+  model: "<MODEL_NAME>", // Optional
+  dimensions: "<DIMENSION>", // Optional
 });
 ```
+
+##### Create Multiple Embeddings
+
+```ts
+const embeddings = await ai.embeddings.create(["<INPUT>", "<INPUT_2>"], ...);
+```
+
+##### Additional Notes
+
+- If a custom `EmbeddingsManager` is provided, all the parameters can still be passed to the `ai.embeddings.create` method, allowing for custom handling and logic while preserving the same interface.
+
+---
+
+### Chat Completions
+
+#### Get Chat Completion Models
+
+```ts
+const models = ai.chatCompletions.getModels();
+```
+
+#### Create Chat Completion
+
+The `create` method allows you to generate chat completions either as a complete string or in a streamed fashion, depending on the `stream` option.
+
+##### As String
+
+Performs a chat completion and returns the result as a complete string.
+
+```ts
+const chatCompletion = await ai.chatCompletions.create({
+  stream: false,
+  prompt: "<PROMPT>",
+  model: "<MODEL_NAME>", // Optional
+  systemRole: "<SYSTEM_ROLE>", // Optional
+  messages: [{ role: "user", content: "<CONTENT>" }], // Optional
+});
+```
+
+##### As Stream
+
+Performs a chat completion and returns the result as a stream of data chunks.
+
+```ts
+const stream = await ai.chatCompletions.create({
+  stream: true,
+  prompt: "<PROMPT>",
+  model: "<MODEL_NAME>", // Optional
+  systemRole: "<SYSTEM_ROLE>", // Optional
+  messages: [{ role: "user", content: "<CONTENT>" }], // Optional
+  tools: [...] // Optional
+});
+
+const chatCompletion = await ai.chatCompletions.handleStream(stream, async (chunk) => {
+  await customFnCall(chunk);
+});
+```
+
+##### Additional Notes
+
+- When using `stream: true`, the `handleStream` function processes the stream and accepts a callback function as the second argument. The callback handles each new chunk of data as it arrives.
+- You can use the messages array to provide additional context for the chat completion, such as user messages or system instructions.
+- If a custom `ChatCompletionsManager` is provided, all the parameters can still be passed to the `ai.chatCompletions.create` method, allowing for custom handling and logic while preserving the same interface.
+
+---
