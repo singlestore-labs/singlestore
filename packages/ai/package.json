@@ -1,6 +1,6 @@
 {
   "name": "@singlestore/ai",
-  "version": "0.0.28",
+  "version": "0.0.29",
   "license": "Apache-2.0",
   "sideEffects": false,
   "main": "./dist/index.js",
@@ -16,20 +16,20 @@
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
     },
+    "./embeddings": {
+      "types": "./dist/embeddings/index.d.ts",
+      "import": "./dist/embeddings/index.mjs",
+      "require": "./dist/embeddings/index.js"
+    },
     "./chat-completions": {
       "types": "./dist/chat-completions/index.d.ts",
       "import": "./dist/chat-completions/index.mjs",
       "require": "./dist/chat-completions/index.js"
     },
     "./chat-completions/errors": {
-      "types": "./dist/chat-completions/errors.d.ts",
-      "import": "./dist/chat-completions/errors.mjs",
-      "require": "./dist/chat-completions/errors.js"
-    },
-    "./embeddings": {
-      "types": "./dist/embeddings.d.ts",
-      "import": "./dist/embeddings.mjs",
-      "require": "./dist/embeddings.js"
+      "types": "./dist/chat-completions/errors/index.d.ts",
+      "import": "./dist/chat-completions/errors/index.mjs",
+      "require": "./dist/chat-completions/errors/index.js"
     }
   },
   "scripts": {
