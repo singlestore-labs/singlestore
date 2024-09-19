@@ -251,7 +251,7 @@ const client = new SingleStoreClient({ ai });
 #### Additional Notes
 
 - The SingleStoreClient class is flexible, allowing you to pass only the features you need (e.g., AI, API key). It will automatically configure the services based on the provided options.
-- You can also use custom LLMs instead of the pre-installed OpenAI. To do this, see the `@singlestore/ai` package [documentation](https://github.com/singlestore-labs/singlestore/tree/update_readme/packages/ai#singlestoreai).
+- You can also use custom LLMs instead of the pre-installed OpenAI. To do this, see the [`@singlestore/ai`](https://github.com/singlestore-labs/singlestore/tree/main/packages/ai) package [documentation](https://github.com/singlestore-labs/singlestore/blob/main/packages/ai/README.md).
 
 ---
 
@@ -320,7 +320,7 @@ const { workspaceGroup, adminPassword } = await client.workspaceGroup.create({
 
 - Only the `name` and `regionName` fields are required to create a workspace group. All other fields are optional.
 - If the `adminPassword` value is not provided, a generated password is returned.
-- To find all available `regionName` values, refer to this [link](https://github.com/singlestore-labs/singlestore/blob/a324301908b7c12751022fc7dd6edd374cbf2de0/packages/client/src/region/index.ts#L3).
+- To find all available `regionName` values, refer to this [link](https://github.com/singlestore-labs/singlestore/blob/main/packages/client/src/region/region.ts#L3).
 
 ---
 
@@ -485,7 +485,7 @@ const workspace = await workspaceGroup.workspace.create({
 ##### Additional Notes
 
 - Only the `name` field is required to create a workspace. All other fields are optional.
-- To find all available `size` values, refer to this [link](https://github.com/singlestore-labs/singlestore/blob/67e9c837465c130525300a8fdff7acb9abc6e056/packages/client/src/workspace/workspace.ts#L8).
+- To find all available `size` values, refer to the [SingleStore Helios Pricing](https://www.singlestore.com/cloud-pricing/) page.
 
 ---
 

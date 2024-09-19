@@ -5,7 +5,8 @@ import { APIManager, type API } from "../api";
 import { type CreateWorkspaceConnectionConfig, WorkspaceConnection } from "./connection";
 import { WorkspacePrivateConnectionManager } from "./private-connection";
 
-export type WorkspaceSize = "S-00";
+// Ref: https://www.singlestore.com/cloud-pricing/
+export type WorkspaceSize = string;
 
 export interface WorkspaceResumeAttachmentSchema {
   attachment: "READWRITE" | "READONLY";
