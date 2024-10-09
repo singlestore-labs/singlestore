@@ -197,6 +197,8 @@ The SingleStore Client is a package designed for interacting with the SingleStor
   - [Storage](#storage)
     - [Get Storage Regions](#get-storage-regions)
     - [Get Storage Status](#get-storage-status)
+  - [Connection](#connection)
+    - [Execute Custom Query](#execute-custom-query)
 
 </details>
 
@@ -1604,6 +1606,16 @@ const regions = await workspaceGroup.storage.getRegions();
 
 ```ts
 const status = await workspaceGroup.storage.getStatus();
+```
+
+---
+
+### Connection
+
+#### Execute Custom Query
+
+```ts
+const result = await connection.client.execute("<SQL_QUERY>");
 ```
 
 ---

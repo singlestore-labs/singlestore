@@ -15,7 +15,7 @@ export interface SingleStoreClientConfig<TAI extends AnyAI | undefined> {
   apiKey?: string;
 }
 
-export interface ConnectWorkspaceConfig<TName extends WorkspaceSchema["name"] | undefined, TAI extends AnyAI | undefined>
+export interface ConnectConfig<TName extends WorkspaceSchema["name"] | undefined, TAI extends AnyAI | undefined>
   extends Omit<CreateWorkspaceConnectionConfig<TName, TAI>, "ai"> {}
 
 export class SingleStoreClient<TAI extends AnyAI | undefined = undefined> {
@@ -43,7 +43,7 @@ export class SingleStoreClient<TAI extends AnyAI | undefined = undefined> {
     this.workspaceGroup = new WorkspaceGroupManager(this._api, this._ai, this.organization, this.region);
   }
 
-  connect<TName extends WorkspaceSchema["name"] | undefined = undefined>(config: ConnectWorkspaceConfig<TName, TAI>) {
+  connect<TName extends WorkspaceSchema["name"] | undefined = undefined>(config: ConnectConfig<TName, TAI>) {
     return WorkspaceConnection.create({ ...config, ai: this._ai });
   }
 }

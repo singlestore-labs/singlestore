@@ -1,8 +1,7 @@
 import type { ConnectionClient } from "../connection";
 import type { DatabaseType, DatabaseName } from "../database";
 import type { Optional } from "@repo/utils";
-import type { AnyAI } from "@singlestore/ai";
-import type { CreateChatCompletionResult } from "@singlestore/ai/chat-completions";
+import type { AnyAI, CreateChatCompletionResult } from "@singlestore/ai";
 import type { FieldPacket, ResultSetHeader, RowDataPacket } from "mysql2/promise";
 
 import { type ColumnType, type AddColumnSchema, ColumnManager, Column, type ColumnName } from "../column";

@@ -1,6 +1,5 @@
 import { AI } from "@singlestore/ai";
-import { SingleStoreClient } from "@singlestore/client";
-import { DatabaseTablesToRecords } from "@singlestore/client/database";
+import { SingleStoreClient, type DatabaseTablesToRecords } from "@singlestore/client";
 
 /**
  * Main function to set up and interact with the SingleStore database
