@@ -54,7 +54,7 @@ A module that enhances the [`@singlestore/client`](https://github.com/singlestor
     - [Delete Chat Message](#delete-chat-message)
       - [By Condition](#by-condition-8)
       - [Specific](#specific-5)
-  - [Tools]
+  - [Tools](#tools)
 
 </details>
 
