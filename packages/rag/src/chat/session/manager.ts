@@ -63,7 +63,7 @@ export class ChatSessionManager<TAI extends AnyAI, TTools extends AnyChatComplet
   >(params?: TParams): Promise<_ReturnType> {
     const rows = await this._database.table
       .use<TableName, ChatSessionTable>(this.tableName)
-      .find({ ...params, where: { ...params?.where, chatID: this.chatID } });
+      .find({ ...(params as any), where: { ...params?.where, chatID: this.chatID } });
 
     const sessions = rows.map((row) => {
       return new ChatSession(

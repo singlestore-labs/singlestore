@@ -47,7 +47,7 @@ export class ChatMessageManager {
   >(params?: TParams): Promise<_ReturnType> {
     const rows = await this._database.table
       .use<TableName, ChatMessageTable>(this._tableName)
-      .find({ ...params, where: { ...params?.where, sessionID: this.sessionID } });
+      .find({ ...(params as any), where: { ...params?.where, sessionID: this.sessionID } });
 
     const sessions = rows.map((row) => {
       return new ChatMessage(this._database, this._tableName, this.sessionID, row.id, row.role, row.content, row.createdAt);

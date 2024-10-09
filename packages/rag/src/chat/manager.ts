@@ -86,7 +86,7 @@ export class ChatManager<TAI extends AnyAI> {
     _ReturnType = TParams extends { where: { id: number } } ? Chat<TAI, TTools> | undefined : Chat<TAI, TTools>[],
   >(config?: FindChatConfig<TTools>, params?: TParams): Promise<_ReturnType> {
     const tableName = config?.tableName ?? "chats";
-    const rows = await this._database.table.use<TableName, ChatTable>(tableName).find(params);
+    const rows = await this._database.table.use<TableName, ChatTable>(tableName).find(params as any);
     const chats = rows.map((row) => {
       return new Chat(
         this._database,
