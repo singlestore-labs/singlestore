@@ -49,7 +49,7 @@ export type InferDatabaseType<T> = T extends Database<infer TType, any, any> ? T
 
 export type DatabaseTablesToRecords<TTables extends DatabaseType["tables"]> = { [K in keyof TTables]: TTables[K][] };
 
-export type AnyDatabase = Database<DatabaseType, any, any>;
+export type AnyDatabase = Database<any, any, any>;
 
 export class Database<
   TType extends DatabaseType,
