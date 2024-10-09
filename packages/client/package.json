@@ -1,6 +1,6 @@
 {
   "name": "@singlestore/client",
-  "version": "0.0.39",
+  "version": "0.0.40",
   "license": "Apache-2.0",
   "sideEffects": false,
   "main": "./dist/index.js",
@@ -15,91 +15,6 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
-    },
-    "./api": {
-      "types": "./dist/api/index.d.ts",
-      "import": "./dist/api/index.mjs",
-      "require": "./dist/api/index.js"
-    },
-    "./billing": {
-      "types": "./dist/billing/index.d.ts",
-      "import": "./dist/billing/index.mjs",
-      "require": "./dist/billing/index.js"
-    },
-    "./column": {
-      "types": "./dist/column/index.d.ts",
-      "import": "./dist/column/index.mjs",
-      "require": "./dist/column/index.js"
-    },
-    "./database": {
-      "types": "./dist/database/index.d.ts",
-      "import": "./dist/database/index.mjs",
-      "require": "./dist/database/index.js"
-    },
-    "./job": {
-      "types": "./dist/job/index.d.ts",
-      "import": "./dist/job/index.mjs",
-      "require": "./dist/job/index.js"
-    },
-    "./organization": {
-      "types": "./dist/organization/index.d.ts",
-      "import": "./dist/organization/index.mjs",
-      "require": "./dist/organization/index.js"
-    },
-    "./private-connection": {
-      "types": "./dist/private-connection/index.d.ts",
-      "import": "./dist/private-connection/index.mjs",
-      "require": "./dist/private-connection/index.js"
-    },
-    "./query": {
-      "types": "./dist/query/index.d.ts",
-      "import": "./dist/query/index.mjs",
-      "require": "./dist/query/index.js"
-    },
-    "./region": {
-      "types": "./dist/region/index.d.ts",
-      "import": "./dist/region/index.mjs",
-      "require": "./dist/region/index.js"
-    },
-    "./secret": {
-      "types": "./dist/secret/index.d.ts",
-      "import": "./dist/secret/index.mjs",
-      "require": "./dist/secret/index.js"
-    },
-    "./table": {
-      "types": "./dist/table/index.d.ts",
-      "import": "./dist/table/index.mjs",
-      "require": "./dist/table/index.js"
-    },
-    "./team": {
-      "types": "./dist/team/index.d.ts",
-      "import": "./dist/team/index.mjs",
-      "require": "./dist/team/index.js"
-    },
-    "./workspace": {
-      "types": "./dist/workspace/index.d.ts",
-      "import": "./dist/workspace/index.mjs",
-      "require": "./dist/workspace/index.js"
-    },
-    "./workspace/private-connection": {
-      "types": "./dist/workspace/private-connection/index.d.ts",
-      "import": "./dist/workspace/private-connection/index.mjs",
-      "require": "./dist/workspace/private-connection/index.js"
-    },
-    "./workspace-group": {
-      "types": "./dist/workspace-group/index.d.ts",
-      "import": "./dist/workspace-group/index.mjs",
-      "require": "./dist/workspace-group/index.js"
-    },
-    "./stage": {
-      "types": "./dist/stage/index.d.ts",
-      "import": "./dist/stage/index.mjs",
-      "require": "./dist/stage/index.js"
-    },
-    "./storage": {
-      "types": "./dist/storage/index.d.ts",
-      "import": "./dist/storage/index.mjs",
-      "require": "./dist/storage/index.js"
     }
   },
   "scripts": {
