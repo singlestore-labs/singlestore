@@ -9,8 +9,8 @@ A module that enhances the [`@singlestore/client`](https://github.com/singlestor
 
 </summary>
 
-- [Example Apps](#example-apps)
 - [Installation](#installation)
+- [Example Apps](#example-apps)
 - [Usage](#usage)
   - [Initialization](#initialization)
     - [Additional Notes](#additional-notes)
@@ -58,15 +58,15 @@ A module that enhances the [`@singlestore/client`](https://github.com/singlestor
 
 </details>
 
-## Example Apps
-
-- [Terminal Chat](https://github.com/singlestore-labs/singlestore/blob/main/examples/rag)
-
 ## Installation
 
 ```bash
 npm install @singlestore/rag @singlestore/ai @singlestore/client
 ```
+
+## Example Apps
+
+- [Terminal Chat](https://github.com/singlestore-labs/singlestore/blob/main/examples/rag)
 
 ## Usage
 

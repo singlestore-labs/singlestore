@@ -10,6 +10,7 @@ The SingleStore Client is a package designed for interacting with the SingleStor
 </summary>
 
 - [Installation](#installation)
+- [Example Apps](#example-apps)
 - [Usage](#usage)
   - [Initialization](#initialization)
     - [Default](#default)
@@ -207,6 +208,11 @@ The SingleStore Client is a package designed for interacting with the SingleStor
 ```bash
 npm install @singlestore/client
 ```
+
+## Example Apps
+
+- [Next.js AI Notes App](https://github.com/singlestore-labs/singlestore-client-notes)
+- [Terminal Usage Example](https://github.com/singlestore-labs/singlestore/tree/main/examples/estore)
 
 ## Usage
 
