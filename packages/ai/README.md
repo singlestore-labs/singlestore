@@ -59,7 +59,7 @@ const ai = new AI({ openAIApiKey: "<OPENAI_API_KEY>" });
 You can define a custom embeddings manager by extending the `EmbeddingsManager` class to handle how embeddings are created and models are selected.
 
 ```ts
-import { type CreateEmbeddingsParams, type Embedding, EmbeddingsManager } from "@singlestore/ai/embeddings";
+import { type CreateEmbeddingsParams, type Embedding, EmbeddingsManager } from "@singlestore/ai";
 
 class CustomEmbeddingsManager extends EmbeddingsManager {
   getModels(): string[] {
@@ -89,7 +89,7 @@ import {
   type CreateChatCompletionParams,
   type CreateChatCompletionResult,
   type MergeChatCompletionTools,
-} from "@singlestore/ai/chat-completions";
+} from "@singlestore/ai";
 
 type ChatCompletionTools = undefined; // If an array of custom tools is created, use `typeof tools`.
 
@@ -123,7 +123,7 @@ const ai = new AI({
 You can also create custom tools to extend the functionality of the chat completions by defining them with the `ChatCompletionTool` class.
 
 ```ts
-import { ChatCompletionTool } from "@singlestore/ai/chat-completions";
+import { ChatCompletionTool } from "@singlestore/ai";
 import { z } from "zod";
 
 const customTool = new ChatCompletionTool({
