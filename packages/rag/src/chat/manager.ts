@@ -2,6 +2,7 @@ import type { AnyAI, AnyChatCompletionTool } from "@singlestore/ai";
 import type { AnyDatabase, DatabaseType, Table, TableName } from "@singlestore/client";
 
 import { Chat, type ChatTable, type ChatSchema } from "./chat";
+import { ChatMessageManager } from "./message";
 import { ChatSessionManager } from "./session";
 
 export interface CreateChatValues<TTools extends AnyChatCompletionTool[] | undefined>
@@ -47,6 +48,7 @@ export class ChatManager<TAI extends AnyAI> {
       const [chatsTable] = await Promise.all([
         this._createTable(tableName),
         ChatSessionManager.createTable(this._database, sessionsTableName),
+        ChatMessageManager.createTable(this._database, messagesTableName),
       ]);
 
       const [rows] = await chatsTable.insert({
