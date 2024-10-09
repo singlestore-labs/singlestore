@@ -1,0 +1,55 @@
+{
+  "name": "@singlestore/rag",
+  "version": "0.0.6",
+  "license": "Apache-2.0",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "./dist/**/*"
+  ],
+  "exports": {
+    "./package.json": "./package.json",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "npm run clean && tsup",
+    "clean": "rm -rf dist",
+    "dev": "tsup --watch",
+    "lint": "eslint . "
+  },
+  "dependencies": {
+    "@singlestore/ai": "*",
+    "@singlestore/client": "*",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "*",
+    "@repo/typescript-config": "*",
+    "@repo/utils": "*",
+    "tsup": "^8.1.0",
+    "typescript": "^5.6.2"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "homepage": "https://github.com/singlestore-labs/singlestore",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/singlestore-labs/singlestore.git"
+  },
+  "bugs": {
+    "url": "https://github.com/singlestore-labs/singlestore/issues"
+  },
+  "keywords": [
+    "singlestore"
+  ]
+}

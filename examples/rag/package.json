@@ -1,0 +1,25 @@
+{
+  "name": "@singlestore/example-rag",
+  "version": "0.0.1",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "build": "npm run clean && tsup",
+    "clean": "rm -rf dist",
+    "start": "dotenv -- node dist/index.js"
+  },
+  "dependencies": {
+    "@singlestore/ai": "*",
+    "@singlestore/client": "*",
+    "@singlestore/rag": "*",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "*",
+    "@repo/typescript-config": "*",
+    "@types/node": "^22.5.0",
+    "dotenv-cli": "^7.4.2",
+    "tsx": "^4.16.2",
+    "typescript": "^5.3.3"
+  }
+}
