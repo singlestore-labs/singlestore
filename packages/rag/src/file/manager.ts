@@ -3,17 +3,19 @@ import type { AnyDatabase, ColumnName, TableName } from "@singlestore/client";
 
 export type UploadFileExt = "txt" | "csv" | "pdf";
 
+interface TableParams {
+  name?: TableName;
+  contentColumnName?: ColumnName;
+  vColumnName?: ColumnName;
+}
+
 export interface UploadFileValues<TAI extends AnyAI> {
   buffer: Buffer;
   name: string;
   ext: UploadFileExt;
-  tableParams?: {
-    name?: TableName;
-    contentColumnName?: ColumnName;
-    vColumnName?: ColumnName;
-  };
+  tableParams?: TableParams;
   textSplitterOptions?: TextSplitterSplitOptions;
-  embeddingsParams?: Parameters<TAI["embeddings"]["create"]>[1] & { dimension?: number };
+  embeddingParams?: Parameters<TAI["embeddings"]["create"]>[1] & { dimension?: number };
 }
 
 export class FileManager<TAI extends AnyAI> {
@@ -91,7 +93,7 @@ export class FileManager<TAI extends AnyAI> {
     });
   }
 
-  async upload({ buffer, name, ext, tableParams, textSplitterOptions, embeddingsParams }: UploadFileValues<TAI>) {
+  async upload({ buffer, name, ext, tableParams, textSplitterOptions, embeddingParams }: UploadFileValues<TAI>) {
     const { name: tableName = "vectors", contentColumnName = "content", vColumnName = "v_content" } = tableParams ?? {};
     const { chunkSize, delimiter } = textSplitterOptions ?? {};
 
@@ -104,10 +106,11 @@ export class FileManager<TAI extends AnyAI> {
       chunks = this._ai.textSplitter.split(bufferContent, { chunkSize, delimiter });
     }
 
-    const table = await this._createTable(tableName, { dimension: embeddingsParams?.dimension ?? 1536 });
+    const table = await this._createTable(tableName, { dimension: embeddingParams?.dimension ?? 1536 });
 
     const processChunks = async (chunks: string[]) => {
-      const embeddings = await this._ai.embeddings.create(chunks, embeddingsParams);
+      const embeddings = await this._ai.embeddings.create(chunks, embeddingParams);
+
       const values = chunks.map((chunk, i) => {
         const createdAt = new Date().toISOString().replace("T", " ").substring(0, 23);
         return {
@@ -117,6 +120,7 @@ export class FileManager<TAI extends AnyAI> {
           createdAt,
         };
       });
+
       return table.insert(values);
     };
 
@@ -128,5 +132,9 @@ export class FileManager<TAI extends AnyAI> {
     } else {
       await processChunks(chunks);
     }
+  }
+
+  async delete(name: string, tableName: TableName = "vectors") {
+    return this._database.table.use(tableName).delete({ name });
   }
 }
