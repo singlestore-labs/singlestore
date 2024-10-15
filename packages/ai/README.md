@@ -264,7 +264,7 @@ Breaks a given text into smaller chunks, making it easier to handle for tasks li
 const chunks = ai.textSplitter.split(
   text,
   {
-    chunkSize: 1024, // Optional; 1024 be deafult
+    chunkSize: 1024, // Optional; 1024 by deafult
     delimiter: " ", // Optional; Sentence splitting by default
   }, // Optional
 );
