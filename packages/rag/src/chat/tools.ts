@@ -72,13 +72,20 @@ export function vectorSearchChatTool(database: AnyDatabase) {
         .describe(
           "Indicates the specific column in the target table that holds vector representations. This column is used to perform similarity matching based on the input prompt.",
         ),
+      where: z
+        .object({})
+        .catchall(z.any())
+        .optional()
+        .describe(
+          "An optional filter object used to specify conditions for querying data. The object should contain dynamic key-value pairs, where each key represents a column name and its corresponding value is the condition for that column.",
+        ),
     }),
     call: async (params) => {
       const rows = await database.table
         .use(params.tableName)
-        .vectorSearch({ prompt: params.prompt, vectorColumn: params.vectorColumn }, { limit: 1 });
+        .vectorSearch({ prompt: params.prompt, vectorColumn: params.vectorColumn }, { where: params.where, limit: 1 });
 
-      const value = rows[0];
+      const value = rows[0] ?? "";
       if (value) delete value[params.vectorColumn];
 
       return { name: "vector_search", params, value: JSON.stringify(value) };
