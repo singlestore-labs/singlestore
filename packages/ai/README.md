@@ -16,6 +16,7 @@ A module that enhances the [`@singlestore/client`](https://github.com/singlestor
     - [With Custom Embeddings Manager](#with-custom-embeddings-manager)
     - [With Custom Chat Completions Manager](#with-custom-chat-completions-manager)
     - [With Custom Chat Completion Tools](#with-custom-chat-completion-tools)
+    - [With Custom Text Splitter](#with-custom-text-splitter)
     - [Additional Notes](#additional-notes)
   - [Embeddings](#embeddings)
     - [Get Embedding Models](#get-embedding-models)
@@ -29,6 +30,8 @@ A module that enhances the [`@singlestore/client`](https://github.com/singlestor
       - [As String](#as-string)
       - [As Stream](#as-stream)
       - [Additional Notes](#additional-notes-1)
+  - [Text Splitter](#text-splitter)
+    - [Split Text](#split-text)
 
 </details>
 
@@ -142,6 +145,22 @@ const ai = new AI({
 });
 ```
 
+#### With Custom Text Splitter
+
+You can define a custom text splitter by extending the `TextSplitter` class to handle how text is split.
+
+```ts
+import { AI, TextSplitter, TextSplitterSplitOptions } from "@singlestore/ai";
+
+class CustomTextSplitter extends TextSplitter {
+  split(text: string, options?: TextSplitterSplitOptions): string[] {
+    return [];
+  }
+}
+
+const ai = new AI({ textSplitter: new CustomTextSplitter() });
+```
+
 #### Additional Notes
 
 - If you declare a custom embeddings manager and a custom chat completions manager, the `openAIApiKey` parameter is not required.
@@ -232,5 +251,23 @@ const chatCompletion = await ai.chatCompletions.handleStream(stream, async (chun
 - When using `stream: true`, the `handleStream` function processes the stream and accepts a callback function as the second argument. The callback handles each new chunk of data as it arrives.
 - You can use the messages array to provide additional context for the chat completion, such as user messages or system instructions.
 - If a custom `ChatCompletionsManager` is provided, all the parameters can still be passed to the `ai.chatCompletions.create` method, allowing for custom handling and logic while preserving the same interface.
+
+---
+
+### Text Splitter
+
+#### Split Text
+
+Breaks a given text into smaller chunks, making it easier to handle for tasks like generating embeddings. By default, it splits text by sentences, but you can customize it to use a different delimiter or set the maximum chunk size.
+
+```ts
+const chunks = ai.textSplitter.split(
+  text,
+  {
+    chunkSize: 1024, // Optional; 1024 be deafult
+    delimiter: " ", // Optional; Sentence splitting by default
+  }, // Optional
+);
+```
 
 ---
