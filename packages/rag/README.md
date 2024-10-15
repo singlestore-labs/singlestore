@@ -54,6 +54,9 @@ A module that enhances the [`@singlestore/client`](https://github.com/singlestor
     - [Delete Chat Message](#delete-chat-message)
       - [By Condition](#by-condition-8)
       - [Specific](#specific-5)
+  - [File](#file)
+    - [Upload File](#upload-file)
+    - [Delete File](#delete-file)
   - [Tools](#tools)
 
 </details>
@@ -521,6 +524,42 @@ Deletes a specific chat message instance.
 
 ```ts
 await message.delete();
+```
+
+---
+
+### File
+
+#### Upload File
+
+Uploads a file buffer, creates embeddings based on the file content, and inserts the resulting embeddings into a specified table for use in vector searches. By default, the method stores embeddings in the `vectors` table, but you can customize the table name and column names.
+
+```ts
+const buffer = "<FILE_BUFFER>";
+
+await rag.file.upload({
+  buffer,
+  name: "<FILE_NAME>",
+  ext: "<FILE_EXTENSION>", // Supported values: `txt` | `csv` | `pdf`
+  tableParams: {
+    name: "<TABLE_NAME>", // Optional; `vectors` by default
+    contentColumnName: "<CONTENT_COLUMN_NAME>", // Optional; `content` by default
+    vColumnName: "<V_COLUMN_NAME>", // Optional; `v_content` by default
+  }, // Optional
+  textSplitterOptions: {...}, // Optional; ai.textSplitter.split options
+  embeddingParams: {...}, // Optional; ai.embeddings.create params
+});
+```
+
+#### Delete File
+
+Deletes a file's corresponding embeddings from the specified table. By default, it removes entries from the `vectors` table, but you can customize the table name if needed.
+
+```ts
+await rag.file.delete(
+  "<FILE_NAME>",
+  "<TABLE_NAME>", // Optional; `vectors` by default
+);
 ```
 
 ---
