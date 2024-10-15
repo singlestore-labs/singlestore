@@ -15,7 +15,7 @@ export interface UploadFileValues<TAI extends AnyAI> {
   ext: UploadFileExt;
   tableParams?: TableParams;
   textSplitterOptions?: TextSplitterSplitOptions;
-  embeddingParams?: Parameters<TAI["embeddings"]["create"]>[1] & { dimension?: number };
+  embeddingParams?: Parameters<TAI["embeddings"]["create"]>[1];
 }
 
 export class FileManager<TAI extends AnyAI> {
@@ -24,14 +24,14 @@ export class FileManager<TAI extends AnyAI> {
     private _ai: TAI,
   ) {}
 
-  private _createTable(name: TableName, { dimension }: { dimension: number }) {
+  private _createTable(name: TableName, { dimensions }: { dimensions: number }) {
     return this._database.table.create({
       name,
       columns: {
         id: { type: "bigint", autoIncrement: true, primaryKey: true },
         name: { type: "varchar(256)" },
         content: { type: "text" },
-        v_content: { type: `vector(${dimension})` },
+        v_content: { type: `vector(${dimensions})` },
         createdAt: { type: "DATETIME(6)", default: "CURRENT_TIMESTAMP(6)" },
       },
     });
@@ -106,7 +106,9 @@ export class FileManager<TAI extends AnyAI> {
       chunks = this._ai.textSplitter.split(bufferContent, { chunkSize, delimiter });
     }
 
-    const table = await this._createTable(tableName, { dimension: embeddingParams?.dimension ?? 1536 });
+    const table = await this._createTable(tableName, {
+      dimensions: embeddingParams && "dimensions" in embeddingParams ? (embeddingParams.dimensions as number) : 1536,
+    });
 
     const processChunks = async (chunks: string[]) => {
       const embeddings = await this._ai.embeddings.create(chunks, embeddingParams);
