@@ -38,7 +38,7 @@ export class FileManager<TAI extends AnyAI> {
   }
 
   private async _readPDF(buffer: Buffer): Promise<string> {
-    // @ts-ignore
+    // @ts-expect-error - required
     const pdf = (await import("pdf-parse/lib/pdf-parse.js")).default;
     return (await pdf(buffer)).text;
   }
