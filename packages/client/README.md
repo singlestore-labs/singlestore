@@ -41,6 +41,7 @@ The SingleStore Client is a package designed for interacting with the SingleStor
     - [Connect Workspace](#connect-workspace)
       - [Using Client](#using-client)
       - [Using Workspace Group](#using-workspace-group)
+      - [Free Tier](#free-tier)
     - [Get Workspace](#get-workspace)
       - [All Workspaces](#all-workspaces)
       - [By Workspace ID](#by-workspace-id)
@@ -439,6 +440,21 @@ if (workspace) {
     port: <WORKSPACE_PORT>,
   });
 }
+```
+
+##### Free Tier
+
+To connect to a free tier workspace, download the SSL certificate from this [link](https://portal.singlestore.com/static/ca/singlestore_bundle.pem), set the `port` and `database`, and place the SSL certificate in the root directory of your project.
+
+```ts
+const connection = client.connect({
+  host: "<WORKSPACE_HOST>",
+  user: "<WORKSPACE_USER>",
+  password: "<WORKSPACE_PASSWORD>",
+  port: <WORKSPACE_PORT>
+  database: "<DATABASE_NAME>",
+  ssl: { ca: readFileSync(resolve(process.cwd(), "singlestore_bundle.pem")) },
+});
 ```
 
 ---
