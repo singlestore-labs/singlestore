@@ -38,6 +38,6 @@ export class API {
       return response.text() as T;
     }
 
-    return response.json();
+    return response.json() as T;
   }
 }
