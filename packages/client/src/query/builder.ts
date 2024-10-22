@@ -273,12 +273,15 @@ export class QueryBuilder<TTableType extends TableType, TDatabaseType extends Da
     const _clauses: string[] = [];
 
     for (const [column, value] of Object.entries(clauses) as [string, any][]) {
+      if (value === undefined) continue;
       if (column === "OR" && Array.isArray(value)) {
         _clauses.push(`(${value.map((v) => `(${this.buildWhereClause(v, joinClauses)})`).join(" OR ")})`);
       } else if (column === "NOT" && typeof value === "object") {
         _clauses.push(`NOT (${this.buildWhereClause(value, joinClauses)})`);
-      } else if (typeof value === "object" && !Array.isArray(value)) {
+      } else if (typeof value === "object" && value !== null && !Array.isArray(value)) {
         for (const [operator, _value] of Object.entries(value) as [string, any][]) {
+          if (_value === undefined) continue;
+
           const _column = joinClauses?.length
             ? isJoinColumn(column, joinClauses)
               ? column
@@ -297,6 +300,8 @@ export class QueryBuilder<TTableType extends TableType, TDatabaseType extends Da
         _clauses.push(this.buildWhereCondition(_column, "eq", value));
       }
     }
+
+    if (!_clauses.length) return "";
 
     return `WHERE ${_clauses.join(" AND ")}`;
   }
