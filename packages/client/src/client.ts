@@ -10,13 +10,15 @@ import { TeamManager } from "./team";
 import { type CreateWorkspaceConnectionConfig, WorkspaceConnection, type WorkspaceSchema } from "./workspace";
 import { WorkspaceGroupManager } from "./workspace-group";
 
-export interface SingleStoreClientConfig<TAI extends AnyAI | undefined> {
+export interface ClientConfig<TAI extends AnyAI | undefined = undefined> {
   ai?: TAI;
   apiKey?: string;
 }
 
-export interface ConnectConfig<TName extends WorkspaceSchema["name"] | undefined, TAI extends AnyAI | undefined>
-  extends Omit<CreateWorkspaceConnectionConfig<TName, TAI>, "ai"> {}
+export interface ConnectionConfig<
+  TName extends WorkspaceSchema["name"] | undefined = undefined,
+  TAI extends AnyAI | undefined = undefined,
+> extends Omit<CreateWorkspaceConnectionConfig<TName, TAI>, "ai"> {}
 
 export class SingleStoreClient<TAI extends AnyAI | undefined = undefined> {
   private _ai: TAI;
@@ -30,7 +32,7 @@ export class SingleStoreClient<TAI extends AnyAI | undefined = undefined> {
   team: TeamManager;
   workspaceGroup: WorkspaceGroupManager<TAI>;
 
-  constructor(config?: SingleStoreClientConfig<TAI>) {
+  constructor(config?: ClientConfig<TAI>) {
     this._ai = config?.ai as TAI;
     this._api = new API(config?.apiKey);
 
@@ -43,7 +45,7 @@ export class SingleStoreClient<TAI extends AnyAI | undefined = undefined> {
     this.workspaceGroup = new WorkspaceGroupManager(this._api, this._ai, this.organization, this.region);
   }
 
-  connect<TName extends WorkspaceSchema["name"] | undefined = undefined>(config: ConnectConfig<TName, TAI>) {
+  connect<TName extends WorkspaceSchema["name"] | undefined = undefined>(config: ConnectionConfig<TName, TAI>) {
     return WorkspaceConnection.create({ ...config, ai: this._ai });
   }
 }

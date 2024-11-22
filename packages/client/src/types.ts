@@ -16,4 +16,4 @@ export type * from "./workspace/private-connection";
 export type * from "./workspace-group";
 export type * from "./workspace-group/stage";
 export type * from "./workspace-group/storage";
-export type * from "./connection";
+export type { Connection, ConnectionClient } from "./connection";
